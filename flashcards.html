@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Threat Intelligence & Risk Management Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .perspective-1000 { perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .flipped { transform: rotateY(180deg); }
+        
+        .card-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900">
+
+    <div id="app" class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-slate-800 mb-2">Threat Intelligence & Risk Management</h1>
+            <p class="text-slate-600">Master vulnerability management and CTI concepts</p>
+            
+            <div class="mt-6 flex justify-center space-x-4">
+                <button onclick="switchMode('study')" id="studyBtn" class="px-6 py-2 rounded-full font-semibold transition-all bg-indigo-600 text-white shadow-lg">
+                    <i class="fas fa-book-open mr-2"></i> Study Mode
+                </button>
+                <button onclick="switchMode('quiz')" id="quizBtn" class="px-6 py-2 rounded-full font-semibold transition-all bg-white text-slate-700 border border-slate-200 hover:bg-slate-50">
+                    <i class="fas fa-vial mr-2"></i> Quiz Mode
+                </button>
+            </div>
+        </header>
+
+        <!-- Progress Bar -->
+        <div class="mb-8 max-w-md mx-auto">
+            <div class="flex justify-between text-xs font-semibold text-slate-500 mb-1 uppercase tracking-wider">
+                <span id="progressLabel">Progress</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2">
+                <div id="progressBar" class="bg-indigo-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main id="mainContent" class="flex flex-col items-center">
+            <!-- Study Mode Content -->
+            <div id="studyView" class="w-full max-w-lg">
+                <div class="perspective-1000 w-full aspect-[4/3] cursor-pointer group" onclick="flipCard()">
+                    <div id="flashcard" class="relative w-full h-full transition-transform duration-500 preserve-3d">
+                        <!-- Front -->
+                        <div class="absolute inset-0 bg-white rounded-2xl p-8 flex flex-col items-center justify-center text-center card-shadow backface-hidden border border-slate-100">
+                            <span class="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-4">Concept</span>
+                            <div id="cardFrontText" class="text-2xl font-semibold text-slate-800 leading-tight">Loading...</div>
+                            <div class="absolute bottom-6 text-slate-400 text-sm">
+                                <i class="fas fa-sync-alt mr-2"></i> Click to flip
+                            </div>
+                        </div>
+                        <!-- Back -->
+                        <div class="absolute inset-0 bg-indigo-600 rounded-2xl p-8 flex flex-col items-center justify-center text-center card-shadow backface-hidden rotate-y-180 border border-indigo-700">
+                            <span class="text-xs font-bold text-indigo-200 uppercase tracking-widest mb-4">Definition / Answer</span>
+                            <div id="cardBackText" class="text-xl text-white leading-relaxed">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex items-center justify-between w-full px-4">
+                    <button onclick="prevCard()" class="p-4 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="counter" class="text-slate-500 font-medium">1 / 25</span>
+                    <button onclick="nextCard()" class="p-4 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quiz Mode Content (Hidden by default) -->
+            <div id="quizView" class="hidden w-full max-w-2xl animate-fade-in">
+                <div class="bg-white rounded-2xl p-8 card-shadow border border-slate-100">
+                    <div id="quizQuestion" class="text-xl font-bold text-slate-800 mb-6">Question text goes here?</div>
+                    <div id="quizOptions" class="space-y-3">
+                        <!-- Options injected here -->
+                    </div>
+                    <div id="quizFeedback" class="mt-6 hidden p-4 rounded-xl text-center font-medium"></div>
+                    <button id="nextQuizBtn" onclick="nextQuizQuestion()" class="mt-6 w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-colors hidden">
+                        Next Question <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const flashcards = [
+            { front: "Cyber Threat Intelligence (CTI)", back: "The process of collecting, processing, analyzing, and disseminating information about threats to enable informed decision-making." },
+            { front: "Formula for Risk in Cybersecurity", back: "$Risk = Likelihood \\times Impact$" },
+            { front: "Phases of the Intelligence Cycle", back: "Direction, Collection, Processing, Analysis, Dissemination, Feedback." },
+            { front: "Strategic Intelligence Audience", back: "Executives, board members, and senior leadership." },
+            { front: "Tactical Intelligence Focus", back: "TTPs (Tactics, Techniques, and Procedures) used by threat actors." },
+            { front: "Operational Intelligence Focus", back: "Specific details about ongoing or imminent attacks, useful for incident responders." },
+            { front: "Technical Intelligence Examples", back: "Indicators of Compromise (IOCs) such as malware signatures, file hashes, and IP addresses." },
+            { front: "OSINT (Open Source Intelligence)", back: "Intelligence gathered from free, publicly available sources like blogs, reports, and social media." },
+            { front: "Difference between Data and Intelligence", back: "Data is raw information; Intelligence is analyzed data with context and actionable insights." },
+            { front: "ISAC (Information Sharing and Analysis Center)", back: "Collaborative platforms for sharing threat intelligence within specific industries (e.g., Financial Services)." },
+            { front: "Indicators of Compromise (IOCs)", back: "Forensic evidence of an intrusion, such as file hashes, malicious domains, or IP addresses." },
+            { front: "SolarWinds Attack Type", back: "Supply Chain Attack." },
+            { front: "Risk Matrix Purpose", back: "A visual tool to prioritize vulnerabilities by plotting them on a grid of likelihood versus impact." },
+            { front: "Factors Influencing Likelihood", back: "Exploit availability, active exploitation, attack surface exposure, attacker motivation, and ease of exploitation." },
+            { front: "Factors Influencing Impact", back: "Confidentiality, system availability, data integrity, compliance/legal consequences, and reputation." },
+            { front: "CVSS (Common Vulnerability Scoring System)", back: "A standard for assessing the severity of computer system security vulnerabilities." },
+            { front: "Limitations of CVSS", back: "It measures severity, not risk, and does not account for environmental context or active exploitation status." },
+            { front: "CISA KEV Catalog", back: "A U.S. government list of vulnerabilities that are known to be actively exploited in the wild." },
+            { front: "Compensating Controls", back: "Security measures (like WAFs or segmentation) that mitigate risk even if a vulnerability exists." },
+            { front: "Log4Shell Vulnerability", back: "A critical remote code execution vulnerability in the Apache Log4j library (CVE-2021-44228)." },
+            { front: "TTPs", back: "Tactics, Techniques, and Procedures describing how threat actors operate." },
+            { front: "FAIR Framework", back: "A quantitative risk framework that calculates risk in monetary terms." },
+            { front: "Direction Phase (Intelligence Cycle)", back: "Determining what information is needed and defining the intelligence requirements." },
+            { front: "EPSS (Exploit Prediction Scoring System)", back: "A data-driven score that estimates the probability that a vulnerability will be exploited." },
+            { front: "Processing Phase (Intelligence Cycle)", back: "Converting raw data into a usable format for analysis." }
+        ];
+
+        let currentIndex = 0;
+        let isFlipped = false;
+        let currentMode = 'study';
+        let quizScore = 0;
+        let quizIndex = 0;
+
+        function updateCard() {
+            const card = flashcards[currentIndex];
+            document.getElementById('cardFrontText').innerText = card.front;
+            document.getElementById('cardBackText').innerText = card.back;
+            document.getElementById('counter').innerText = `${currentIndex + 1} / ${flashcards.length}`;
+            
+            // Progress calculation
+            const progress = ((currentIndex + 1) / flashcards.length) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            document.getElementById('progressPercent').innerText = `${Math.round(progress)}%`;
+            
+            // Reset flip state
+            isFlipped = false;
+            document.getElementById('flashcard').classList.remove('flipped');
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            const cardElement = document.getElementById('flashcard');
+            if (isFlipped) {
+                cardElement.classList.add('flipped');
+            } else {
+                cardElement.classList.remove('flipped');
+            }
+        }
+
+        function nextCard() {
+            currentIndex = (currentIndex + 1) % flashcards.length;
+            updateCard();
+        }
+
+        function prevCard() {
+            currentIndex = (currentIndex - 1 + flashcards.length) % flashcards.length;
+            updateCard();
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const studyView = document.getElementById('studyView');
+            const quizView = document.getElementById('quizView');
+            const studyBtn = document.getElementById('studyBtn');
+            const quizBtn = document.getElementById('quizBtn');
+            const progressLabel = document.getElementById('progressLabel');
+
+            if (mode === 'study') {
+                studyView.classList.remove('hidden');
+                quizView.classList.add('hidden');
+                studyBtn.className = "px-6 py-2 rounded-full font-semibold transition-all bg-indigo-600 text-white shadow-lg";
+                quizBtn.className = "px-6 py-2 rounded-full font-semibold transition-all bg-white text-slate-700 border border-slate-200 hover:bg-slate-50";
+                progressLabel.innerText = "Study Progress";
+                updateCard();
+            } else {
+                studyView.classList.add('hidden');
+                quizView.classList.remove('hidden');
+                quizBtn.className = "px-6 py-2 rounded-full font-semibold transition-all bg-indigo-600 text-white shadow-lg";
+                studyBtn.className = "px-6 py-2 rounded-full font-semibold transition-all bg-white text-slate-700 border border-slate-200 hover:bg-slate-50";
+                progressLabel.innerText = "Quiz Progress";
+                quizIndex = 0;
+                quizScore = 0;
+                startQuiz();
+            }
+        }
+
+        function startQuiz() {
+            const question = flashcards[quizIndex];
+            const quizQuestion = document.getElementById('quizQuestion');
+            const quizOptions = document.getElementById('quizOptions');
+            const feedback = document.getElementById('quizFeedback');
+            const nextBtn = document.getElementById('nextQuizBtn');
+
+            feedback.classList.add('hidden');
+            nextBtn.classList.add('hidden');
+            
+            quizQuestion.innerText = question.front;
+            
+            // Generate options
+            let options = [question.back];
+            while (options.length < 4) {
+                const randomBack = flashcards[Math.floor(Math.random() * flashcards.length)].back;
+                if (!options.includes(randomBack)) {
+                    options.push(randomBack);
+                }
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            quizOptions.innerHTML = '';
+            options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all font-medium text-slate-700";
+                btn.innerText = option;
+                btn.onclick = () => checkAnswer(option, question.back, btn);
+                quizOptions.appendChild(btn);
+            });
+
+            // Update Progress
+            const progress = ((quizIndex + 1) / flashcards.length) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            document.getElementById('progressPercent').innerText = `${Math.round(progress)}%`;
+        }
+
+        function checkAnswer(selected, correct, btn) {
+            const options = document.querySelectorAll('#quizOptions button');
+            options.forEach(b => b.disabled = true);
+
+            const feedback = document.getElementById('quizFeedback');
+            feedback.classList.remove('hidden');
+            
+            if (selected === correct) {
+                btn.classList.add('bg-emerald-100', 'border-emerald-500', 'text-emerald-700');
+                feedback.innerText = "Correct! Great job.";
+                feedback.className = "mt-6 p-4 rounded-xl text-center font-medium bg-emerald-50 text-emerald-700 border border-emerald-200";
+                quizScore++;
+            } else {
+                btn.classList.add('bg-red-100', 'border-red-500', 'text-red-700');
+                feedback.innerHTML = `Incorrect. The correct answer is:<br><span class="font-bold">${correct}</span>`;
+                feedback.className = "mt-6 p-4 rounded-xl text-center font-medium bg-red-50 text-red-700 border border-red-200";
+            }
+
+            document.getElementById('nextQuizBtn').classList.remove('hidden');
+        }
+
+        function nextQuizQuestion() {
+            quizIndex++;
+            if (quizIndex < flashcards.length) {
+                startQuiz();
+            } else {
+                showQuizResults();
+            }
+        }
+
+        function showQuizResults() {
+            const quizView = document.getElementById('quizView');
+            quizView.innerHTML = `
+                <div class="bg-white rounded-2xl p-10 card-shadow border border-slate-100 text-center animate-fade-in">
+                    <div class="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Quiz Complete!</h2>
+                    <p class="text-slate-600 mb-6">You scored ${quizScore} out of ${flashcards.length}</p>
+                    <div class="text-4xl font-black text-indigo-600 mb-8">${Math.round((quizScore/flashcards.length)*100)}%</div>
+                    <button onclick="location.reload()" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-colors">
+                        Restart Session
+                    </button>
+                </div>
+            `;
+        }
+
+        // Initialize
+        window.onload = updateCard;
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (currentMode === 'study') {
+                if (e.key === 'ArrowRight') nextCard();
+                if (e.key === 'ArrowLeft') prevCard();
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    flipCard();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
