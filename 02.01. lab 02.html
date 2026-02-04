@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk-Based Vulnerability Assessment Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Chosen Palette: Secure Slate -->
+    <!-- 
+        Background: #f8fafc (slate-50) - Warm neutral
+        Cards: #ffffff (white)
+        Text: #334155 (slate-700)
+        Accents: #0f172a (slate-900), #3b82f6 (blue-500) for interactive elements
+        Risk Colors: #ef4444 (red-500) for High/Critical, #eab308 (yellow-500) for Medium
+    -->
+
+    <!-- Application Structure Plan: 
+        1. Header: Context setting.
+        2. Context & Assets: Interactive grid of the organization's assets (Step 1.2). Users click to understand business impact.
+        3. The Risk Framework Engine: A dynamic calculator (Step 2.1). Users can adjust the weights of the 4 risk components. 
+           - Visual: Doughnut chart of weights.
+           - Interaction: Sliders to change emphasis (e.g., prioritize active exploitation over asset criticality).
+        4. Vulnerability Analysis & Validation: A data table and scatter plot (Step 2.2 & 2.3).
+           - Visual: Scatter plot comparing CVSS Base Score vs. Calculated Risk Score. This highlights the "Gap" explained in the lab.
+           - Interaction: As users change weights in Section 3, this chart and table update in real-time.
+        5. Remediation Roadmap: A visual Gantt chart built with CSS Grid (Step 3.2). Shows timelines based on the calculated priorities.
+        6. Stakeholder Briefing: A dynamic text block (Step 3.1) that updates based on the top-ranked vulnerability.
+        
+        Why this structure? It follows the "Data -> Logic -> Insight -> Action" flow. It turns the static lab formulas into a reactive model where students can "play" with the variables to see how risk prioritization shifts.
+    -->
+
+    <!-- Visualization & Content Choices:
+        1. Asset Inventory: Grid of Cards. Goal: Inform/Context. Justification: Cleanest way to show categorical data with hidden detail (click to reveal).
+        2. Framework Weights: Doughnut Chart (Chart.js). Goal: Inform/Change. Justification: Shows part-to-whole relationship of the risk formula.
+        3. Risk Analysis: Scatter Plot (Chart.js). Goal: Relationships. Justification: Perfectly illustrates the correlation (or lack thereof) between technical severity (CVSS) and business risk.
+        4. Vulnerability List: Dynamic Table. Goal: Organize/Compare. Justification: Standard format for security analysts, allows quick scanning of metrics.
+        5. Remediation Timeline: HTML/CSS Grid Gantt. Goal: Change/Plan. Justification: Visualizes the "Window" concept. CSS Grid allows precise alignment without SVG.
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        /* Custom Chart Container Styling */
+        .chart-container-doughnut {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            margin: 0 auto;
+        }
+        
+        .chart-container-scatter {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            margin: 0 auto;
+        }
+
+        /* Custom Scrollbar for tables if needed */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        /* Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px; 
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e2e8f0;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-700 font-sans antialiased selection:bg-blue-100">
+
+    <!-- Navigation / Header -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center gap-2">
+                        <span class="text-2xl font-bold text-slate-800 tracking-tight">Lab<span class="text-blue-600">Sim</span></span>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="#assets" class="border-transparent text-slate-500 hover:border-blue-500 hover:text-slate-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">Asset Context</a>
+                        <a href="#framework" class="border-transparent text-slate-500 hover:border-blue-500 hover:text-slate-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">Scoring Engine</a>
+                        <a href="#analysis" class="border-transparent text-slate-500 hover:border-blue-500 hover:text-slate-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">Vulnerability Matrix</a>
+                        <a href="#reporting" class="border-transparent text-slate-500 hover:border-blue-500 hover:text-slate-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200">Remediation</a>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">Lab Exercise 2</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero / Intro -->
+    <div class="bg-white pb-8 pt-6 border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-extrabold text-slate-900 sm:text-4xl">Risk-Based Vulnerability Assessment</h1>
+            <p class="mt-3 max-w-3xl text-lg text-slate-500">
+                Welcome to the Risk Prioritization Simulator. In this environment, you will move beyond simple CVSS scores to evaluate risk based on <strong>Active Exploitation</strong>, <strong>Asset Criticality</strong>, and <strong>Exposure</strong>. Adjust the framework parameters below to see how organizational context changes your security priorities.
+            </p>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+        <!-- SECTION 1: ASSET CONTEXT (Step 1.2) -->
+        <section id="assets" class="scroll-mt-20">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-900">1. Organizational Asset Context</h2>
+                <p class="mt-2 text-slate-600 max-w-4xl">
+                    Risk is relative to the asset being attacked. Below is the inventory for our hypothetical college IT department. 
+                    <span class="font-semibold text-blue-600">Click on any card</span> to reveal the specific business impact scenarios associated with that asset category. This "Asset Criticality" score feeds directly into your risk calculator.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="asset-grid">
+                <!-- Assets injected via JS -->
+            </div>
+        </section>
+
+        <!-- SECTION 2: SCORING ENGINE (Step 2.1) -->
+        <section id="framework" class="scroll-mt-20 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 bg-slate-50">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">2. Risk Prioritization Framework Engine</h2>
+                        <p class="mt-2 text-slate-600 text-sm max-w-2xl">
+                            Design your scoring logic. CVSS is just one factor. Adjust the weights below to determine how much influence each component has on the final <strong>Risk Priority Score (0-10)</strong>. 
+                            <br><em>Tip: Total weight must equal 100%.</em>
+                        </p>
+                    </div>
+                    <div class="mt-4 md:mt-0">
+                        <button onclick="resetWeights()" class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            Reset Defaults
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Controls -->
+                <div class="lg:col-span-2 space-y-8">
+                    
+                    <!-- Component A -->
+                    <div class="bg-white p-4 rounded-lg border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-bold text-slate-900">A. Technical Severity (CVSS Base)</label>
+                            <span class="text-sm font-mono bg-slate-100 px-2 py-1 rounded text-slate-600" id="val-A">25%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value="25" class="w-full" id="range-A">
+                        <p class="text-xs text-slate-500 mt-2">Intrinsic vulnerability characteristics (0-10 scale). Source: NVD.</p>
+                    </div>
+
+                    <!-- Component B -->
+                    <div class="bg-white p-4 rounded-lg border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-bold text-slate-900">B. Active Exploitation</label>
+                            <span class="text-sm font-mono bg-slate-100 px-2 py-1 rounded text-slate-600" id="val-B">30%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value="30" class="w-full" id="range-B">
+                        <p class="text-xs text-slate-500 mt-2">Evidence of use in the wild (0-10 scale). Source: CISA KEV.</p>
+                    </div>
+
+                    <!-- Component C -->
+                    <div class="bg-white p-4 rounded-lg border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-bold text-slate-900">C. Asset Criticality</label>
+                            <span class="text-sm font-mono bg-slate-100 px-2 py-1 rounded text-slate-600" id="val-C">25%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value="25" class="w-full" id="range-C">
+                        <p class="text-xs text-slate-500 mt-2">Business impact if compromised (0-10 scale). Source: Asset Inventory.</p>
+                    </div>
+
+                    <!-- Component D -->
+                    <div class="bg-white p-4 rounded-lg border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-bold text-slate-900">D. Exposure & Accessibility</label>
+                            <span class="text-sm font-mono bg-slate-100 px-2 py-1 rounded text-slate-600" id="val-D">20%</span>
+                        </div>
+                        <input type="range" min="0" max="100" value="20" class="w-full" id="range-D">
+                        <p class="text-xs text-slate-500 mt-2">Attack vector and privileges (0-10 scale). Source: Architecture review.</p>
+                    </div>
+
+                    <!-- Warning -->
+                    <div id="weight-warning" class="hidden p-3 bg-red-50 text-red-700 text-sm rounded border border-red-200 flex items-center">
+                        <span class="text-xl mr-2">⚠️</span> Total weight must equal 100%. Current: <span id="current-total" class="font-bold ml-1">0%</span>
+                    </div>
+
+                </div>
+
+                <!-- Visualization -->
+                <div class="flex flex-col items-center justify-center bg-slate-50 rounded-lg p-4">
+                    <h3 class="text-sm font-semibold text-slate-500 mb-4 uppercase tracking-wider">Weight Distribution</h3>
+                    <div class="chart-container-doughnut">
+                        <canvas id="frameworkChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: VULNERABILITY MATRIX (Step 2.2 & 2.3) -->
+        <section id="analysis" class="scroll-mt-20">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-900">3. Vulnerability Analysis Matrix</h2>
+                <p class="mt-2 text-slate-600 max-w-4xl">
+                    Here we apply your framework to 5 sample vulnerabilities. Observe the <strong>"Risk Gap"</strong> in the scatter plot: items with similar technical severity (X-axis) may have vastly different business risks (Y-axis) based on your framework settings.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Scatter Plot -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 px-2">Technical Severity vs. Calculated Risk</h3>
+                    <div class="chart-container-scatter">
+                        <canvas id="scatterChart"></canvas>
+                    </div>
+                    <p class="text-xs text-center text-slate-400 mt-2">Top-Left quadrant: Low Tech Severity, High Business Risk (The "Hidden Killers")</p>
+                </div>
+
+                <!-- Live Table -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                    <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-slate-800">Prioritized Vulnerability List</h3>
+                        <span class="text-xs font-medium bg-blue-100 text-blue-800 px-2 py-1 rounded">Live Updates</span>
+                    </div>
+                    <div class="overflow-x-auto custom-scrollbar flex-grow">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CVE ID</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">CVSS (Base)</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Asset</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Calc. Risk</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Priority</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-slate-200" id="vuln-table-body">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: REMEDIATION & REPORTING (Step 3.2 & 3.1) -->
+        <section id="reporting" class="scroll-mt-20 grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Remediation Roadmap -->
+            <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 bg-slate-50">
+                    <h2 class="text-xl font-bold text-slate-900">4. Remediation Roadmap</h2>
+                    <p class="text-sm text-slate-500 mt-1">Timeline generated based on calculated risk urgency.</p>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-6" id="gantt-chart">
+                        <!-- JS Generated Gantt Bars -->
+                    </div>
+                    <div class="mt-6 flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-4">
+                        <span>Today</span>
+                        <span>+7 Days</span>
+                        <span>+30 Days</span>
+                        <span>+90 Days</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Executive Summary Preview -->
+            <div class="lg:col-span-1 bg-slate-800 rounded-xl shadow-lg text-white overflow-hidden flex flex-col">
+                <div class="p-6 border-b border-slate-700 bg-slate-900">
+                    <h2 class="text-lg font-bold text-white flex items-center">
+                        <span class="mr-2">📝</span> Executive Summary Preview
+                    </h2>
+                </div>
+                <div class="p-6 flex-grow space-y-4 font-light text-slate-300 text-sm leading-relaxed" id="exec-summary">
+                    <!-- Dynamic Summary Text -->
+                </div>
+                <div class="p-4 bg-slate-900 text-xs text-center text-slate-500">
+                    Auto-generated for the Principal
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 mt-12 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-slate-400 text-sm">&copy; 2026 Lab Exercise Simulation | Risk-Based Vulnerability Assessment</p>
+        </div>
+    </footer>
+
+    <!-- LOGIC -->
+    <script>
+        // --- DATA STORE ---
+
+        // 1. Asset Data (Step 1.2)
+        const assets = [
+            {
+                id: 'sis',
+                category: 'Student Information System',
+                example: 'Student records DB',
+                criticality: 10, // Critical
+                criticalityLabel: 'Critical',
+                desc: 'Breach leads to massive privacy violation (GDPR/FERPA), loss of academic integrity, and severe reputational damage. Core business function halted.'
+            },
+            {
+                id: 'network',
+                category: 'Network Infrastructure',
+                example: 'Core Switch / Firewall',
+                criticality: 9, // Critical
+                criticalityLabel: 'Critical',
+                desc: 'Compromise allows lateral movement, interception of all traffic, and potential total campus outage. Foundation of all other services.'
+            },
+            {
+                id: 'lms',
+                category: 'Learning Management System',
+                example: 'Online Course Platform',
+                criticality: 7, // High
+                criticalityLabel: 'High',
+                desc: 'Disruption affects class delivery and assignment submission. Data loss involves intellectual property and grades.'
+            },
+            {
+                id: 'admin',
+                category: 'Admin Workstations',
+                example: 'Finance/Staff PC',
+                criticality: 5, // Medium
+                criticalityLabel: 'Medium',
+                desc: 'Potential entry point for ransomware. Contains sensitive operational data but individual machines are replaceable.'
+            },
+            {
+                id: 'web',
+                category: 'Public Web Server',
+                example: 'Marketing Site',
+                criticality: 4, // Medium
+                criticalityLabel: 'Medium',
+                desc: 'Defacement impacts reputation and prospective student marketing. Does not typically house sensitive internal data if segmented.'
+            }
+        ];
+
+        // 2. Vulnerability Data (Mock data for Step 2.2)
+        // We use raw values here. The score is calculated dynamically.
+        const vulnerabilities = [
+            {
+                id: 'CVE-2023-9812',
+                product: 'Core Router OS',
+                cvss: 9.8, // Component A
+                exploitScore: 2, // Component B (PoC only, hard to exploit)
+                exploitLabel: 'PoC Available',
+                assetId: 'network', // Links to Component C
+                exposureScore: 10, // Component D (Network, No Auth)
+                exposureLabel: 'Network / No Auth',
+                desc: 'Remote Code Execution in core routing firmware.'
+            },
+            {
+                id: 'CVE-2023-4401',
+                product: 'Student DB SQL',
+                cvss: 8.8, 
+                exploitScore: 8, // High active exploitation
+                exploitLabel: 'Active Attacks',
+                assetId: 'sis',
+                exposureScore: 6, // Network, Low Priv
+                exposureLabel: 'Network / Low Priv',
+                desc: 'SQL Injection in student portal login.'
+            },
+            {
+                id: 'CVE-2023-1105',
+                product: 'Marketing CMS',
+                cvss: 7.5,
+                exploitScore: 10, // Very high activity (botnets)
+                exploitLabel: 'Widespread Worm',
+                assetId: 'web',
+                exposureScore: 10,
+                exposureLabel: 'Network / No Auth',
+                desc: 'Unauthenticated file upload on public web server.'
+            },
+            {
+                id: 'CVE-2023-0023',
+                product: 'LMS Plugin',
+                cvss: 6.1,
+                exploitScore: 0, // Theoretical
+                exploitLabel: 'Theoretical',
+                assetId: 'lms',
+                exposureScore: 4, // Local access needed
+                exposureLabel: 'Adjacent / Auth',
+                desc: 'Cross-site scripting in gradebook comments.'
+            },
+            {
+                id: 'CVE-2023-5566',
+                product: 'Staff PDF Reader',
+                cvss: 7.8,
+                exploitScore: 5,
+                exploitLabel: 'Kit Available',
+                assetId: 'admin',
+                exposureScore: 2, // Physical/Local interactions
+                exposureLabel: 'Local / User Action',
+                desc: 'Buffer overflow when opening malicious PDF.'
+            }
+        ];
+
+        // 3. State Management
+        let weights = {
+            A: 0.25, // Technical Severity
+            B: 0.30, // Exploitation
+            C: 0.25, // Asset Criticality
+            D: 0.20  // Exposure
+        };
+
+        // --- CHART INSTANCES ---
+        let frameworkChart = null;
+        let scatterChart = null;
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAssets();
+            initCharts();
+            setupEventListeners();
+            recalculateAndRender();
+        });
+
+        // --- RENDER FUNCTIONS ---
+
+        function renderAssets() {
+            const container = document.getElementById('asset-grid');
+            container.innerHTML = assets.map(asset => `
+                <div class="group bg-white rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer overflow-hidden" onclick="toggleAssetDetail('${asset.id}')">
+                    <div class="p-5">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-lg font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">${asset.category}</h3>
+                                <p class="text-xs text-slate-500 mt-1">${asset.example}</p>
+                            </div>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCriticalityColor(asset.criticality)}">
+                                ${asset.criticalityLabel}
+                            </span>
+                        </div>
+                        <div id="detail-${asset.id}" class="hidden mt-4 pt-4 border-t border-slate-100 text-sm text-slate-600 animate-fade-in">
+                            <p><strong>Business Impact:</strong> ${asset.desc}</p>
+                            <p class="mt-2 text-xs text-slate-400">Criticality Score: ${asset.criticality}/10</p>
+                        </div>
+                        <div class="mt-4 flex justify-center text-slate-300 group-hover:text-blue-400">
+                            <span class="text-xs" id="hint-${asset.id}">Click to reveal impact</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getCriticalityColor(score) {
+            if (score >= 9) return 'bg-red-100 text-red-800';
+            if (score >= 7) return 'bg-orange-100 text-orange-800';
+            if (score >= 4) return 'bg-yellow-100 text-yellow-800';
+            return 'bg-green-100 text-green-800';
+        }
+
+        function toggleAssetDetail(id) {
+            const detail = document.getElementById(`detail-${id}`);
+            const hint = document.getElementById(`hint-${id}`);
+            detail.classList.toggle('hidden');
+            hint.textContent = detail.classList.contains('hidden') ? 'Click to reveal impact' : 'Click to hide';
+        }
+
+        // --- LOGIC ENGINE ---
+
+        function updateWeightsFromInput() {
+            const rangeA = parseInt(document.getElementById('range-A').value);
+            const rangeB = parseInt(document.getElementById('range-B').value);
+            const rangeC = parseInt(document.getElementById('range-C').value);
+            const rangeD = parseInt(document.getElementById('range-D').value);
+
+            // Update Labels
+            document.getElementById('val-A').textContent = rangeA + '%';
+            document.getElementById('val-B').textContent = rangeB + '%';
+            document.getElementById('val-C').textContent = rangeC + '%';
+            document.getElementById('val-D').textContent = rangeD + '%';
+
+            // Validate Total
+            const total = rangeA + rangeB + rangeC + rangeD;
+            const warning = document.getElementById('weight-warning');
+            document.getElementById('current-total').textContent = total + '%';
+
+            if (total !== 100) {
+                warning.classList.remove('hidden');
+                // Don't update logic if invalid, or normalize? Let's normalize for smoother UX but warn.
+            } else {
+                warning.classList.add('hidden');
+            }
+
+            // Update State (Normalize if not 100 to prevent math errors)
+            const factor = total === 0 ? 1 : 100 / total;
+            weights = {
+                A: (rangeA * factor) / 100,
+                B: (rangeB * factor) / 100,
+                C: (rangeC * factor) / 100,
+                D: (rangeD * factor) / 100
+            };
+
+            // Update App
+            updateChartData();
+            recalculateAndRender();
+        }
+
+        function resetWeights() {
+            document.getElementById('range-A').value = 25;
+            document.getElementById('range-B').value = 30;
+            document.getElementById('range-C').value = 25;
+            document.getElementById('range-D').value = 20;
+            updateWeightsFromInput();
+        }
+
+        function calculateRisk(vuln) {
+            // Find asset criticality
+            const asset = assets.find(a => a.id === vuln.assetId);
+            const critScore = asset ? asset.criticality : 5;
+
+            // Formula: (A * wA) + (B * wB) + (C * wC) + (D * wD)
+            const score = (vuln.cvss * weights.A) + 
+                          (vuln.exploitScore * weights.B) + 
+                          (critScore * weights.C) + 
+                          (vuln.exposureScore * weights.D);
+            
+            return parseFloat(score.toFixed(2));
+        }
+
+        function getRemediationWindow(score) {
+            if (score >= 8.0) return { label: 'Immediate (24h)', color: 'bg-red-600', text: 'text-red-600', days: 1 };
+            if (score >= 6.0) return { label: 'Urgent (7d)', color: 'bg-orange-500', text: 'text-orange-500', days: 7 };
+            if (score >= 4.0) return { label: 'Scheduled (30d)', color: 'bg-yellow-500', text: 'text-yellow-600', days: 30 };
+            return { label: 'Routine (90d)', color: 'bg-blue-400', text: 'text-blue-500', days: 90 };
+        }
+
+        function recalculateAndRender() {
+            // 1. Calculate scores
+            const processedVulns = vulnerabilities.map(v => {
+                const score = calculateRisk(v);
+                return { ...v, riskScore: score, window: getRemediationWindow(score) };
+            });
+
+            // 2. Sort by Risk Score desc
+            processedVulns.sort((a, b) => b.riskScore - a.riskScore);
+
+            // 3. Update Table
+            const tbody = document.getElementById('vuln-table-body');
+            tbody.innerHTML = processedVulns.map(v => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">${v.id}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${v.cvss}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${assets.find(a=>a.id===v.assetId).category}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-800">${v.riskScore}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${v.window.color} text-white bg-opacity-90">
+                            ${v.window.label}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+
+            // 4. Update Scatter Plot
+            updateScatterChart(processedVulns);
+
+            // 5. Update Gantt
+            renderGantt(processedVulns);
+
+            // 6. Update Summary
+            renderSummary(processedVulns[0]);
+        }
+
+        function renderGantt(vulns) {
+            const container = document.getElementById('gantt-chart');
+            const maxDays = 90;
+            
+            container.innerHTML = vulns.map(v => {
+                const widthPerc = Math.max(5, (v.window.days / maxDays) * 100);
+                return `
+                <div class="relative">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="font-bold text-slate-700">${v.id}</span>
+                        <span class="text-slate-500">${v.window.label}</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
+                        <div class="${v.window.color} h-4 rounded-full transition-all duration-500 ease-out flex items-center justify-end pr-2 text-[10px] text-white font-bold hover:opacity-80 cursor-help" style="width: ${widthPerc}%" title="Due in ${v.window.days} days">
+                        </div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-0.5 truncate">${v.product} - ${v.desc}</div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function renderSummary(topVuln) {
+            const summary = document.getElementById('exec-summary');
+            const assetName = assets.find(a => a.id === topVuln.assetId).category;
+            
+            summary.innerHTML = `
+                <p><strong class="text-white">Attention:</strong> A critical security risk has been identified requiring immediate executive attention.</p>
+                <p>The highest priority vulnerability is <strong>${topVuln.id}</strong> affecting the <strong>${assetName}</strong>.</p>
+                <p>While the technical severity is ${topVuln.cvss}, our risk model rates this as a <strong>${topVuln.riskScore}/10</strong> due to <strong>${topVuln.exploitLabel}</strong> activity and the critical nature of the asset involved.</p>
+                <p><strong class="text-blue-300">Recommendation:</strong> Authorize immediate resource allocation for patching within the next <strong>${topVuln.window.days * 24} hours</strong> to prevent potential business disruption.</p>
+            `;
+        }
+
+        // --- CHART JS SETUP ---
+
+        function initCharts() {
+            // 1. Framework Weights Doughnut
+            const ctxDoughnut = document.getElementById('frameworkChart').getContext('2d');
+            frameworkChart = new Chart(ctxDoughnut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Tech Severity', 'Exploitation', 'Asset Crit.', 'Exposure'],
+                    datasets: [{
+                        data: [25, 30, 25, 20],
+                        backgroundColor: ['#94a3b8', '#ef4444', '#3b82f6', '#eab308'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+                    }
+                }
+            });
+
+            // 2. Scatter Plot
+            const ctxScatter = document.getElementById('scatterChart').getContext('2d');
+            scatterChart = new Chart(ctxScatter, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Vulnerabilities',
+                        data: [], // Populated dynamically
+                        backgroundColor: function(context) {
+                            const val = context.raw?.y; 
+                            return val >= 8 ? '#ef4444' : (val >= 5 ? '#eab308' : '#3b82f6');
+                        },
+                        pointRadius: 8,
+                        pointHoverRadius: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            min: 0,
+                            max: 10,
+                            title: { display: true, text: 'Technical Severity (CVSS Base)' }
+                        },
+                        y: {
+                            min: 0,
+                            max: 10,
+                            title: { display: true, text: 'Calculated Business Risk Score' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.raw.label}: Risk ${context.raw.y}`;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    yMin: 0,
+                                    yMax: 10,
+                                    xMin: 0,
+                                    xMax: 10,
+                                    borderColor: 'rgba(0,0,0,0.1)',
+                                    borderWidth: 1,
+                                    borderDash: [5, 5],
+                                    label: { enabled: true, content: '1:1 Ratio' }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChartData() {
+            if (frameworkChart) {
+                frameworkChart.data.datasets[0].data = [
+                    weights.A * 100, 
+                    weights.B * 100, 
+                    weights.C * 100, 
+                    weights.D * 100
+                ];
+                frameworkChart.update();
+            }
+        }
+
+        function updateScatterChart(processedVulns) {
+            if (scatterChart) {
+                scatterChart.data.datasets[0].data = processedVulns.map(v => ({
+                    x: v.cvss,
+                    y: v.riskScore,
+                    label: v.id
+                }));
+                scatterChart.update();
+            }
+        }
+
+        function setupEventListeners() {
+            ['range-A', 'range-B', 'range-C', 'range-D'].forEach(id => {
+                document.getElementById(id).addEventListener('input', updateWeightsFromInput);
+            });
+        }
+
+    </script>
+</body>
+</html>
+
+
+
