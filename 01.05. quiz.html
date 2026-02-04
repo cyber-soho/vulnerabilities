@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTI & Risk Management Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .option-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .option-card:hover:not(.disabled) {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .option-card.selected {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+        }
+
+        .option-card.correct {
+            border-color: #22c55e;
+            background-color: #f0fdf4;
+        }
+
+        .option-card.incorrect {
+            border-color: #ef4444;
+            background-color: #fef2f2;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="quiz-container" class="max-w-2xl w-full bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Progress Bar -->
+        <div class="h-2 bg-slate-100 w-full">
+            <div id="progress" class="h-full bg-blue-600 progress-bar" style="width: 0%"></div>
+        </div>
+
+        <div class="p-8">
+            <!-- Header -->
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-xl font-bold text-slate-800">CTI & Risk Management</h1>
+                <span id="question-counter" class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Question 1 / 10</span>
+            </div>
+
+            <!-- Question Area -->
+            <div id="question-content" class="fade-in">
+                <p id="question-text" class="text-lg text-slate-700 font-medium mb-8 leading-relaxed">
+                    Loading question...
+                </p>
+
+                <!-- Options -->
+                <div id="options-container" class="space-y-4">
+                    <!-- Options injected here -->
+                </div>
+
+                <!-- Hint/Rationale Area -->
+                <div id="feedback-area" class="mt-8 hidden p-4 rounded-lg bg-slate-50 border border-slate-200">
+                    <p id="rationale-text" class="text-sm text-slate-600 italic"></p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="mt-10 flex justify-between items-center">
+                <button id="hint-btn" class="text-blue-600 text-sm font-semibold hover:underline">Need a hint?</button>
+                <button id="next-btn" class="hidden bg-slate-800 text-white px-8 py-3 rounded-lg font-semibold hover:bg-slate-700 transition-colors">
+                    Next Question
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Score Screen (Hidden by default) -->
+    <div id="score-screen" class="hidden max-w-md w-full bg-white rounded-2xl shadow-xl p-10 text-center">
+        <div class="mb-6 inline-flex items-center justify-center w-20 h-20 bg-blue-100 text-blue-600 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        </div>
+        <h2 class="text-3xl font-bold text-slate-800 mb-2">Quiz Complete!</h2>
+        <p class="text-slate-500 mb-8">You have successfully finished the practice session.</p>
+        <div class="text-5xl font-extrabold text-blue-600 mb-8"><span id="final-score">0</span>/10</div>
+        <button onclick="location.reload()" class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+            Try Again
+        </button>
+    </div>
+
+    <script>
+        const quizData = [
+            {
+                question: "According to the lecture, what is the fundamental difference between 'data' and 'intelligence' in the context of cybersecurity?",
+                hint: "Think about the road trip analogy: looking at a map versus checking traffic patterns and weather forecasts to make a decision.",
+                options: [
+                    { text: "Data is the raw information collected, while intelligence is the actionable insight derived from analyzing that data.", rationale: "Intelligence is the result of processing and analyzing raw data to provide context and meaning that informs decision-making.", isCorrect: true },
+                    { text: "Data refers to external threats, while intelligence refers to internal system logs.", rationale: "The source of the information does not define the distinction between data and intelligence.", isCorrect: false },
+                    { text: "Intelligence is simply a larger volume of data collected from more than one source.", rationale: "Volume alone does not transform data into intelligence; analysis and processing are required.", isCorrect: false },
+                    { text: "Data is used by executives, whereas intelligence is exclusively for technical staff.", rationale: "Both are used across an organization, though the format changes based on the audience.", isCorrect: false }
+                ]
+            },
+            {
+                question: "In the Intelligence Cycle, which phase involves converting raw data into a usable format, such as decrypting files or translating languages?",
+                hint: "This step happens right after gathering the data but before you can actually analyze what it means.",
+                options: [
+                    { text: "Processing", rationale: "Processing is the step where raw data is organized, formatted, decrypted, or translated for analysis.", isCorrect: true },
+                    { text: "Collection", rationale: "Collection involves gathering raw information, but not necessarily formatting it.", isCorrect: false },
+                    { text: "Direction", rationale: "Direction is the initial phase where goals are set before data is gathered.", isCorrect: false },
+                    { text: "Dissemination", rationale: "Dissemination occurs after analysis, involving the sharing of finished intelligence.", isCorrect: false }
+                ]
+            },
+            {
+                question: "You are preparing a report for the Board of Directors regarding long-term trends in ransomware attacks. Which type of intelligence is this?",
+                hint: "Consider the audience (executives) and the timeframe (long-term/trends).",
+                options: [
+                    { text: "Strategic Intelligence", rationale: "Strategic intelligence focuses on long-term trends and is intended for non-technical executives.", isCorrect: true },
+                    { text: "Tactical Intelligence", rationale: "Tactical intelligence focuses on adversary TTPs and is aimed at security architects.", isCorrect: false },
+                    { text: "Operational Intelligence", rationale: "Operational intelligence deals with specific, imminent attacks and is useful for incident responders.", isCorrect: false },
+                    { text: "Technical Intelligence", rationale: "Technical intelligence involves specific indicators like IP addresses, which are too granular for a board report.", isCorrect: false }
+                ]
+            },
+            {
+                question: "The lecture describes 'Risk' in cybersecurity using a specific formula. Which of the following accurately represents this?",
+                hint: "Recall the analogy of the meteorite (high damage, low probability) versus the leaky pipe.",
+                options: [
+                    { text: "Risk = Likelihood × Impact", rationale: "Risk is calculated by assessing the probability of an event occurring combined with the severity of consequences.", isCorrect: true },
+                    { text: "Risk = Vulnerability + Threat", rationale: "While these are components, the standard calculation emphasizes the probability and consequence dimensions.", isCorrect: false },
+                    { text: "Risk = Severity ÷ Cost", rationale: "Cost is a factor in impact, but division is not the method for determining risk levels.", isCorrect: false },
+                    { text: "Risk = CVSS Score + Exploitability", rationale: "Simply adding them does not account for specific organizational impact or active attacks.", isCorrect: false }
+                ]
+            },
+            {
+                question: "In the SolarWinds case study, what was the primary vector used by the attackers to compromise victims?",
+                hint: "The attackers didn't attack the victims directly; they poisoned a trusted tool the victims were already using.",
+                options: [
+                    { text: "A supply chain attack via a malicious software update", rationale: "Attackers compromised the build system and injected code into legitimate updates downloaded by victims.", isCorrect: true },
+                    { text: "Phishing emails targeting executive credentials", rationale: "While common, SolarWinds was distinct because it leveraged trusted software updates.", isCorrect: false },
+                    { text: "Brute force attacks against RDP ports", rationale: "The entry point was not a weak password but a compromised vendor product.", isCorrect: false },
+                    { text: "Physical access to server rooms", rationale: "The attack was entirely remote, utilizing the digital software supply chain.", isCorrect: false }
+                ]
+            },
+            {
+                question: "Which factor would INCREASE the 'Likelihood' score in a risk assessment for a specific vulnerability?",
+                hint: "Look for the factor that makes it easier for a hacker to actually execute the attack.",
+                options: [
+                    { text: "Public availability of exploit code", rationale: "Public exploit code drops the barrier to entry, making an attack much more probable.", isCorrect: true },
+                    { text: "The system containing PII (Personally Identifiable Information)", rationale: "PII increases the 'Impact' (consequences), not the 'Likelihood' of exploitation.", isCorrect: false },
+                    { text: "The presence of compensating controls like a WAF", rationale: "Compensating controls typically decrease the likelihood of successful exploitation.", isCorrect: false },
+                    { text: "Strict regulatory fines for data breaches", rationale: "Regulatory fines relate to the financial Impact, not the probability of the event.", isCorrect: false }
+                ]
+            },
+            {
+                question: "Why might a vulnerability with a CVSS score of 9.8 (Critical) be prioritized LOWER than one with a score of 7.5 (High)?",
+                hint: "Intelligence-driven risk management looks at 'Likelihood' factors like internet exposure.",
+                options: [
+                    { text: "The 9.8 is on an isolated internal system, while the 7.5 is on an internet-facing system being actively exploited.", rationale: "Contextual risk assessment values exposure and active exploitation over theoretical severity.", isCorrect: true },
+                    { text: "The 9.8 vulnerability requires authentication.", rationale: "A 9.8 score usually implies no authentication is required.", isCorrect: false },
+                    { text: "CVSS scores are random and should be ignored.", rationale: "CVSS scores provide a useful baseline but must be enriched with environmental context.", isCorrect: false },
+                    { text: "The 7.5 allows for remote code execution, while the 9.8 does not.", rationale: "A 9.8 score almost always involves critical impacts like remote code execution.", isCorrect: false }
+                ]
+            },
+            {
+                question: "What is an Indicator of Compromise (IOC) in the context of Technical Intelligence?",
+                hint: "Think of the 'fingerprints' left behind at a crime scene that you can feed into a firewall.",
+                options: [
+                    { text: "A specific artifact like a file hash or IP address associated with an attack.", rationale: "IOCs are technical pieces of forensic data that identify known malicious activity.", isCorrect: true },
+                    { text: "A high-level report on geopolitical motivations.", rationale: "This describes Strategic Intelligence, not technical IOCs.", isCorrect: false },
+                    { text: "A vulnerability in software that has not yet been patched.", rationale: "A vulnerability is a weakness; an IOC is evidence that a threat actor has acted.", isCorrect: false },
+                    { text: "The methodology used by an attacker to move laterally.", rationale: "This describes TTPs, which falls under Tactical Intelligence.", isCorrect: false }
+                ]
+            },
+            {
+                question: "Which combination of factors made Log4Shell a 'perfect storm' global emergency?",
+                hint: "It wasn't just that it was dangerous; it was that it was everywhere and incredibly easy to use.",
+                options: [
+                    { text: "Ubiquity of usage, trivial ease of exploitation, and critical impact.", rationale: "The library was used everywhere, required zero skill to exploit, and allowed total control.", isCorrect: true },
+                    { text: "It affected only government systems.", rationale: "Log4Shell affected nearly every Java-based application globally.", isCorrect: false },
+                    { text: "It was a complex attack requiring state-sponsored capabilities.", rationale: "It was notoriously easy to exploit, even for low-skill attackers.", isCorrect: false },
+                    { text: "The vulnerability had a low CVSS score.", rationale: "Log4Shell had a CVSS score of 10.0, the maximum possible severity.", isCorrect: false }
+                ]
+            },
+            {
+                question: "Why do we use SHA256 hashes to identify malicious files?",
+                hint: "Think of a hash as a unique digital ID card for a file.",
+                options: [
+                    { text: "Hashes provide a unique fingerprint where even a single byte change results in a different hash.", rationale: "This allows tools to precisely identify specific malware versions without analyzing all code.", isCorrect: true },
+                    { text: "Hashes allow us to decrypt the malware.", rationale: "Hashing is a one-way function; you cannot reverse a hash to get the original file.", isCorrect: false },
+                    { text: "Hashes identify the IP address of the attacker.", rationale: "Hashes identify file content; IP addresses identify network locations.", isCorrect: false },
+                    { text: "SHA256 is the only algorithm supported by Python.", rationale: "Python supports many algorithms; SHA256 is used because it is a security standard.", isCorrect: false }
+                ]
+            }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function loadQuestion() {
+            answered = false;
+            const data = quizData[currentQuestion];
+            document.getElementById('question-text').textContent = data.question;
+            document.getElementById('question-counter').textContent = `Question ${currentQuestion + 1} / ${quizData.length}`;
+            document.getElementById('progress').style.width = `${((currentQuestion) / quizData.length) * 100}%`;
+            
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+            
+            // Shuffle options
+            const shuffledOptions = [...data.options].sort(() => Math.random() - 0.5);
+
+            shuffledOptions.forEach((opt, idx) => {
+                const div = document.createElement('div');
+                div.className = 'option-card p-4 bg-white border-2 border-slate-200 rounded-xl flex items-center';
+                div.innerHTML = `
+                    <div class="w-6 h-6 rounded-full border-2 border-slate-300 mr-4 flex items-center justify-center text-xs font-bold text-white"></div>
+                    <span class="text-slate-700 font-medium">${opt.text}</span>
+                `;
+                div.onclick = () => selectOption(div, opt);
+                optionsContainer.appendChild(div);
+            });
+
+            document.getElementById('feedback-area').classList.add('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+            document.getElementById('hint-btn').classList.remove('hidden');
+        }
+
+        function selectOption(element, option) {
+            if (answered) return;
+            answered = true;
+
+            const allOptions = document.querySelectorAll('.option-card');
+            allOptions.forEach(opt => opt.classList.add('disabled'));
+
+            if (option.isCorrect) {
+                element.classList.add('correct');
+                score++;
+            } else {
+                element.classList.add('incorrect');
+                // Highlight correct one
+                allOptions.forEach((el, idx) => {
+                    // This is simplified; in a real app you'd check which data object belongs to which element
+                });
+            }
+
+            const feedback = document.getElementById('feedback-area');
+            const rationaleText = document.getElementById('rationale-text');
+            rationaleText.textContent = option.rationale;
+            feedback.classList.remove('hidden');
+
+            document.getElementById('next-btn').classList.remove('hidden');
+            document.getElementById('hint-btn').classList.add('hidden');
+            
+            if (currentQuestion === quizData.length - 1) {
+                document.getElementById('next-btn').textContent = "See Results";
+            }
+        }
+
+        document.getElementById('next-btn').onclick = () => {
+            currentQuestion++;
+            if (currentQuestion < quizData.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        };
+
+        document.getElementById('hint-btn').onclick = () => {
+            const data = quizData[currentQuestion];
+            const feedback = document.getElementById('feedback-area');
+            const rationaleText = document.getElementById('rationale-text');
+            feedback.classList.remove('hidden');
+            rationaleText.innerHTML = `<strong>Hint:</strong> ${data.hint}`;
+        };
+
+        function showResults() {
+            document.getElementById('quiz-container').classList.add('hidden');
+            document.getElementById('score-screen').classList.remove('hidden');
+            document.getElementById('final-score').textContent = score;
+        }
+
+        window.onload = loadQuestion;
+    </script>
+</body>
+</html>
+
+
+

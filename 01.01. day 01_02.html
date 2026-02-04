@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Threat Intelligence & Risk Management Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom styles for specific interactive elements */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc; /* Slate 50 */
+        }
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 2px;
+            background-color: #cbd5e1;
+            border: 2px solid #475569;
+            position: relative;
+        }
+        .matrix-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: rgba(0,0,0,0.4);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+        .risk-puck {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            position: absolute;
+            transform: translate(-50%, 50%);
+            transition: all 0.3s ease-out;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+        .cycle-step {
+            transition: all 0.3s ease;
+        }
+        .cycle-step:hover {
+            transform: scale(1.05);
+        }
+        .tab-active {
+            border-bottom: 2px solid #0ea5e9;
+            color: #0ea5e9;
+            font-weight: 600;
+        }
+        .tab-inactive {
+            color: #64748b;
+        }
+        .tab-inactive:hover {
+            color: #334155;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+    </style>
+    <!-- Chosen Palette: Clean Cyber - Light Slate/White background (#F8FAFC) with Slate text (#1E293B). Accents: Sky Blue (#0EA5E9) for primary actions, Emerald Green (#10B981) for safe/low risk, Amber (#F59E0B) for medium, Rose (#E11D48) for critical/high risk. -->
+    <!-- Application Structure Plan: The app is designed as a "Security Operations Center (SOC) Training Dashboard". It uses a top-level tabbed navigation to switch between four main modules: 
+         1. Intel HQ: Covers foundational concepts (Definition, Cycle, Types) using interactive cards and a cycle diagram.
+         2. Threat Monitor (SolarWinds): Uses a timeline and an interactive "IOC Scanner" tool (simulating the Python script) to teach technical intelligence.
+         3. Risk Lab: Focuses on the Risk Matrix. An interactive HTML grid allows users to manipulate Likelihood/Impact sliders to understand the formula.
+         4. War Room (Log4Shell): Applies the concepts to a crisis. Includes a "Risk Scorer" calculator (simulating the Bash script) where users toggle intelligence factors to see how risk scores change dynamically. 
+         This structure moves from theory (HQ) to practice (Monitor) to analysis (Lab) to synthesis (War Room), mirroring the learning journey. -->
+    <!-- Visualization & Content Choices:
+         - Intel Cycle: Interactive circular diagram (HTML/CSS) to show the feedback loop.
+         - SolarWinds Stats: Bar Chart (Chart.js) to show the scale of impact.
+         - Risk Matrix: Custom HTML Grid with absolute positioning for a "puck" to visualize Risk = Likelihood x Impact dynamically.
+         - Log4Shell Factors: Interactive Checklist that updates a score and progress bar, visualizing the "Bash Script" logic.
+         - IOC Scanner: Simple JS input/output simulation to demonstrate the "Python Script" logic without running actual code.
+         - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="text-slate-800">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-2">🛡️</span>
+                    <span class="font-bold text-xl tracking-tight text-slate-900">Managing Vulnerabilities |<span class="text-sky-500 font-normal">Threat Intell & Risk Management</span></span>
+                </div>
+                <div class="flex space-x-8 items-center hidden md:flex" id="nav-tabs">
+                    <button onclick="switchTab('intel-hq')" class="nav-btn tab-active px-3 py-2 text-sm font-medium" id="btn-intel-hq">Intel HQ</button>
+                    <button onclick="switchTab('threat-monitor')" class="nav-btn tab-inactive px-3 py-2 text-sm font-medium" id="btn-threat-monitor">Threat Monitor</button>
+                    <button onclick="switchTab('risk-lab')" class="nav-btn tab-inactive px-3 py-2 text-sm font-medium" id="btn-risk-lab">Risk Lab</button>
+                    <button onclick="switchTab('war-room')" class="nav-btn tab-inactive px-3 py-2 text-sm font-medium" id="btn-war-room">War Room</button>
+                </div>
+                <!-- Mobile menu button placeholder -->
+                <div class="flex items-center md:hidden">
+                    <button class="text-slate-500 hover:text-slate-700" onclick="alert('Please view on a larger screen for the best dashboard experience.')">☰</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- MODULE 1: INTEL HQ (CONCEPTS) -->
+        <section id="intel-hq" class="space-y-8 animate-fade-in">
+            <div class="bg-white rounded-lg shadow-sm p-6 border-l-4 border-sky-500">
+                <h1 class="text-2xl font-bold text-slate-900 mb-2">Intelligence Headquarters</h1>
+                <p class="text-slate-600">
+                    Welcome to the command center. Here, we transform raw <strong>Data</strong> into actionable <strong>Cyber Threat Intelligence (CTI)</strong>. 
+                    CTI isn't just reading news; it's a strategic process of understanding adversaries to make informed decisions.
+                    Explore the Intelligence Cycle and the different types of intelligence below.
+                </p>
+            </div>
+
+            <!-- The Intelligence Cycle -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">The Intelligence Cycle</h2>
+                    <p class="text-sm text-slate-500 mb-4">Click on any phase to view details.</p>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div onclick="showCycleInfo('direction')" class="cycle-step cursor-pointer bg-slate-50 border border-slate-200 p-4 rounded-lg hover:bg-sky-50 hover:border-sky-300 text-center">
+                            <div class="text-2xl mb-1">🧭</div>
+                            <div class="font-bold text-slate-700">1. Direction</div>
+                        </div>
+                        <div onclick="showCycleInfo('collection')" class="cycle-step cursor-pointer bg-slate-50 border border-slate-200 p-4 rounded-lg hover:bg-sky-50 hover:border-sky-300 text-center">
+                            <div class="text-2xl mb-1">📡</div>
+                            <div class="font-bold text-slate-700">2. Collection</div>
+                        </div>
+                        <div onclick="showCycleInfo('processing')" class="cycle-step cursor-pointer bg-slate-50 border border-slate-200 p-4 rounded-lg hover:bg-sky-50 hover:border-sky-300 text-center">
+                            <div class="text-2xl mb-1">⚙️</div>
+                            <div class="font-bold text-slate-700">3. Processing</div>
+                        </div>
+                        <div onclick="showCycleInfo('analysis')" class="cycle-step cursor-pointer bg-slate-50 border border-slate-200 p-4 rounded-lg hover:bg-sky-50 hover:border-sky-300 text-center">
+                            <div class="text-2xl mb-1">🧠</div>
+                            <div class="font-bold text-slate-700">4. Analysis</div>
+                        </div>
+                        <div onclick="showCycleInfo('dissemination')" class="cycle-step cursor-pointer bg-slate-50 border border-slate-200 p-4 rounded-lg hover:bg-sky-50 hover:border-sky-300 text-center">
+                            <div class="text-2xl mb-1">📢</div>
+                            <div class="font-bold text-slate-700">5. Dissemination</div>
+                        </div>
+                        <div onclick="showCycleInfo('feedback')" class="cycle-step cursor-pointer bg-slate-50 border border-slate-200 p-4 rounded-lg hover:bg-sky-50 hover:border-sky-300 text-center">
+                            <div class="text-2xl mb-1">🔄</div>
+                            <div class="font-bold text-slate-700">6. Feedback</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800 rounded-lg shadow p-6 text-white flex flex-col justify-center">
+                    <h3 id="cycle-title" class="text-2xl font-bold text-sky-400 mb-2">Select a Phase</h3>
+                    <p id="cycle-desc" class="text-slate-300 leading-relaxed">
+                        The intelligence cycle is a systematic, continuous process. Click on the phases to the left to understand how raw data becomes finished intelligence.
+                    </p>
+                    <div id="cycle-example" class="mt-4 p-3 bg-slate-700 rounded border-l-4 border-yellow-500 hidden">
+                        <span class="font-bold text-yellow-400">Example:</span> <span id="cycle-example-text"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Types of Intelligence -->
+            <div class="mt-8">
+                <h2 class="text-xl font-semibold mb-4 text-slate-800">Types of Threat Intelligence</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Strategic -->
+                    <div class="bg-white p-5 rounded-lg shadow border-t-4 border-purple-500 hover:shadow-lg transition">
+                        <h3 class="font-bold text-lg mb-2">Strategic</h3>
+                        <p class="text-xs font-semibold text-purple-600 uppercase mb-2">Audience: Executives</p>
+                        <p class="text-slate-600 text-sm mb-4">High-level trends, risk landscapes, and business impact. Long-term focus.</p>
+                        <div class="bg-slate-50 p-2 rounded text-xs text-slate-500 italic">
+                            "Ransomware attacks on healthcare increased 94%."
+                        </div>
+                    </div>
+                    <!-- Tactical -->
+                    <div class="bg-white p-5 rounded-lg shadow border-t-4 border-blue-500 hover:shadow-lg transition">
+                        <h3 class="font-bold text-lg mb-2">Tactical</h3>
+                        <p class="text-xs font-semibold text-blue-600 uppercase mb-2">Audience: Security Architects</p>
+                        <p class="text-slate-600 text-sm mb-4">TTPs (Tactics, Techniques, Procedures). Medium-term focus.</p>
+                        <div class="bg-slate-50 p-2 rounded text-xs text-slate-500 italic">
+                            "Group using stolen VPN credentials for initial access."
+                        </div>
+                    </div>
+                    <!-- Operational -->
+                    <div class="bg-white p-5 rounded-lg shadow border-t-4 border-green-500 hover:shadow-lg transition">
+                        <h3 class="font-bold text-lg mb-2">Operational</h3>
+                        <p class="text-xs font-semibold text-green-600 uppercase mb-2">Audience: Defenders / SOC</p>
+                        <p class="text-slate-600 text-sm mb-4">Specific details on imminent attacks. Short-term focus.</p>
+                        <div class="bg-slate-50 p-2 rounded text-xs text-slate-500 italic">
+                            "Scanning detected from IP 192.0.2.50."
+                        </div>
+                    </div>
+                    <!-- Technical -->
+                    <div class="bg-white p-5 rounded-lg shadow border-t-4 border-red-500 hover:shadow-lg transition">
+                        <h3 class="font-bold text-lg mb-2">Technical</h3>
+                        <p class="text-xs font-semibold text-red-600 uppercase mb-2">Audience: Malware Analysts</p>
+                        <p class="text-slate-600 text-sm mb-4">IOCs (Indicators of Compromise) like hashes and IPs. Immediate focus.</p>
+                        <div class="bg-slate-50 p-2 rounded text-xs text-slate-500 italic">
+                            "File Hash: e3b0c442... is TrickBot malware."
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 2: THREAT MONITOR (SOLARWINDS & IOCs) -->
+        <section id="threat-monitor" class="hidden space-y-8 animate-fade-in">
+            <div class="bg-white rounded-lg shadow-sm p-6 border-l-4 border-indigo-500">
+                <h1 class="text-2xl font-bold text-slate-900 mb-2">Threat Monitor: Case Study & Tools</h1>
+                <p class="text-slate-600">
+                    Analyze real-world application of CTI using the <strong>SolarWinds Supply Chain Attack</strong> as a case study. 
+                    Then, use the <strong>IOC Scanner</strong> to simulate how SOC analysts detect threats technically.
+                </p>
+            </div>
+
+            <!-- SolarWinds Case Study -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2 bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">SolarWinds Intelligence Timeline</h2>
+                    <div class="relative border-l-2 border-indigo-200 ml-3 space-y-8">
+                        <div class="ml-6 relative">
+                            <span class="absolute -left-9 bg-indigo-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">1</span>
+                            <h3 class="font-bold text-slate-800">Direction</h3>
+                            <p class="text-sm text-slate-600">FireEye detects breach. Question: "How did they get in?"</p>
+                        </div>
+                        <div class="ml-6 relative">
+                            <span class="absolute -left-9 bg-indigo-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">2</span>
+                            <h3 class="font-bold text-slate-800">Collection</h3>
+                            <p class="text-sm text-slate-600">Logs analyzed. Suspicious beacons to <code>avsvmcloud.com</code> found.</p>
+                        </div>
+                        <div class="ml-6 relative">
+                            <span class="absolute -left-9 bg-indigo-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">3</span>
+                            <h3 class="font-bold text-slate-800">Analysis</h3>
+                            <p class="text-sm text-slate-600">Determined nation-state supply chain attack via SolarWinds Orion updates.</p>
+                        </div>
+                        <div class="ml-6 relative">
+                            <span class="absolute -left-9 bg-indigo-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">4</span>
+                            <h3 class="font-bold text-slate-800">Dissemination</h3>
+                            <p class="text-sm text-slate-600">CISA Directive 21-01 issued. IOCs shared globally.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">SolarWinds Impact</h2>
+                    <div class="chart-container">
+                        <canvas id="solarwindsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive IOC Scanner -->
+            <div class="bg-slate-900 rounded-lg shadow-lg p-6 text-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-mono text-green-400">Terminal: IOC_Scanner.py</h2>
+                    <span class="text-xs bg-slate-700 px-2 py-1 rounded">Python Script Simulation</span>
+                </div>
+                <p class="mb-4 text-sm text-slate-400">
+                    Simulate checking system artifacts against a threat feed. Enter a Domain or IP to check against the database.
+                    <br>
+                    <span class="text-xs text-slate-500">Try: <code>avsvmcloud.com</code>, <code>192.0.2.50</code>, or <code>google.com</code></span>
+                </p>
+
+                <div class="flex space-x-2 mb-4">
+                    <span class="text-green-500 font-mono self-center">root@soc:~#</span>
+                    <input type="text" id="ioc-input" placeholder="Enter Domain or IP..." class="bg-slate-800 border border-slate-700 text-white px-3 py-2 rounded flex-1 font-mono focus:outline-none focus:border-green-500">
+                    <button onclick="runIOCScan()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-mono transition">SCAN</button>
+                </div>
+
+                <div id="scan-output" class="bg-black p-4 rounded font-mono text-sm min-h-[150px] border border-slate-700 overflow-y-auto">
+                    <div class="text-slate-500">Waiting for input...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 3: RISK LAB (RISK MATRIX) -->
+        <section id="risk-lab" class="hidden space-y-8 animate-fade-in">
+            <div class="bg-white rounded-lg shadow-sm p-6 border-l-4 border-amber-500">
+                <h1 class="text-2xl font-bold text-slate-900 mb-2">Risk Assessment Lab</h1>
+                <p class="text-slate-600">
+                    Understanding <strong>Risk = Likelihood × Impact</strong>. 
+                    Use the interactive matrix to visualize how different factors change the risk level. 
+                    Prioritization is key—you can't fix everything at once.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Controls -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-6 text-slate-800">Risk Calculator</h2>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="flex justify-between font-semibold text-slate-700 mb-2">
+                                <span>Likelihood</span>
+                                <span id="likelihood-val" class="text-blue-600">Low</span>
+                            </label>
+                            <input type="range" id="likelihood-slider" min="1" max="99" value="20" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                            <p class="text-xs text-slate-500 mt-1">Factors: Exploit Availability, Active Exploitation, Attack Surface.</p>
+                        </div>
+
+                        <div>
+                            <label class="flex justify-between font-semibold text-slate-700 mb-2">
+                                <span>Impact</span>
+                                <span id="impact-val" class="text-blue-600">Low</span>
+                            </label>
+                            <input type="range" id="impact-slider" min="1" max="99" value="20" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                            <p class="text-xs text-slate-500 mt-1">Factors: Data Confidentiality, System Availability, Reputation.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 p-4 bg-slate-50 rounded border border-slate-200">
+                        <h3 class="font-bold text-slate-800">Current Assessment:</h3>
+                        <div class="flex items-center mt-2">
+                            <div id="risk-badge" class="px-4 py-1 rounded-full text-white font-bold text-sm bg-green-500 mr-3">LOW RISK</div>
+                            <span id="risk-desc" class="text-sm text-slate-600">Monitor and fix when resources available.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Matrix Visualization -->
+                <div class="bg-white rounded-lg shadow p-6 flex flex-col items-center">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">Risk Matrix</h2>
+                    
+                    <div class="relative w-full max-w-[400px] aspect-square">
+                        <!-- Y-Axis Label -->
+                        <div class="absolute -left-8 top-1/2 -translate-y-1/2 -rotate-90 font-bold text-slate-500 tracking-widest text-xs">IMPACT</div>
+                        
+                        <!-- Grid -->
+                        <div class="matrix-grid w-full h-full rounded shadow-inner">
+                            <!-- Row 1 (High Impact) -->
+                            <div class="matrix-cell bg-yellow-200">Medium</div>
+                            <div class="matrix-cell bg-orange-300">High</div>
+                            <div class="matrix-cell bg-red-400">Critical</div>
+                            
+                            <!-- Row 2 (Med Impact) -->
+                            <div class="matrix-cell bg-green-200">Low</div>
+                            <div class="matrix-cell bg-yellow-200">Medium</div>
+                            <div class="matrix-cell bg-orange-300">High</div>
+                            
+                            <!-- Row 3 (Low Impact) -->
+                            <div class="matrix-cell bg-green-200">Low</div>
+                            <div class="matrix-cell bg-green-200">Low</div>
+                            <div class="matrix-cell bg-yellow-200">Medium</div>
+
+                            <!-- The Moving Puck -->
+                            <div id="risk-puck" class="risk-puck bg-slate-800" style="left: 20%; bottom: 20%;"></div>
+                        </div>
+
+                        <!-- X-Axis Label -->
+                        <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 font-bold text-slate-500 tracking-widest text-xs">LIKELIHOOD</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODULE 4: WAR ROOM (LOG4SHELL) -->
+        <section id="war-room" class="hidden space-y-8 animate-fade-in">
+            <div class="bg-white rounded-lg shadow-sm p-6 border-l-4 border-red-600">
+                <h1 class="text-2xl font-bold text-slate-900 mb-2">War Room: Log4Shell Simulation</h1>
+                <p class="text-slate-600">
+                    Apply intelligence-driven risk assessment to the <strong>Log4Shell (CVE-2021-44228)</strong> crisis. 
+                    Use the checklist below (simulating our Bash Script logic) to calculate the contextual risk score.
+                    See why a CVSS 10.0 becomes a global emergency when combined with active threat intel.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Log4Shell Context -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">Vulnerability Briefing</h2>
+                    <ul class="space-y-3 text-sm text-slate-600">
+                        <li class="flex items-start"><span class="mr-2">📁</span> <strong>Vulnerability:</strong> Apache Log4j RCE</li>
+                        <li class="flex items-start"><span class="mr-2">🔢</span> <strong>CVSS Score:</strong> 10.0 (Critical)</li>
+                        <li class="flex items-start"><span class="mr-2">💥</span> <strong>Impact:</strong> Complete System Takeover</li>
+                        <li class="flex items-start"><span class="mr-2">🌍</span> <strong>Scale:</strong> Millions of devices (AWS, iCloud, Minecraft)</li>
+                    </ul>
+                    <div class="mt-6">
+                        <h3 class="font-bold text-slate-800 mb-2">Why Prioritize?</h3>
+                        <p class="text-sm text-slate-600 mb-4">Without intelligence, every "Critical" bug looks the same. With intelligence, we see Log4Shell is a "Drop Everything" emergency.</p>
+                        <div class="chart-container h-48">
+                            <canvas id="log4jChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Scoring Tool -->
+                <div class="bg-slate-50 rounded-lg shadow border border-slate-200 p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-800">Intelligence Risk Scorer</h2>
+                    <p class="text-xs text-slate-500 mb-4">Select factors based on Threat Intelligence reports to calculate the Real-World Risk Score.</p>
+                    
+                    <div class="space-y-3 mb-6">
+                        <label class="flex items-center p-3 bg-white rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                            <input type="checkbox" id="chk-exploit-avail" class="w-5 h-5 text-red-600 rounded focus:ring-red-500" onchange="calculateWarRoomScore()">
+                            <div class="ml-3">
+                                <span class="block text-sm font-medium text-slate-900">Public Exploit Code Available?</span>
+                                <span class="block text-xs text-slate-500">+20 Points (GitHub, Metasploit)</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 bg-white rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                            <input type="checkbox" id="chk-active-exploit" class="w-5 h-5 text-red-600 rounded focus:ring-red-500" onchange="calculateWarRoomScore()">
+                            <div class="ml-3">
+                                <span class="block text-sm font-medium text-slate-900">Active Exploitation in Wild?</span>
+                                <span class="block text-xs text-slate-500">+30 Points (CISA KEV, Ransomware groups)</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 bg-white rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                            <input type="checkbox" id="chk-internet" class="w-5 h-5 text-red-600 rounded focus:ring-red-500" onchange="calculateWarRoomScore()">
+                            <div class="ml-3">
+                                <span class="block text-sm font-medium text-slate-900">Internet Facing System?</span>
+                                <span class="block text-xs text-slate-500">+15 Points (Broad attack surface)</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 bg-white rounded border border-slate-200 cursor-pointer hover:bg-slate-50">
+                            <input type="checkbox" id="chk-controls" class="w-5 h-5 text-green-600 rounded focus:ring-green-500" onchange="calculateWarRoomScore()">
+                            <div class="ml-3">
+                                <span class="block text-sm font-medium text-slate-900">Compensating Controls?</span>
+                                <span class="block text-xs text-slate-500">-25 Points (WAF, Segmentation)</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="border-t border-slate-200 pt-4">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-sm font-bold text-slate-600">Final Risk Score</span>
+                            <span id="final-score" class="text-3xl font-bold text-slate-800">0</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-4">
+                            <div id="score-bar" class="bg-slate-400 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <div id="action-recommendation" class="mt-4 p-3 bg-slate-100 rounded text-sm font-semibold text-slate-700 text-center">
+                            Select factors to see recommendations.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-800 text-slate-400 py-6 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-sm">© 2026 Cyber.SoHo Educational Division. All rights reserved.</p>
+            <p class="text-xs mt-2">Interactive Learning Platform | Managing Vulnerabilities Course</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- DATA & CONTENT ---
+        
+        // Threat Feed for IOC Scanner
+        const threatFeed = {
+            hashes: {
+                "32519b85c0b422e4656de6e6c41878e95fd95026267daab4215ee59c107d6c77": { name: "SUNBURST", actor: "APT29", desc: "SolarWinds Orion Backdoor" },
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": { name: "TrickBot", actor: "Wizard Spider", desc: "Banking Trojan" }
+            },
+            domains: {
+                "avsvmcloud.com": { severity: "HIGH", rec: "Block at Firewall" },
+                "freescanonline.com": { severity: "HIGH", rec: "Block at Firewall" }
+            },
+            ips: {
+                "192.0.2.50": { severity: "HIGH", rec: "Block and Investigate" },
+                "198.51.100.42": { severity: "HIGH", rec: "Block and Investigate" }
+            }
+        };
+
+        // --- NAVIGATION LOGIC ---
+        function switchTab(tabId) {
+            // Hide all sections
+            document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+
+            // Update button styles
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('tab-active');
+                btn.classList.add('tab-inactive');
+            });
+            document.getElementById('btn-' + tabId).classList.add('tab-active');
+            document.getElementById('btn-' + tabId).classList.remove('tab-inactive');
+
+            // Trigger chart resize
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        // --- MODULE 1: INTEL CYCLE LOGIC ---
+        const cycleInfo = {
+            'direction': { title: "1. Direction", desc: "Setting the goals. What do we need to know? E.g., 'Are ransomware groups targeting our specific industry?'", example: "Asking: 'How did attackers get into FireEye?'" },
+            'collection': { title: "2. Collection", desc: "Gathering raw data from sources like threat feeds, logs, dark web, and ISAC reports.", example: "Analyzing network logs and discovering suspicious beacons." },
+            'processing': { title: "3. Processing", desc: "Converting raw data into a usable format for analysis (decrypting, translating, organizing).", example: "Extracting file hashes and IPs from the logs." },
+            'analysis': { title: "4. Analysis", desc: "Making sense of the data. Identifying patterns, context, and meaning. Connecting the dots.", example: "Determining it was a nation-state supply chain attack." },
+            'dissemination': { title: "5. Dissemination", desc: "Sharing the finished intelligence with the right people (Execs, SOC, etc.) in the right format.", example: "Publishing IOCs and briefing government officials." },
+            'feedback': { title: "6. Feedback", desc: "Reviewing the process. Did the intel help? What new questions do we have?", example: "Organizations reporting successful remediation." }
+        };
+
+        function showCycleInfo(phase) {
+            const info = cycleInfo[phase];
+            document.getElementById('cycle-title').textContent = info.title;
+            document.getElementById('cycle-desc').textContent = info.desc;
+            document.getElementById('cycle-example-text').textContent = info.example;
+            document.getElementById('cycle-example').classList.remove('hidden');
+        }
+
+        // --- MODULE 2: CHART & IOC SCANNER LOGIC ---
+        let solarChart = null;
+        let log4jChart = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // SolarWinds Chart
+            const ctx1 = document.getElementById('solarwindsChart').getContext('2d');
+            solarChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Orgs Downloaded', 'Major Agencies Breached', 'Private Corps Compromised', 'Duration (Months)'],
+                    datasets: [{
+                        label: 'Impact Scale',
+                        data: [18000, 9, 100, 9],
+                        backgroundColor: ['#6366f1', '#ef4444', '#f59e0b', '#10b981']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, title: { display: true, text: 'SolarWinds Attack Metrics' } },
+                    scales: { y: { type: 'logarithmic', title: {display: true, text: 'Count (Log Scale)'} } }
+                }
+            });
+
+            // Log4j Chart (Doughnut)
+            const ctx2 = document.getElementById('log4jChart').getContext('2d');
+            log4jChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Enterprise Cloud Impacted', 'Safe'],
+                    datasets: [{
+                        data: [93, 7],
+                        backgroundColor: ['#ef4444', '#cbd5e1']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { title: { display: true, text: 'Environments Vulnerable to Log4Shell' } }
+                }
+            });
+        });
+
+        function runIOCScan() {
+            const input = document.getElementById('ioc-input').value.trim();
+            const outputDiv = document.getElementById('scan-output');
+            
+            if (!input) return;
+
+            // Generate timestamp
+            const time = new Date().toLocaleTimeString();
+            let resultHTML = `<div><span class="text-slate-500">[${time}]</span> Scanning: ${input}...</div>`;
+
+            // Check Logic
+            let detection = null;
+            if (threatFeed.hashes[input]) {
+                const data = threatFeed.hashes[input];
+                detection = `<span class="text-red-500 font-bold">CRITICAL THREAT DETECTED</span><br>Type: FILE HASH<br>Threat: ${data.name} (${data.actor})<br>Desc: ${data.desc}`;
+            } else if (threatFeed.domains[input.toLowerCase()]) {
+                const data = threatFeed.domains[input.toLowerCase()];
+                detection = `<span class="text-orange-500 font-bold">HIGH THREAT DETECTED</span><br>Type: DOMAIN<br>Severity: ${data.severity}<br>Rec: ${data.rec}`;
+            } else if (threatFeed.ips[input]) {
+                const data = threatFeed.ips[input];
+                detection = `<span class="text-orange-500 font-bold">HIGH THREAT DETECTED</span><br>Type: IP ADDRESS<br>Severity: ${data.severity}<br>Rec: ${data.rec}`;
+            } else {
+                detection = `<span class="text-green-500">CLEAN. No threats found in feed.</span>`;
+            }
+
+            resultHTML += `<div class="ml-4 mb-2 border-l-2 pl-2 border-slate-600">${detection}</div>`;
+            outputDiv.innerHTML = resultHTML + outputDiv.innerHTML;
+        }
+
+        // --- MODULE 3: RISK MATRIX LOGIC ---
+        const likelihoodSlider = document.getElementById('likelihood-slider');
+        const impactSlider = document.getElementById('impact-slider');
+        const puck = document.getElementById('risk-puck');
+        const riskBadge = document.getElementById('risk-badge');
+        const riskDesc = document.getElementById('risk-desc');
+        const lVal = document.getElementById('likelihood-val');
+        const iVal = document.getElementById('impact-val');
+
+        function updateRiskMatrix() {
+            const l = parseInt(likelihoodSlider.value);
+            const i = parseInt(impactSlider.value);
+
+            // Update Puck Position (Bottom-Left is 0,0)
+            puck.style.left = `${l}%`;
+            puck.style.bottom = `${i}%`;
+
+            // Update Labels
+            lVal.innerText = l < 33 ? "Low" : l < 66 ? "Medium" : "High";
+            iVal.innerText = i < 33 ? "Low" : i < 66 ? "Medium" : "High";
+
+            // Determine Risk
+            // Simple logic: Risk Score roughly L * I scaled to 100
+            // Or use grid regions
+            let riskLevel = "LOW";
+            let colorClass = "bg-green-500";
+            let desc = "Monitor and fix when resources available.";
+
+            // Approximate logic mirroring the matrix grid colors
+            if (i > 66) {
+                if (l > 66) { riskLevel = "CRITICAL"; colorClass = "bg-red-600"; desc = "FIX IMMEDIATELY. Incident Response."; }
+                else if (l > 33) { riskLevel = "HIGH"; colorClass = "bg-orange-500"; desc = "Urgent. Patch within 24-48 hours."; }
+                else { riskLevel = "MEDIUM"; colorClass = "bg-yellow-500"; desc = "Schedule remediation."; }
+            } else if (i > 33) {
+                if (l > 66) { riskLevel = "HIGH"; colorClass = "bg-orange-500"; desc = "Urgent. Patch within 24-48 hours."; }
+                else { riskLevel = "MEDIUM"; colorClass = "bg-yellow-500"; desc = "Schedule remediation."; }
+            } else {
+                if (l > 66) { riskLevel = "MEDIUM"; colorClass = "bg-yellow-500"; desc = "Schedule remediation."; }
+                else { riskLevel = "LOW"; colorClass = "bg-green-500"; desc = "Monitor. Fix during maintenance."; }
+            }
+
+            riskBadge.className = `px-4 py-1 rounded-full text-white font-bold text-sm mr-3 ${colorClass}`;
+            riskBadge.innerText = `${riskLevel} RISK`;
+            riskDesc.innerText = desc;
+        }
+
+        likelihoodSlider.addEventListener('input', updateRiskMatrix);
+        impactSlider.addEventListener('input', updateRiskMatrix);
+
+        // --- MODULE 4: RISK SCORING LOGIC (BASH SCRIPT) ---
+        function calculateWarRoomScore() {
+            const baseCVSS = 100; // Log4Shell is CVSS 10.0 -> 100 points
+            let score = baseCVSS;
+            let log = [];
+
+            // Factors
+            const hasExploit = document.getElementById('chk-exploit-avail').checked;
+            const isActive = document.getElementById('chk-active-exploit').checked;
+            const isInternet = document.getElementById('chk-internet').checked;
+            const hasControls = document.getElementById('chk-controls').checked;
+
+            // Logic from Bash Script
+            if (isActive) score += 30;
+            if (hasExploit) score += 20;
+            if (isInternet) score += 15;
+            if (hasControls) score -= 25;
+
+            // Caps
+            if (score > 100) score = 100;
+            if (score < 0) score = 0;
+
+            // Update UI
+            document.getElementById('final-score').innerText = score;
+            const bar = document.getElementById('score-bar');
+            bar.style.width = `${score}%`;
+
+            let recText = "";
+            let barColor = "";
+
+            if (score >= 80) {
+                barColor = "bg-red-600";
+                recText = "CRITICAL PRIORITY: Patch immediately (24h). Activate Incident Response. Consider taking offline.";
+            } else if (score >= 60) {
+                barColor = "bg-orange-500";
+                recText = "HIGH PRIORITY: Schedule emergency patching (48h). Increase monitoring.";
+            } else if (score >= 40) {
+                barColor = "bg-yellow-500";
+                recText = "MEDIUM PRIORITY: Patch within 7 days. Verify controls.";
+            } else {
+                barColor = "bg-green-500";
+                recText = "LOW PRIORITY: Patch during maintenance window. Monitor.";
+            }
+
+            bar.className = `h-4 rounded-full transition-all duration-500 ${barColor}`;
+            document.getElementById('action-recommendation').innerText = recText;
+        }
+        
+        // Initial setup
+        calculateWarRoomScore();
+
+    </script>
+</body>
+</html>
+
+

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 1: Vulnerability Intelligence Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Slate-50 */
+            color: #1e293b; /* Slate-800 */
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Scrollbar for internal panels */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 20px;
+        }
+
+        .tab-active {
+            border-bottom: 2px solid #2563eb; /* Blue-600 */
+            color: #2563eb;
+            font-weight: 600;
+        }
+
+        .step-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+    <!-- Chosen Palette: Slate & Blue (Light Background) - Professional, Clean, Academic -->
+    <!-- Application Structure Plan: Dashboard Layout. 
+         - Left/Top Sidebar: Navigation between major Lab Phases (Overview, Recon, Analysis, Reporting).
+         - Main Content Area: Dynamic content injection based on selected phase.
+         - Right Panel (Desktop): Persistent "Lab Status" with Progress Tracker and Charts (Grading/Weighting) to keep goals visible.
+         - Interaction: Task checklists update the progress bar. Interactive "Resource Cards" for external links. 
+         This structure transforms a linear document into a task-based workflow management tool. -->
+    <!-- Visualization & Content Choices: 
+         1. Grading Criteria -> Goal: Inform -> Radar Chart -> Interaction: Hover for details -> Chart.js (Good for comparing multiple metrics).
+         2. Lab Weighting -> Goal: Context -> Doughnut Chart -> Interaction: Simple Tooltip -> Chart.js.
+         3. Workflow Tasks -> Goal: Organize -> Interactive Checklists -> Javascript state management.
+         4. Process Flow -> Goal: Explain -> CSS Grid Diagram (No SVG) -> Javascript Highlights. 
+         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="min-h-screen flex flex-col md:flex-row">
+
+    <!-- Mobile Navigation -->
+    <div class="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center sticky top-0 z-50">
+        <h1 class="font-bold text-slate-800">Lab 01: Vulnerability Intel</h1>
+        <button id="mobile-menu-btn" class="text-slate-600 focus:outline-none">
+            &#9776; <!-- Hamburger Menu Unicode -->
+        </button>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar" class="hidden md:flex flex-col w-full md:w-64 bg-white border-r border-slate-200 h-screen sticky top-0 z-40">
+        <div class="p-6 border-b border-slate-100">
+            <h1 class="text-xl font-bold text-slate-800 tracking-tight">Cyber<span class="text-blue-600">Lab</span> Assistant</h1>
+            <p class="text-xs text-slate-500 mt-1">Managing Vulnerabilities</p>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1 px-3">
+                <li>
+                    <button onclick="app.navigate('overview')" class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-slate-50 text-slate-600 transition-colors tab-active" data-target="overview">
+                        &#128202; &nbsp; Overview & Objectives
+                    </button>
+                </li>
+                <li>
+                    <button onclick="app.navigate('part1')" class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-slate-50 text-slate-600 transition-colors" data-target="part1">
+                        &#128269; &nbsp; Part 1: Recon & DBs
+                    </button>
+                </li>
+                <li>
+                    <button onclick="app.navigate('part2')" class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-slate-50 text-slate-600 transition-colors" data-target="part2">
+                        &#129514; &nbsp; Part 2: Analysis & Intel
+                    </button>
+                </li>
+                <li>
+                    <button onclick="app.navigate('part3')" class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-slate-50 text-slate-600 transition-colors" data-target="part3">
+                        &#128196; &nbsp; Part 3: Synthesis
+                    </button>
+                </li>
+                <li>
+                    <button onclick="app.navigate('resources')" class="nav-item w-full text-left px-4 py-3 rounded-lg text-sm hover:bg-slate-50 text-slate-600 transition-colors" data-target="resources">
+                        &#128736; &nbsp; Tools & Resources
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="p-4 border-t border-slate-100 bg-slate-50">
+            <div class="text-xs font-semibold text-slate-500 uppercase mb-2">Lab Progress</div>
+            <div class="w-full bg-slate-200 rounded-full h-2.5 mb-1">
+                <div id="sidebar-progress" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-500">
+                <span id="progress-text">0% Complete</span>
+                <span>4 Hours Est.</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto h-screen" id="main-content">
+        <!-- Dynamic Content Injected Here -->
+    </main>
+
+    <!-- Right Sidebar (Context & Visuals) -->
+    <aside class="w-full md:w-80 bg-white border-l border-slate-200 h-auto md:h-screen overflow-y-auto sticky top-0 p-6 hidden xl:block">
+        <h3 class="font-bold text-slate-800 mb-4">Evaluation Metrics</h3>
+        <p class="text-sm text-slate-500 mb-4">Keep these criteria in mind while working.</p>
+        
+        <div class="mb-8">
+            <div class="chart-container">
+                <canvas id="gradingChart"></canvas>
+            </div>
+            <div class="text-xs text-center text-slate-400 mt-2">Evaluation Breakdown</div>
+        </div>
+
+        <h3 class="font-bold text-slate-800 mb-4">Workload Distribution</h3>
+        <div class="mb-8">
+            <div class="chart-container" style="height: 200px;">
+                <canvas id="weightingChart"></canvas>
+            </div>
+            <div class="text-xs text-center text-slate-400 mt-2">1-2-1 Ponderation</div>
+        </div>
+
+        <div class="bg-blue-50 border border-blue-100 rounded-lg p-4">
+            <h4 class="font-bold text-blue-800 text-sm mb-2">&#9888; Critical Disclaimer</h4>
+            <p class="text-xs text-blue-700 leading-relaxed">
+                Perform ALL activities ONLY within authorized environments. Unauthorized access is illegal. Use these skills EXCLUSIVELY for defensive purposes.
+            </p>
+        </div>
+    </aside>
+
+    <script>
+        // --- DATA & CONTENT ---
+        const labData = {
+            overview: {
+                title: "Laboratory Overview",
+                intro: "Welcome to Lab 1. This dashboard is designed to guide you through the process of exploring Open Source Intelligence (OSINT), analyzing CISA alerts, and navigating CVE databases. The visualizations on the right (desktop) or below (mobile) help you understand how your work will be evaluated.",
+                objectives: [
+                    "Gather threat intelligence from public sources",
+                    "Navigate CVE databases (NVD)",
+                    "Interpret CISA alerts",
+                    "Assess vulnerability severity",
+                    "Create a vulnerability assessment workflow"
+                ],
+                requirements: {
+                    duration: "4 hours maximum",
+                    level: "Intermediate",
+                    report: "Max 4 pages A4"
+                }
+            },
+            part1: {
+                title: "Part 1: Initial Reconnaissance",
+                intro: "In this phase, you will familiarize yourself with the foundational databases of vulnerability management: the NVD and CISA's KEV catalog. This section accounts for 25% of your grade.",
+                steps: [
+                    {
+                        id: "1.1",
+                        title: "NVD Navigation",
+                        desc: "Explore the National Vulnerability Database.",
+                        tasks: [
+                            "Locate a recent CVE (last 30 days)",
+                            "Document: ID, CVSS score, CWE, Product, Patches",
+                            "Find a High Severity CVE (CVSS > 7.0)",
+                            "Screenshot: Complete CVE Entry",
+                            "Screenshot: CVSS Score breakdown",
+                            "Write brief explanation of significance"
+                        ],
+                        link: "https://nvd.nist.gov"
+                    },
+                    {
+                        id: "1.2",
+                        title: "CISA KEV Catalog",
+                        desc: "Analyze Known Exploited Vulnerabilities.",
+                        tasks: [
+                            "Identify 3 vulnerabilities added in last 60 days",
+                            "Document: CVE ID, Vendor, Date Added, Deadline",
+                            "Cross-reference one entry with NVD",
+                            "Document additional info found in NVD",
+                            "Screenshot: KEV search results"
+                        ],
+                        link: "https://www.cisa.gov/known-exploited-vulnerabilities-catalog"
+                    }
+                ]
+            },
+            part2: {
+                title: "Part 2: In-Depth Analysis",
+                intro: "This is the core of the lab (50% weight). You will move from passive observation to active intelligence gathering and deep-dive analysis.",
+                steps: [
+                    {
+                        id: "2.1",
+                        title: "OSINT Aggregation",
+                        desc: "Set up your listening posts.",
+                        tasks: [
+                            "Configure an aggregator (Feedly, etc.)",
+                            "Monitor 3+ sources (CISA, Vendors, Reddit)",
+                            "Collect data for 24-48 hours",
+                            "Identify trends (Recurring themes? Specific vendors?)",
+                            "Create spreadsheet with 10+ items",
+                            "Screenshot: Aggregation tool view",
+                            "Screenshot: The spreadsheet"
+                        ]
+                    },
+                    {
+                        id: "2.2",
+                        title: "Deep Dive Analysis",
+                        desc: "Select ONE relevant vulnerability for comprehensive study.",
+                        tasks: [
+                            "Investigate Technical Details (Type, Vector, Impact)",
+                            "Search for PoC (GitHub, Exploit-DB) - DO NOT RUN",
+                            "Research Mitigations (Patches, Workarounds)",
+                            "Assess Organizational Impact (Hypothetical)",
+                            "Write detailed 1-2 page analysis",
+                            "Screenshot: PoC search results",
+                            "Screenshot: Vendor advisory"
+                        ]
+                    },
+                    {
+                        id: "2.3",
+                        title: "Correlation & Prioritization",
+                        desc: "Synthesize your findings into a framework.",
+                        tasks: [
+                            "Develop a prioritization framework",
+                            "Consider: CVSS, CISA KEV status, Exploit availability, Business impact",
+                            "Rank your researched vulnerabilities",
+                            "Justify your ranking vs. raw CVSS scores"
+                        ]
+                    }
+                ]
+            },
+            part3: {
+                title: "Part 3: Synthesis & Reporting",
+                intro: "Communication is a critical security skill. You will now translate technical findings into actionable business intelligence.",
+                steps: [
+                    {
+                        id: "3.1",
+                        title: "Executive Summary",
+                        desc: "For the non-technical administrator.",
+                        tasks: [
+                            "Write max 0.5 page summary",
+                            "Highlight most critical threat",
+                            "Explain business impact (no jargon)",
+                            "Provide actionable recommendations"
+                        ]
+                    },
+                    {
+                        id: "3.2",
+                        title: "Technical Appendix",
+                        desc: "For the technical colleague.",
+                        tasks: [
+                            "List tools used (versions)",
+                            "Document step-by-step methodology",
+                            "List data sources",
+                            "Note challenges & solutions",
+                            "Suggest workflow improvements"
+                        ]
+                    },
+                    {
+                        id: "3.3",
+                        title: "Reflection",
+                        desc: "Personal learning analysis.",
+                        tasks: [
+                            "What surprised you?",
+                            "Skills needed to develop?",
+                            "Application in professional role?",
+                            "Future tools to explore?"
+                        ]
+                    }
+                ]
+            },
+            resources: {
+                title: "Tools & Resources",
+                intro: "A curated list of approved tools for this laboratory. Students are encouraged to explore alternatives.",
+                categories: [
+                    {
+                        name: "Databases",
+                        items: [
+                            { name: "NVD", desc: "National Vulnerability Database", url: "https://nvd.nist.gov" },
+                            { name: "CISA KEV", desc: "Known Exploited Vulnerabilities", url: "https://www.cisa.gov/known-exploited-vulnerabilities-catalog" },
+                            { name: "CVE Details", desc: "Advanced CVE Search", url: "https://www.cvedetails.com" },
+                            { name: "Vulners", desc: "Aggregated DB with API", url: "https://vulners.com" }
+                        ]
+                    },
+                    {
+                        name: "Aggregators & Intel",
+                        items: [
+                            { name: "Feedly", desc: "RSS Aggregator", url: "https://feedly.com" },
+                            { name: "MISP", desc: "Malware Info Sharing", url: "https://www.misp-project.org" },
+                            { name: "OpenCTI", desc: "Threat Intel Platform", url: "https://www.opencti.io" }
+                        ]
+                    },
+                    {
+                        name: "Exploit Research (Look Only)",
+                        items: [
+                            { name: "Exploit-DB", desc: "Archive of Exploits", url: "https://www.exploit-db.com" },
+                            { name: "Packet Storm", desc: "Security News & Exploits", url: "https://packetstormsecurity.com" }
+                        ]
+                    }
+                ]
+            }
+        };
+
+        // --- APP LOGIC ---
+        const app = {
+            state: {
+                currentView: 'overview',
+                completedTasks: new Set()
+            },
+
+            init() {
+                this.renderView('overview');
+                this.initCharts();
+                this.setupMobileMenu();
+                // Load progress from localStorage if exists
+                const saved = localStorage.getItem('lab1_progress');
+                if (saved) {
+                    this.state.completedTasks = new Set(JSON.parse(saved));
+                    this.updateProgress();
+                    // Re-render to show checked boxes if we are on a page with tasks
+                    this.renderView('overview'); 
+                }
+            },
+
+            navigate(viewId) {
+                this.state.currentView = viewId;
+                
+                // Update Sidebar Styles
+                document.querySelectorAll('.nav-item').forEach(el => {
+                    if(el.dataset.target === viewId) {
+                        el.classList.add('tab-active', 'bg-slate-50');
+                    } else {
+                        el.classList.remove('tab-active', 'bg-slate-50');
+                    }
+                });
+
+                this.renderView(viewId);
+                // Close mobile menu if open
+                document.getElementById('sidebar').classList.add('hidden');
+            },
+
+            toggleTask(taskId) {
+                if (this.state.completedTasks.has(taskId)) {
+                    this.state.completedTasks.delete(taskId);
+                } else {
+                    this.state.completedTasks.add(taskId);
+                }
+                this.updateProgress();
+                localStorage.setItem('lab1_progress', JSON.stringify([...this.state.completedTasks]));
+            },
+
+            updateProgress() {
+                // Count total tasks
+                let total = 0;
+                ['part1', 'part2', 'part3'].forEach(part => {
+                    labData[part].steps.forEach(step => total += step.tasks.length);
+                });
+                
+                const current = this.state.completedTasks.size;
+                const percent = Math.round((current / total) * 100);
+                
+                document.getElementById('sidebar-progress').style.width = `${percent}%`;
+                document.getElementById('progress-text').innerText = `${percent}% Complete`;
+            },
+
+            renderView(viewId) {
+                const content = document.getElementById('main-content');
+                const data = labData[viewId];
+                
+                if (!data) return;
+
+                let html = `
+                    <div class="max-w-4xl mx-auto">
+                        <header class="mb-8">
+                            <h2 class="text-3xl font-bold text-slate-900 mb-2">${data.title}</h2>
+                            <p class="text-slate-600 text-lg leading-relaxed border-l-4 border-blue-500 pl-4 bg-white p-4 rounded-r shadow-sm">${data.intro}</p>
+                        </header>
+                `;
+
+                if (viewId === 'overview') {
+                    html += this.renderOverview(data);
+                } else if (viewId === 'resources') {
+                    html += this.renderResources(data);
+                } else {
+                    html += this.renderSteps(data);
+                }
+
+                html += `</div>`;
+                content.innerHTML = html;
+            },
+
+            renderOverview(data) {
+                return `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <h3 class="font-bold text-slate-800 mb-4 flex items-center">&#127919; Learning Objectives</h3>
+                            <ul class="space-y-3">
+                                ${data.objectives.map(obj => `<li class="flex items-start text-sm text-slate-600"><span class="mr-2 text-blue-500">&#10003;</span> ${obj}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                            <h3 class="font-bold text-slate-800 mb-4 flex items-center">&#128221; Requirements</h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between border-b border-slate-100 pb-2">
+                                    <span class="text-sm text-slate-500">Duration</span>
+                                    <span class="text-sm font-semibold text-slate-700">${data.requirements.duration}</span>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-100 pb-2">
+                                    <span class="text-sm text-slate-500">Difficulty</span>
+                                    <span class="text-sm font-semibold text-slate-700">${data.requirements.level}</span>
+                                </div>
+                                <div class="flex justify-between border-b border-slate-100 pb-2">
+                                    <span class="text-sm text-slate-500">Report</span>
+                                    <span class="text-sm font-semibold text-slate-700">${data.requirements.report}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile Chart Placeholder -->
+                    <div class="xl:hidden block mb-8">
+                         <div class="bg-white p-4 rounded-xl border border-slate-200">
+                            <h4 class="font-bold text-slate-700 mb-2 text-center">Evaluation Metrics</h4>
+                            <div class="chart-container" style="height: 250px">
+                                <canvas id="mobileGradingChart"></canvas>
+                            </div>
+                         </div>
+                    </div>
+
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+                        <h3 class="font-bold text-yellow-800 mb-2">&#9888; Safety First</h3>
+                        <p class="text-sm text-yellow-700">This exercise mimics real-world assessments. Never scan systems you don't own. Use skills only for defensive purposes. You bear full responsibility for your actions.</p>
+                    </div>
+                `;
+            },
+
+            renderSteps(data) {
+                return `
+                    <div class="space-y-6">
+                        ${data.steps.map((step, index) => `
+                            <div class="step-card bg-white rounded-xl border border-slate-200 overflow-hidden">
+                                <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                    <div>
+                                        <span class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1 block">Step ${step.id}</span>
+                                        <h3 class="text-xl font-bold text-slate-800">${step.title}</h3>
+                                        <p class="text-sm text-slate-500">${step.desc}</p>
+                                    </div>
+                                    ${step.link ? `<a href="${step.link}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm font-semibold flex items-center">Open Resource &rarr;</a>` : ''}
+                                </div>
+                                <div class="p-6">
+                                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Task Checklist</h4>
+                                    <div class="space-y-3">
+                                        ${step.tasks.map((task, i) => {
+                                            const uniqueId = `${step.id}-${i}`;
+                                            const isChecked = this.state.completedTasks.has(uniqueId) ? 'checked' : '';
+                                            return `
+                                                <label class="flex items-start space-x-3 cursor-pointer group">
+                                                    <input type="checkbox" class="mt-1 form-checkbox h-5 w-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 transition duration-150 ease-in-out" 
+                                                        onchange="app.toggleTask('${uniqueId}')" ${isChecked}>
+                                                    <span class="text-sm text-slate-700 group-hover:text-slate-900 leading-relaxed select-none transition-colors">${task}</span>
+                                                </label>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            },
+
+            renderResources(data) {
+                return `
+                    <div class="space-y-8">
+                        ${data.categories.map(cat => `
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">${cat.name}</h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    ${cat.items.map(item => `
+                                        <a href="${item.url}" target="_blank" class="block bg-white border border-slate-200 rounded-lg p-4 hover:border-blue-400 hover:shadow-md transition-all group">
+                                            <div class="flex justify-between items-center mb-2">
+                                                <h4 class="font-bold text-slate-800 group-hover:text-blue-600">${item.name}</h4>
+                                                <span class="text-slate-400 group-hover:text-blue-500">&#8599;</span>
+                                            </div>
+                                            <p class="text-sm text-slate-500">${item.desc}</p>
+                                        </a>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            },
+
+            initCharts() {
+                // Grading Radar Chart Config
+                const gradingConfig = {
+                    type: 'radar',
+                    data: {
+                        labels: ['Completeness', 'Tech Accuracy', 'Critical Thinking', 'Documentation'],
+                        datasets: [{
+                            label: 'Evaluation Criteria',
+                            data: [40, 25, 20, 15],
+                            fill: true,
+                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            borderColor: 'rgb(37, 99, 235)',
+                            pointBackgroundColor: 'rgb(37, 99, 235)',
+                            pointBorderColor: '#fff',
+                            pointHoverBackgroundColor: '#fff',
+                            pointHoverBorderColor: 'rgb(37, 99, 235)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            r: {
+                                angleLines: { display: false },
+                                suggestedMin: 0,
+                                suggestedMax: 50
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                };
+
+                // Desktop Radar
+                const ctxGrading = document.getElementById('gradingChart').getContext('2d');
+                new Chart(ctxGrading, gradingConfig);
+                
+                // Mobile Radar (rendered initially but might be hidden)
+                const mobileCanvas = document.getElementById('mobileGradingChart');
+                if(mobileCanvas) {
+                    new Chart(mobileCanvas.getContext('2d'), gradingConfig);
+                }
+
+                // Weighting Doughnut Chart
+                const ctxWeighting = document.getElementById('weightingChart').getContext('2d');
+                new Chart(ctxWeighting, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Part 1 (Recon)', 'Part 2 (Analysis)', 'Part 3 (Synthesis)'],
+                        datasets: [{
+                            data: [25, 50, 25],
+                            backgroundColor: [
+                                'rgb(148, 163, 184)', // Slate 400
+                                'rgb(37, 99, 235)',  // Blue 600
+                                'rgb(96, 165, 250)'  // Blue 400
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { boxWidth: 10, font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+            },
+
+            setupMobileMenu() {
+                const btn = document.getElementById('mobile-menu-btn');
+                const sidebar = document.getElementById('sidebar');
+                btn.addEventListener('click', () => {
+                    sidebar.classList.toggle('hidden');
+                    sidebar.classList.toggle('fixed');
+                    sidebar.classList.toggle('inset-0');
+                    sidebar.classList.toggle('z-40');
+                    // Ensure full screen overlay style for mobile
+                    if (!sidebar.classList.contains('hidden')) {
+                        sidebar.classList.add('bg-white');
+                    }
+                });
+            }
+        };
+
+        // Start App
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
+
+
+
