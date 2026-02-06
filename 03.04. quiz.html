@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Security Frameworks Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .option-btn { transition: all 0.2s; }
+        .option-btn:hover:not(:disabled) { transform: translateY(-2px); shadow: lg; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex items-center justify-center p-4">
+
+    <div class="max-w-2xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200" id="app-container">
+        
+        <!-- Start Screen -->
+        <div id="start-screen" class="p-8 text-center fade-in">
+            <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span class="text-4xl">🎓</span>
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-900 mb-4">Cyber Frameworks Mastery</h1>
+            <p class="text-slate-600 mb-8 leading-relaxed">
+                Test your knowledge of the <strong>Cyber Kill Chain</strong>, <strong>Diamond Model</strong>, and <strong>MITRE ATT&CK</strong>. 
+                <br>10 Questions • Immediate Feedback
+            </p>
+            <button onclick="startQuiz()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all transform hover:scale-105">
+                Start Quiz
+            </button>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden flex flex-col min-h-[500px]">
+            <!-- Progress Bar -->
+            <div class="bg-slate-100 h-2 w-full">
+                <div id="progress-bar" class="bg-blue-600 h-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+
+            <!-- Header -->
+            <div class="px-8 pt-8 pb-4 flex justify-between items-center border-b border-slate-100">
+                <span class="text-xs font-bold tracking-wider text-slate-400 uppercase">Question <span id="q-current">1</span> of <span id="q-total">10</span></span>
+                <span id="score-display" class="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">Score: 0</span>
+            </div>
+
+            <!-- Question Area -->
+            <div class="p-8 flex-grow fade-in" id="question-container">
+                <h2 id="question-text" class="text-xl font-bold text-slate-800 mb-6 leading-snug"></h2>
+                
+                <!-- Hint Button -->
+                <button onclick="toggleHint()" class="text-xs font-semibold text-amber-600 hover:text-amber-700 mb-6 flex items-center focus:outline-none">
+                    <span class="mr-1">💡</span> Show Hint
+                </button>
+                <div id="hint-box" class="hidden mb-6 bg-amber-50 border-l-4 border-amber-400 p-3 text-sm text-amber-800 italic rounded-r"></div>
+
+                <!-- Options -->
+                <div id="options-list" class="space-y-3"></div>
+
+                <!-- Rationale / Feedback -->
+                <div id="feedback-area" class="hidden mt-6 p-4 rounded-xl border">
+                    <div class="flex items-start">
+                        <div id="feedback-icon" class="text-2xl mr-3"></div>
+                        <div>
+                            <h3 id="feedback-title" class="font-bold mb-1"></h3>
+                            <p id="feedback-text" class="text-sm leading-relaxed opacity-90"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-6 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button id="next-btn" onclick="nextQuestion()" class="hidden bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center">
+                    Next Question <span class="ml-2">→</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="hidden p-8 text-center fade-in">
+            <div id="result-emoji" class="text-6xl mb-4"></div>
+            <h2 class="text-3xl font-bold text-slate-900 mb-2">Quiz Complete!</h2>
+            <p class="text-slate-500 mb-8">You scored <span id="final-score" class="font-bold text-blue-600 text-xl"></span> out of <span id="total-score" class="font-bold"></span></p>
+            
+            <div class="bg-slate-50 rounded-xl p-6 mb-8 border border-slate-200">
+                <p id="result-message" class="text-slate-700 font-medium"></p>
+            </div>
+
+            <button onclick="resetQuiz()" class="bg-white border-2 border-slate-200 hover:border-blue-500 hover:text-blue-600 text-slate-600 font-bold py-3 px-8 rounded-xl transition-all">
+                Retake Quiz
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        const questions = [
+            {
+                "question": "According to the Cyber Kill Chain principle, what must a defender do to prevent an attack from succeeding?",
+                "options": [
+                    { "text": "Stop the attacker at every single phase", "correct": false, "rationale": "Ideally yes, but the core principle emphasizes that you don't NEED to stop them everywhere to win." },
+                    { "text": "Break the chain at just one link", "correct": true, "rationale": "The framework's core principle states that defenders only need to disrupt the attack sequence at a single point to stop the entire operation." },
+                    { "text": "Identify the attacker's identity first", "correct": false, "rationale": "Attribution is useful but not required to stop the attack mechanism itself." },
+                    { "text": "Allow the attack to complete to gather intel", "correct": false, "rationale": "This contradicts prevention; the goal is to neutralize the threat before objectives are achieved." }
+                ],
+                "hint": "Think about the structural weakness of a chain; it relies on the integrity of all its parts to hold together."
+            },
+            {
+                "question": "In the Cyber Kill Chain, which phase involves the transmission of a weaponized payload to the victim?",
+                "options": [
+                    { "text": "Exploitation", "correct": false, "rationale": "Exploitation is the triggering of the vulnerability after arrival." },
+                    { "text": "Weaponization", "correct": false, "rationale": "Weaponization happens offline before the package is sent." },
+                    { "text": "Delivery", "correct": true, "rationale": "This phase is specifically defined as the transmission (via email, USB, web) of the malware to the target." },
+                    { "text": "Installation", "correct": false, "rationale": "Installation occurs after the exploit succeeds." }
+                ],
+                "hint": "This phase acts as the courier service for the malicious package."
+            },
+            {
+                "question": "Which framework is designed to answer: 'Who is involved and how are they connected?'",
+                "options": [
+                    { "text": "Cyber Kill Chain", "correct": false, "rationale": "Focuses on sequential timeline, not relationships." },
+                    { "text": "MITRE ATT&CK", "correct": false, "rationale": "Focuses on technical behaviors and detection rules." },
+                    { "text": "Diamond Model", "correct": true, "rationale": "Specifically maps relationships between Adversary, Capability, Infrastructure, and Victim." },
+                    { "text": "NIST CSF", "correct": false, "rationale": "A policy/risk framework, not an intrusion analysis model." }
+                ],
+                "hint": "This model uses a geometric shape with four vertices."
+            },
+            {
+                "question": "In the Diamond Model, linking a malicious domain (Infrastructure) to the malware hosted on it reveals which vertex?",
+                "options": [
+                    { "text": "Capability", "correct": true, "rationale": "Malware, exploits, and tools are classified as Capability." },
+                    { "text": "Victim", "correct": false, "rationale": "The Victim is the target, not the tool." },
+                    { "text": "Adversary", "correct": false, "rationale": "Capability leads to Adversary, but the immediate link from Infrastructure is to the tool used." },
+                    { "text": "Phase", "correct": false, "rationale": "Phase is a meta-feature, not a core vertex." }
+                ],
+                "hint": "Think about what the 'tool' or 'weapon' is called in this model."
+            },
+            {
+                "question": "How does MITRE ATT&CK organize its hierarchy?",
+                "options": [
+                    { "text": "Phases -> Steps -> Actions", "correct": false, "rationale": "Generic terminology, not MITRE specific." },
+                    { "text": "Tactics -> Techniques -> Sub-Techniques", "correct": true, "rationale": "Tactics (Goal) -> Techniques (Method) -> Sub-Techniques (Specific Variation)." },
+                    { "text": "Actors -> Tools -> Infrastructure", "correct": false, "rationale": "These are Diamond Model vertices." },
+                    { "text": "Recon -> Weaponization -> Delivery", "correct": false, "rationale": "These are Kill Chain phases." }
+                ],
+                "hint": "Moves from the high-level 'Why' to the specific 'How'."
+            },
+            {
+                "question": "What is the primary purpose of the 'Weaponization' phase?",
+                "options": [
+                    { "text": "To exploit a vulnerability", "correct": false, "rationale": "That is the Exploitation phase." },
+                    { "text": "To package exploit + payload offline", "correct": true, "rationale": "It is the offline preparation where the attacker builds the deliverable file." },
+                    { "text": "To gather target info", "correct": false, "rationale": "That is Reconnaissance." },
+                    { "text": "To establish remote command", "correct": false, "rationale": "That is Command & Control (C2)." }
+                ],
+                "hint": "Happens in the attacker's lab before touching the victim network."
+            },
+            {
+                "question": "Which analogy best describes Command and Control (C2)?",
+                "options": [
+                    { "text": "Flyer on windshield", "correct": false, "rationale": "Analogy for Delivery." },
+                    { "text": "Burglar with an earpiece", "correct": true, "rationale": "The compromised system (burglar) gets real-time instructions from the attacker (earpiece)." },
+                    { "text": "Driving past a venue", "correct": false, "rationale": "Analogy for Reconnaissance." },
+                    { "text": "Spare key under doormat", "correct": false, "rationale": "Analogy for Installation/Persistence." }
+                ],
+                "hint": "Maintains a line of communication for instructions."
+            },
+            {
+                "question": "What are 'visibility gaps' in MITRE ATT&CK?",
+                "options": [
+                    { "text": "Techniques with no detection rules", "correct": true, "rationale": "Blind spots where you cannot see specific adversary behaviors." },
+                    { "text": "Failed Kill Chain phases", "correct": false, "rationale": "Not the definition of a gap analysis." },
+                    { "text": "Untrained employees", "correct": false, "rationale": "A training gap, not a detection gap." },
+                    { "text": "Unpatched software", "correct": false, "rationale": "A vulnerability, not a visibility gap." }
+                ],
+                "hint": "Think of the red/green matrix."
+            },
+            {
+                "question": "In unified analysis, what is the role of the Diamond Model?",
+                "options": [
+                    { "text": "Determine exact timestamp", "correct": false, "rationale": "Just a meta-feature." },
+                    { "text": "Link Script to Infra and Adversary", "correct": true, "rationale": "It acts as the relationship mapper connecting the 'what', 'where', and 'who'." },
+                    { "text": "Provide detection rule IDs", "correct": false, "rationale": "Role of MITRE ATT&CK." },
+                    { "text": "Identify sequential phase", "correct": false, "rationale": "Role of Kill Chain." }
+                ],
+                "hint": "The 'relationship mapper'."
+            },
+            {
+                "question": "What is the correct formula for 'Weaponization'?",
+                "options": [
+                    { "text": "Weapon = Exploit + Payload + Disguise", "correct": true, "rationale": "Method of entry + Malicious action + Camouflage." },
+                    { "text": "Weapon = Phishing + Malware + Email", "correct": false, "rationale": "Specific delivery method examples, not the formula." },
+                    { "text": "Weapon = Vulnerability + Patch + Target", "correct": false, "rationale": "Mixes defensive terms." },
+                    { "text": "Weapon = Recon + Delivery + Action", "correct": false, "rationale": "Lists separate phases." }
+                ],
+                "hint": "Break in, do damage, hide it."
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
+
+        // Shuffle function
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Initialize
+        questions.forEach(q => shuffle(q.options));
+
+        function startQuiz() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('quiz-screen').classList.remove('hidden');
+            document.getElementById('q-total').innerText = questions.length;
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            answered = false;
+            document.getElementById('feedback-area').classList.add('hidden');
+            document.getElementById('next-btn').classList.add('hidden');
+            document.getElementById('hint-box').classList.add('hidden');
+            document.getElementById('question-container').classList.remove('fade-in');
+            void document.getElementById('question-container').offsetWidth; // trigger reflow
+            document.getElementById('question-container').classList.add('fade-in');
+
+            const q = questions[currentQuestionIndex];
+            document.getElementById('q-current').innerText = currentQuestionIndex + 1;
+            document.getElementById('question-text').innerText = q.question;
+            document.getElementById('hint-box').innerText = q.hint;
+
+            // Update Progress Bar
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+
+            const optionsList = document.getElementById('options-list');
+            optionsList.innerHTML = '';
+
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn w-full text-left p-4 rounded-xl border-2 border-slate-100 bg-white hover:border-blue-200 hover:bg-slate-50 font-medium text-slate-700`;
+                btn.innerText = opt.text;
+                btn.onclick = () => checkAnswer(btn, opt);
+                optionsList.appendChild(btn);
+            });
+        }
+
+        function toggleHint() {
+            document.getElementById('hint-box').classList.toggle('hidden');
+        }
+
+        function checkAnswer(btn, option) {
+            if (answered) return;
+            answered = true;
+
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(b => {
+                b.disabled = true;
+                b.classList.add('opacity-70');
+            });
+
+            const feedbackArea = document.getElementById('feedback-area');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackText = document.getElementById('feedback-text');
+            const feedbackIcon = document.getElementById('feedback-icon');
+
+            feedbackArea.classList.remove('hidden');
+            document.getElementById('next-btn').classList.remove('hidden');
+
+            if (option.correct) {
+                score++;
+                document.getElementById('score-display').innerText = `Score: ${score}`;
+                btn.classList.remove('border-slate-100', 'hover:border-blue-200', 'bg-white', 'opacity-70');
+                btn.classList.add('bg-emerald-100', 'border-emerald-500', 'text-emerald-900', 'opacity-100');
+                
+                feedbackArea.className = "mt-6 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900 fade-in";
+                feedbackIcon.innerText = "✅";
+                feedbackTitle.innerText = "Correct!";
+            } else {
+                btn.classList.remove('border-slate-100', 'hover:border-blue-200', 'bg-white', 'opacity-70');
+                btn.classList.add('bg-rose-100', 'border-rose-500', 'text-rose-900', 'opacity-100');
+
+                // Highlight correct answer
+                const correctBtn = Array.from(buttons).find(b => {
+                    const txt = b.innerText;
+                    return questions[currentQuestionIndex].options.find(o => o.text === txt && o.correct);
+                });
+                if (correctBtn) {
+                    correctBtn.classList.remove('border-slate-100', 'opacity-70');
+                    correctBtn.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-800');
+                }
+
+                feedbackArea.className = "mt-6 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 fade-in";
+                feedbackIcon.innerText = "❌";
+                feedbackTitle.innerText = "Incorrect";
+            }
+
+            feedbackText.innerText = option.rationale;
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-screen').classList.add('hidden');
+            document.getElementById('results-screen').classList.remove('hidden');
+            
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('total-score').innerText = questions.length;
+
+            const percentage = (score / questions.length) * 100;
+            const emojiEl = document.getElementById('result-emoji');
+            const msgEl = document.getElementById('result-message');
+
+            if (percentage === 100) {
+                emojiEl.innerText = "🏆";
+                msgEl.innerText = "Perfect score! You are a master of frameworks.";
+            } else if (percentage >= 80) {
+                emojiEl.innerText = "🎉";
+                msgEl.innerText = "Excellent work! You're ready for the SOC.";
+            } else if (percentage >= 60) {
+                emojiEl.innerText = "👍";
+                msgEl.innerText = "Good job. Review the rationales and try again.";
+            } else {
+                emojiEl.innerText = "📚";
+                msgEl.innerText = "Keep studying. Focus on the core differences between the models.";
+            }
+        }
+
+        function resetQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            answered = false;
+            // Reshuffle questions on retake
+            // questions.forEach(q => shuffle(q.options));
+            document.getElementById('results-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+            document.getElementById('score-display').innerText = `Score: 0`;
+        }
+    </script>
+</body>
+</html>
+
+
+

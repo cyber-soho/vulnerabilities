@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 3: Managing Vulnerabilities & MITRE ATT&CK</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Slate 50 */
+            color: #334155; /* Slate 700 */
+        }
+
+        /* Chart Container Styling per requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 350px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        /* Tab Transitions */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl text-blue-600">🛡️</span>
+                    <span class="font-bold text-xl text-slate-800 tracking-tight">CyberSec<span class="text-blue-600">Lab3</span></span>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#briefing" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Briefing</a>
+                    <a href="#exercise1" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Phase 1: Recon</a>
+                    <a href="#exercise2" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Phase 2: Mapping</a>
+                    <a href="#exercise3" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Phase 3: Defense</a>
+                </div>
+                <div class="text-xs font-semibold bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
+                    Est. Time: 3 Hours
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero / Briefing Section -->
+    <header id="briefing" class="pt-12 pb-8 bg-gradient-to-b from-slate-50 to-white">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-10">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">Managing Vulnerabilities</h1>
+                <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                    Day 3 – Lab 3: Bridge the gap between raw vulnerability data and operational defense by mapping a CVE to the MITRE ATT&CK Matrix.
+                </p>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <!-- Status Card 1 -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-xs font-bold uppercase text-slate-400 mb-2">Deliverable</h3>
+                    <div class="text-2xl font-bold text-slate-800 mb-1">Max 5 Pages</div>
+                    <p class="text-sm text-slate-500">A4 Report covering 3 exercises.</p>
+                </div>
+                <!-- Status Card 2 -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xs font-bold uppercase text-slate-400 mb-2">Structure</h3>
+                        <div class="text-2xl font-bold text-slate-800 mb-1">1 – 2 – 1</div>
+                        <p class="text-sm text-slate-500">Weighting Ponderation</p>
+                    </div>
+                </div>
+                <!-- Status Card 3 -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-red-500">
+                    <h3 class="text-xs font-bold uppercase text-red-500 mb-2">Ethical Notice</h3>
+                    <p class="text-sm text-slate-700 font-medium leading-relaxed">
+                        Strictly educational. Unauthorized testing is illegal. You are responsible for lawful conduct.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Lab Overview Intro Paragraph -->
+            <div class="bg-blue-50/50 rounded-2xl p-6 md:p-8 border border-blue-100 mb-8">
+                <h2 class="text-lg font-bold text-blue-900 mb-3">Mission Briefing</h2>
+                <p class="text-slate-700 leading-relaxed">
+                    This interactive dashboard guides you through the process of analyzing a High/Critical severity CVE. You will move from initial reconnaissance (NVD/CVSS) to strategic mapping (MITRE ATT&CK) and finally to defensive planning. Review the chart below to understand how to allocate your 3-hour lab session effectively.
+                </p>
+            </div>
+
+            <!-- Time Allocation Chart -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-3xl mx-auto">
+                <h3 class="text-center font-bold text-slate-800 mb-4">Recommended Time Allocation</h3>
+                <div class="chart-container">
+                    <canvas id="timeChart"></canvas>
+                </div>
+                <div class="mt-4 flex justify-center space-x-6 text-sm text-slate-600">
+                    <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-blue-500 mr-2"></span>Recon (45m)</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-indigo-500 mr-2"></span>Mapping (90m)</div>
+                    <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-teal-500 mr-2"></span>Reflection (45m)</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tool Belt (External Links) -->
+    <div class="bg-slate-800 py-4 sticky top-16 z-40">
+        <div class="max-w-7xl mx-auto px-4 overflow-x-auto whitespace-nowrap text-center">
+            <span class="text-slate-400 text-xs font-bold uppercase mr-4 tracking-wider">Analyst Toolkit:</span>
+            <a href="https://nvd.nist.gov" target="_blank" class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-slate-700 text-slate-200 hover:bg-blue-600 hover:text-white transition mr-2">NIST NVD ↗</a>
+            <a href="https://attack.mitre.org" target="_blank" class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-slate-700 text-slate-200 hover:bg-blue-600 hover:text-white transition mr-2">MITRE ATT&CK ↗</a>
+            <a href="https://cwe.mitre.org" target="_blank" class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-slate-700 text-slate-200 hover:bg-blue-600 hover:text-white transition mr-2">CWE List ↗</a>
+            <a href="https://www.first.org/cvss" target="_blank" class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-slate-700 text-slate-200 hover:bg-blue-600 hover:text-white transition mr-2">CVSS Calc ↗</a>
+            <a href="https://mitre-attack.github.io/attack-navigator/" target="_blank" class="inline-flex items-center px-3 py-1 rounded text-xs font-medium bg-slate-700 text-slate-200 hover:bg-blue-600 hover:text-white transition">ATT&CK Navigator ↗</a>
+        </div>
+    </div>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
+
+        <!-- Exercise 1: Reconnaissance -->
+        <section id="exercise1" class="scroll-mt-32">
+            <div class="border-l-4 border-blue-500 pl-6 mb-8">
+                <h2 class="text-3xl font-bold text-slate-900">Phase 1: CVE Reconnaissance</h2>
+                <div class="text-sm font-medium text-blue-600 mt-1">Weight: 1/4 • Time: ~45 mins • Output: ~1 Page</div>
+            </div>
+            
+            <p class="text-slate-600 mb-8 max-w-3xl leading-relaxed">
+                Vulnerability management begins with identification. In this phase, you will select a real-world CVE (High/Critical, <3 years old) and build a technical profile. Use the interactive guide below to ensure you gather all necessary data points for your report.
+            </p>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Step Selector (Left) -->
+                <div class="lg:col-span-4 space-y-2">
+                    <button onclick="switchTab('ex1', 'step1-1')" id="btn-ex1-step1-1" class="w-full text-left p-4 rounded-lg bg-white border border-slate-200 hover:border-blue-400 transition-all shadow-sm group active-tab-btn">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-700">1. Choose Criteria</span>
+                            <span class="text-slate-300 group-hover:text-blue-500">→</span>
+                        </div>
+                    </button>
+                    <button onclick="switchTab('ex1', 'step1-2')" id="btn-ex1-step1-2" class="w-full text-left p-4 rounded-lg bg-white border border-slate-200 hover:border-blue-400 transition-all shadow-sm group">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-700">2. Retrieve Data</span>
+                            <span class="text-slate-300 group-hover:text-blue-500">→</span>
+                        </div>
+                    </button>
+                    <button onclick="switchTab('ex1', 'step1-3')" id="btn-ex1-step1-3" class="w-full text-left p-4 rounded-lg bg-white border border-slate-200 hover:border-blue-400 transition-all shadow-sm group">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-700">3. Analyze Vector</span>
+                            <span class="text-slate-300 group-hover:text-blue-500">→</span>
+                        </div>
+                    </button>
+                    
+                    <!-- Pro Tip Card -->
+                    <div class="mt-6 bg-amber-50 border border-amber-100 rounded-lg p-4">
+                        <h4 class="text-amber-800 font-bold text-sm mb-2">💡 Pro Tip</h4>
+                        <p class="text-xs text-amber-700">
+                            Try querying the NVD API with Python instead of manual browsing. It's a key analyst skill!
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Content Display (Right) -->
+                <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm p-8 min-h-[400px]">
+                    
+                    <!-- Tab 1: Criteria -->
+                    <div id="ex1-step1-1" class="tab-content active">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">Selection Criteria</h3>
+                        <p class="mb-4 text-slate-600">Navigate to <a href="https://nvd.nist.gov/vuln/search" class="text-blue-600 hover:underline">NIST NVD Search</a> and find a CVE matching these rules:</p>
+                        <ul class="space-y-3 mb-6">
+                            <li class="flex items-start">
+                                <span class="text-green-500 font-bold mr-2">✓</span>
+                                <span class="text-slate-700"><strong>Severity:</strong> CVSS Base Score ≥ 7.0 (High or Critical).</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-green-500 font-bold mr-2">✓</span>
+                                <span class="text-slate-700"><strong>Age:</strong> Published within the last 3 years.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-green-500 font-bold mr-2">✓</span>
+                                <span class="text-slate-700"><strong>Status:</strong> Known exploit or referenced by threat intel (e.g., CISA KEV).</span>
+                            </li>
+                        </ul>
+                        <div class="bg-slate-50 p-4 rounded border border-slate-200">
+                            <h4 class="font-bold text-slate-700 text-sm mb-2">Need Inspiration?</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono text-slate-600">CVE-2023-44228 (Log4j)</span>
+                                <span class="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono text-slate-600">CVE-2024-3400 (PAN-OS)</span>
+                                <span class="px-2 py-1 bg-white border border-slate-300 rounded text-xs font-mono text-slate-600">CVE-2023-23397 (Outlook)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Retrieve Data -->
+                    <div id="ex1-step1-2" class="tab-content">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">Data Collection</h3>
+                        <p class="mb-4 text-slate-600">Extract the following fields for your report table:</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="p-4 bg-slate-50 rounded border border-slate-100">
+                                <div class="text-xs uppercase font-bold text-slate-400 mb-1">Identifier</div>
+                                <div class="font-mono text-slate-800">CVE-YYYY-NNNNN</div>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded border border-slate-100">
+                                <div class="text-xs uppercase font-bold text-slate-400 mb-1">Target</div>
+                                <div class="font-mono text-slate-800">Product & Version</div>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded border border-slate-100">
+                                <div class="text-xs uppercase font-bold text-slate-400 mb-1">Score</div>
+                                <div class="font-mono text-slate-800">CVSS v3.1 Base Score</div>
+                            </div>
+                            <div class="p-4 bg-slate-50 rounded border border-slate-100">
+                                <div class="text-xs uppercase font-bold text-slate-400 mb-1">Type</div>
+                                <div class="font-mono text-slate-800">CWE Identifier</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-400 text-sm text-blue-800">
+                            <strong>Requirement:</strong> Describe the CWE in 2-3 sentences. Explain <em>why</em> this weakness leads to the vulnerability (e.g., Buffer Overflow allowing code execution).
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Vector Analysis -->
+                    <div id="ex1-step1-3" class="tab-content">
+                        <h3 class="text-xl font-bold text-slate-800 mb-4">CVSS Vector Analysis</h3>
+                        <p class="mb-4 text-slate-600">Translate the vector string (e.g., <code>AV:N/AC:L...</code>) into plain English.</p>
+                        
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded hover:bg-slate-50 transition cursor-help group" title="Attack Vector: Network means the vuln is exploitable remotely.">
+                                <span class="font-mono font-bold text-indigo-600">AV:N</span>
+                                <span class="text-sm text-slate-500">Attack Vector: Network</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded hover:bg-slate-50 transition cursor-help" title="Attack Complexity: Low means no special conditions needed.">
+                                <span class="font-mono font-bold text-indigo-600">AC:L</span>
+                                <span class="text-sm text-slate-500">Attack Complexity: Low</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded hover:bg-slate-50 transition cursor-help" title="Privileges Required: None means unauthenticated access.">
+                                <span class="font-mono font-bold text-indigo-600">PR:N</span>
+                                <span class="text-sm text-slate-500">Privileges Required: None</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-4 text-right">*Hover items for hints</p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Exercise 2: Mapping -->
+        <section id="exercise2" class="scroll-mt-32">
+            <div class="border-l-4 border-indigo-500 pl-6 mb-8">
+                <h2 class="text-3xl font-bold text-slate-900">Phase 2: ATT&CK Mapping</h2>
+                <div class="text-sm font-medium text-indigo-600 mt-1">Weight: 2/4 • Time: ~90 mins • Output: ~2-3 Pages</div>
+            </div>
+            
+            <p class="text-slate-600 mb-8 max-w-3xl leading-relaxed">
+                This is the core task. You will map your CVE to the MITRE ATT&CK Enterprise Matrix to understand the operational context. Where does this vulnerability fit in an attack chain?
+            </p>
+
+            <!-- Interactive Mapping Flow -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-50 border-b border-slate-200 p-4">
+                    <h3 class="font-bold text-slate-700">Mapping Workflow Assistant</h3>
+                </div>
+                
+                <div class="p-6 md:p-8">
+                    <!-- Workflow Steps -->
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 space-y-4 md:space-y-0 relative">
+                        <!-- Connecting Line (Desktop) -->
+                        <div class="hidden md:block absolute top-1/2 left-0 w-full h-1 bg-slate-100 -z-10"></div>
+
+                        <div onclick="showMapStep(1)" class="cursor-pointer flex flex-col items-center bg-white z-10 px-2 transition hover:scale-105">
+                            <div id="step-icon-1" class="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold mb-2">1</div>
+                            <span class="text-xs font-bold text-slate-600">Identify Tactics</span>
+                        </div>
+                        <div onclick="showMapStep(2)" class="cursor-pointer flex flex-col items-center bg-white z-10 px-2 transition hover:scale-105">
+                            <div id="step-icon-2" class="w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold mb-2">2</div>
+                            <span class="text-xs font-bold text-slate-600">Select Techniques</span>
+                        </div>
+                        <div onclick="showMapStep(3)" class="cursor-pointer flex flex-col items-center bg-white z-10 px-2 transition hover:scale-105">
+                            <div id="step-icon-3" class="w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold mb-2">3</div>
+                            <span class="text-xs font-bold text-slate-600">Intel Check</span>
+                        </div>
+                         <div onclick="showMapStep(4)" class="cursor-pointer flex flex-col items-center bg-white z-10 px-2 transition hover:scale-105">
+                            <div id="step-icon-4" class="w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold mb-2">4</div>
+                            <span class="text-xs font-bold text-slate-600">Navigator Visual</span>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Content Area -->
+                    <div class="bg-slate-50 rounded-xl p-6 border border-slate-200 min-h-[250px] transition-all" id="mapping-content">
+                        <!-- Default Content (Step 1) -->
+                        <h4 class="text-lg font-bold text-indigo-900 mb-2">Step 1: Identify Relevant Tactics</h4>
+                        <p class="text-sm text-slate-600 mb-4">Determine which high-level objective (Tactic) the vulnerability facilitates. Ask yourself:</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button class="text-left p-3 bg-white border border-slate-200 rounded hover:border-indigo-400 hover:shadow-sm transition group">
+                                <div class="font-bold text-slate-800 text-sm">Initial Access (TA0001)</div>
+                                <div class="text-xs text-slate-500 mt-1">Does it allow entry into the network?</div>
+                            </button>
+                            <button class="text-left p-3 bg-white border border-slate-200 rounded hover:border-indigo-400 hover:shadow-sm transition group">
+                                <div class="font-bold text-slate-800 text-sm">Execution (TA0002)</div>
+                                <div class="text-xs text-slate-500 mt-1">Does it run arbitrary code?</div>
+                            </button>
+                            <button class="text-left p-3 bg-white border border-slate-200 rounded hover:border-indigo-400 hover:shadow-sm transition group">
+                                <div class="font-bold text-slate-800 text-sm">Privilege Escalation (TA0004)</div>
+                                <div class="text-xs text-slate-500 mt-1">Does it grant higher permissions?</div>
+                            </button>
+                            <button class="text-left p-3 bg-white border border-slate-200 rounded hover:border-indigo-400 hover:shadow-sm transition group">
+                                <div class="font-bold text-slate-800 text-sm">Defense Evasion (TA0005)</div>
+                                <div class="text-xs text-slate-500 mt-1">Does it bypass security controls?</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deliverable Preview -->
+            <div class="mt-8">
+                <h4 class="font-bold text-slate-700 mb-3">Required Deliverable Structure</h4>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600 border border-slate-200 rounded-lg">
+                        <thead class="bg-slate-100 text-slate-700 uppercase">
+                            <tr>
+                                <th class="px-6 py-3">Tactic (ID)</th>
+                                <th class="px-6 py-3">Technique (ID)</th>
+                                <th class="px-6 py-3">Justification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="bg-white border-b hover:bg-slate-50">
+                                <td class="px-6 py-4 font-mono">Initial Access (TA0001)</td>
+                                <td class="px-6 py-4 font-mono">Exploit Public-Facing App (T1190)</td>
+                                <td class="px-6 py-4 italic text-slate-400">Your explanation here...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Exercise 3: Reflection -->
+        <section id="exercise3" class="scroll-mt-32">
+            <div class="border-l-4 border-teal-500 pl-6 mb-8">
+                <h2 class="text-3xl font-bold text-slate-900">Phase 3: Defensive Context</h2>
+                <div class="text-sm font-medium text-teal-600 mt-1">Weight: 1/4 • Time: ~45 mins • Output: ~1 Page</div>
+            </div>
+            
+            <p class="text-slate-600 mb-8 max-w-3xl leading-relaxed">
+                Step back from the technical mapping. Identify potential Mitigations and Detections using the framework, then reflect on how this informs vulnerability management.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Action Card 1 -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-teal-400 transition">
+                    <div class="flex items-center mb-4">
+                        <span class="text-2xl mr-3">🛡️</span>
+                        <h3 class="font-bold text-slate-800">Mitigations</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-4">For each mapped technique, list 2+ mitigations from the framework.</p>
+                    <div class="bg-slate-50 p-3 rounded text-xs font-mono text-slate-700">
+                        Example: M1048 – Application Isolation and Sandboxing
+                    </div>
+                </div>
+
+                <!-- Action Card 2 -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:border-teal-400 transition">
+                    <div class="flex items-center mb-4">
+                        <span class="text-2xl mr-3">👁️</span>
+                        <h3 class="font-bold text-slate-800">Detections</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-4">Propose 2 approaches. Consider log sources and behavioural indicators.</p>
+                    <div class="bg-slate-50 p-3 rounded text-xs font-mono text-slate-700">
+                        Log Source: Web Server Access Logs<br>Logic: Look for URI patterns...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reflection Prompts -->
+            <div class="mt-8 bg-teal-50 border border-teal-100 rounded-xl p-6">
+                <h3 class="font-bold text-teal-900 mb-3">Reflection Questions</h3>
+                <ul class="list-disc list-inside space-y-2 text-teal-800 text-sm">
+                    <li>What did the mapping reveal that the CVE record alone did not?</li>
+                    <li>How does this inform prioritization (patching urgency)?</li>
+                    <li>What limitations did you encounter in the framework?</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Final Checklist -->
+        <section class="bg-slate-800 rounded-2xl p-8 text-white">
+            <h2 class="text-2xl font-bold mb-6">Final Report Checklist</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="checklist-container">
+                <!-- Checklist items generated by JS -->
+            </div>
+            <div class="mt-8 pt-6 border-t border-slate-700 text-sm text-slate-400 flex justify-between items-center">
+                <span>Part 2 will continue in the next session.</span>
+                <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-medium transition">Print Instructions</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-20 py-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-slate-500 text-sm mb-2">&copy; Academic Year 2025–2026. Cybersecurity Program.</p>
+            <p class="text-slate-400 text-xs">Tools mentioned (NVD, ATT&CK, etc.) are property of their respective owners.</p>
+        </div>
+    </footer>
+
+    <!-- Placeholders -->
+    <!-- Chosen Palette: "Clean Cyber" - Slate (Backgrounds/Text), White (Cards), Blue/Indigo/Teal (Accents for Phases). Designed for readability and professional academic tone. -->
+    
+    <!-- Application Structure Plan:
+        The app transforms a linear text document into a Phase-based Dashboard.
+        - Hero: Gives the "Mission" context and visualizes the time allocation (Chart.js) to help students plan.
+        - Tool Belt: Sticky nav for quick access to the required external tools (NVD, MITRE).
+        - Phase 1 (Recon): Uses a Tab system to break down the criteria, data collection, and analysis into digestible steps, preventing information overload.
+        - Phase 2 (Mapping): A custom "Workflow Assistant" visualizes the complex mapping process. It uses interactive buttons to reveal definitions and examples, making the abstract concept of "Tactics" concrete.
+        - Phase 3 (Defense): Uses cards to separate Mitigations vs Detections, and a distinct block for Reflection to ensure students don't miss the critical thinking component.
+        - Checklist: An interactive footer to ensure compliance before submission.
+        This structure facilitates the *doing* of the lab, not just the reading.
+    -->
+
+    <!-- Visualization & Content Choices:
+        - Time Allocation Chart (Bar): Goal: Inform/Plan. Visualizes the 1-2-1 weighting and minute breakdown so students know where to spend effort.
+        - Workflow Stepper (Phase 2): Goal: Guide/Process. Breaks the complex mapping task into 4 distinct clickable steps (Identify -> Select -> Intel -> Visual).
+        - Tabbed Interface (Phase 1): Goal: Organize. Keeps the 3 distinct sub-tasks of Recon separate but accessible without scrolling.
+        - Interactive Checklist: Goal: Verify. Simple JS toggle to help students self-audit.
+        - NO SVG/Mermaid: All icons are Unicode or pure CSS. Charts are Canvas (Chart.js).
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <script>
+        // --- 1. Charts Initialization ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('timeChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Phase 1: Recon', 'Phase 2: Mapping', 'Phase 3: Defense'],
+                    datasets: [{
+                        label: 'Time Allocation (Minutes)',
+                        data: [45, 90, 45],
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.8)', // Blue (Ex1)
+                            'rgba(99, 102, 241, 0.8)', // Indigo (Ex2)
+                            'rgba(20, 184, 166, 0.8)'  // Teal (Ex3)
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(99, 102, 241, 1)',
+                            'rgba(20, 184, 166, 1)'
+                        ],
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Minutes' },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.raw} Minutes (Weight: ${context.dataIndex === 1 ? '2' : '1'})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            renderChecklist();
+        });
+
+        // --- 2. Tab Logic (Phase 1) ---
+        function switchTab(group, targetId) {
+            // Hide all contents in group
+            const contents = document.querySelectorAll(`#exercise1 .tab-content`);
+            contents.forEach(el => el.classList.remove('active'));
+            
+            // Deactivate all buttons
+            const buttons = document.querySelectorAll(`#exercise1 button[id^="btn-${group}"]`);
+            buttons.forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-blue-500', 'border-blue-400');
+                btn.classList.add('border-slate-200');
+                const arrow = btn.querySelector('span:last-child');
+                if(arrow) arrow.classList.remove('text-blue-500');
+            });
+
+            // Activate Target
+            document.getElementById(group + '-' + targetId).classList.add('active');
+            
+            // Activate Button style
+            const activeBtn = document.getElementById(`btn-${group}-${targetId}`);
+            activeBtn.classList.remove('border-slate-200');
+            activeBtn.classList.add('ring-2', 'ring-blue-500', 'border-blue-400');
+            const activeArrow = activeBtn.querySelector('span:last-child');
+            if(activeArrow) activeArrow.classList.add('text-blue-500');
+        }
+
+        // Initialize first tab visual state
+        document.getElementById('btn-ex1-step1-1').classList.add('ring-2', 'ring-blue-500', 'border-blue-400');
+        document.getElementById('btn-ex1-step1-1').querySelector('span:last-child').classList.add('text-blue-500');
+
+        // --- 3. Mapping Workflow Logic (Phase 2) ---
+        const mapSteps = {
+            1: {
+                title: "Step 1: Identify Relevant Tactics",
+                content: `
+                    <p class="text-sm text-slate-600 mb-4">Determine which high-level objective the vulnerability facilitates.</p>
+                    <ul class="space-y-2 text-sm text-slate-700">
+                        <li><strong>Initial Access (TA0001):</strong> Entry to network?</li>
+                        <li><strong>Execution (TA0002):</strong> Run arbitrary code?</li>
+                        <li><strong>Privilege Escalation (TA0004):</strong> Gain higher rights?</li>
+                        <li><strong>Defense Evasion (TA0005):</strong> Bypass controls?</li>
+                        <li><strong>Exfiltration (TA0010):</strong> Steal data?</li>
+                    </ul>`
+            },
+            2: {
+                title: "Step 2: Select Techniques",
+                content: `
+                    <p class="text-sm text-slate-600 mb-4">Drill down to the specific method (Technique/Sub-Technique).</p>
+                    <div class="bg-indigo-50 p-3 rounded border border-indigo-100 text-sm">
+                        <strong>Example:</strong> If it exploits a web app:<br>
+                        Tactic: <em>Initial Access</em> -> Technique: <em>Exploit Public-Facing Application (T1190)</em>.
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Check the ATT&CK website to match the behavior description.</p>`
+            },
+            3: {
+                title: "Step 3: Intel Check",
+                content: `
+                    <p class="text-sm text-slate-600 mb-4">Does this CVE map to a known threat group?</p>
+                    <ul class="space-y-2 text-sm text-slate-700">
+                        <li>Check <strong>MITRE Groups</strong> page.</li>
+                        <li>Check <strong>CISA Advisories</strong>.</li>
+                        <li>Check <strong>Exploit-DB</strong>.</li>
+                    </ul>
+                    <div class="mt-3 text-xs text-slate-500"><em>Finding a group (e.g., APT28) adds significant value to your report.</em></div>`
+            },
+            4: {
+                title: "Step 4: Visualize",
+                content: `
+                    <p class="text-sm text-slate-600 mb-4">Create a visual evidence layer.</p>
+                    <ol class="list-decimal list-inside text-sm text-slate-700 space-y-2">
+                        <li>Open <a href="https://mitre-attack.github.io/attack-navigator/" target="_blank" class="text-blue-600 hover:underline">ATT&CK Navigator</a>.</li>
+                        <li>Create a new layer.</li>
+                        <li>Highlight your identified techniques.</li>
+                        <li>Export Screenshot for report.</li>
+                    </ol>`
+            }
+        };
+
+        function showMapStep(stepNum) {
+            // Update Icons
+            for(let i=1; i<=4; i++) {
+                const icon = document.getElementById(`step-icon-${i}`);
+                if (i === stepNum) {
+                    icon.className = "w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold mb-2 shadow-lg scale-110 transition";
+                } else {
+                    icon.className = "w-10 h-10 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center font-bold mb-2";
+                }
+            }
+
+            // Update Content
+            const container = document.getElementById('mapping-content');
+            container.innerHTML = `
+                <h4 class="text-lg font-bold text-indigo-900 mb-2 fade-in">${mapSteps[stepNum].title}</h4>
+                <div class="fade-in">${mapSteps[stepNum].content}</div>
+            `;
+        }
+
+        // --- 4. Checklist Logic ---
+        const checklistItems = [
+            "Report length ≤ 5 pages",
+            "Ex 1: Complete CVE Profile Table",
+            "Ex 1: CVSS Vector Interpretation",
+            "Ex 2: Mapping Table with Justification",
+            "Ex 2: ATT&CK Navigator Screenshot",
+            "Ex 3: Two Mitigations Listed",
+            "Ex 3: Two Detection Approaches",
+            "Ex 3: Reflection Paragraph",
+            "Sources Cited & Screenshots Labelled"
+        ];
+
+        function renderChecklist() {
+            const container = document.getElementById('checklist-container');
+            checklistItems.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = "flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-slate-700 transition";
+                div.onclick = function() {
+                    const checkbox = this.querySelector('div');
+                    const text = this.querySelector('span');
+                    if (checkbox.innerText === '✓') {
+                        checkbox.innerText = '';
+                        checkbox.className = "w-5 h-5 rounded border border-slate-400 flex items-center justify-center";
+                        text.classList.remove('line-through', 'text-slate-500');
+                    } else {
+                        checkbox.innerText = '✓';
+                        checkbox.className = "w-5 h-5 rounded border border-green-500 bg-green-500 flex items-center justify-center text-white font-bold";
+                        text.classList.add('line-through', 'text-slate-500');
+                    }
+                };
+                div.innerHTML = `
+                    <div class="w-5 h-5 rounded border border-slate-400 flex items-center justify-center"></div>
+                    <span class="text-sm select-none">${item}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Security Frameworks Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* Slate-100 */
+        }
+
+        /* 3D Flip Animation Styles */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .flip-card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .flip-card-front, .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .flip-card-front {
+            background-color: white;
+            color: #1e293b; /* Slate-800 */
+            border: 2px solid #e2e8f0; /* Slate-200 */
+        }
+
+        .flip-card-back {
+            background-color: #1e293b; /* Slate-800 */
+            color: white;
+            transform: rotateY(180deg);
+            border: 2px solid #1e293b;
+        }
+
+        /* Math rendering support if needed later */
+        .math-text {
+            font-family: 'Times New Roman', serif;
+            font-style: italic;
+        }
+        
+        .no-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Header -->
+    <div class="mb-8 text-center">
+        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-blue-600 mb-4">
+            <i class="fas fa-layer-group text-xl"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-slate-900">Cyber Security Frameworks</h1>
+        <p class="text-slate-500 mt-2">Master the Kill Chain, Diamond Model, and MITRE ATT&CK</p>
+    </div>
+
+    <!-- Main Flashcard Area -->
+    <div class="w-full max-w-2xl perspective-1000 h-80 sm:h-96 mb-8 group">
+        <div class="flip-card-inner" id="card-inner" onclick="flipCard()">
+            <!-- Front -->
+            <div class="flip-card-front">
+                <div class="flex flex-col items-center">
+                    <span class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4">Term / Question</span>
+                    <h2 id="card-front-text" class="text-2xl sm:text-3xl font-bold leading-tight">
+                        <!-- JS injected text -->
+                    </h2>
+                    <p class="text-slate-400 text-xs mt-8 absolute bottom-6">Click to flip</p>
+                </div>
+            </div>
+            
+            <!-- Back -->
+            <div class="flip-card-back">
+                <div class="flex flex-col items-center">
+                    <span class="text-xs font-bold text-blue-300 uppercase tracking-widest mb-4">Definition / Answer</span>
+                    <p id="card-back-text" class="text-xl sm:text-2xl font-medium leading-relaxed">
+                        <!-- JS injected text -->
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="w-full max-w-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        
+        <!-- Progress -->
+        <div class="text-slate-500 font-medium order-1 sm:order-2">
+            Card <span id="current-index" class="text-slate-900 font-bold">1</span> of <span id="total-cards">25</span>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex gap-3 order-2 sm:order-1">
+            <button onclick="prevCard()" class="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm" id="btn-prev">
+                <i class="fas fa-arrow-left mr-2"></i> Prev
+            </button>
+            <button onclick="nextCard()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 shadow-lg shadow-blue-500/30" id="btn-next">
+                Next <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+
+        <!-- Utility Buttons -->
+        <div class="order-3 flex gap-2">
+            <button onclick="shuffleDeck()" class="p-3 text-slate-500 hover:text-blue-600 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200" title="Shuffle Cards">
+                <i class="fas fa-random"></i>
+            </button>
+            <button onclick="resetDeck()" class="p-3 text-slate-500 hover:text-blue-600 hover:bg-white rounded-lg transition-colors border border-transparent hover:border-slate-200" title="Reset Deck">
+                <i class="fas fa-redo"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Hint -->
+    <div class="mt-12 text-slate-400 text-xs text-center hidden sm:block">
+        <span class="bg-slate-200 px-2 py-1 rounded mx-1">Space</span> to Flip &bull; 
+        <span class="bg-slate-200 px-2 py-1 rounded mx-1">←</span> <span class="bg-slate-200 px-2 py-1 rounded mx-1">→</span> to Navigate
+    </div>
+
+    <script>
+        // Data Source
+        const originalData = [
+            { front: "Cyber Kill Chain Origin", back: "Developed by Lockheed Martin in 2011, adapted from military concepts to describe the sequential phases of a network intrusion." },
+            { front: "Cyber Kill Chain Core Principle", back: "Defenders do not need to stop every phase—they only need to break the chain at ONE link to prevent the attack from succeeding." },
+            { front: "Phase 1: Reconnaissance", back: "The adversary gathers intelligence about the target (e.g., email formats, open ports) before launching any attack." },
+            { front: "Passive vs. Active Reconnaissance", back: "Passive involves no direct contact (e.g., reading public records), while Active involves direct probing (e.g., port scanning)." },
+            { front: "Phase 2: Weaponization", back: "The attacker combines an exploit and a payload into a deliverable weapon (e.g., a malicious PDF) offline." },
+            { front: "Weaponization Formula", back: "Weapon = Exploit + Payload + Disguise" },
+            { front: "Phase 3: Delivery", back: "The transmission of the weaponized payload to the target via vectors like phishing emails, USB drives, or watering holes." },
+            { front: "Phase 4: Exploitation", back: "The moment the vulnerability is triggered (e.g., SQL injection, executing macro code) to gain initial access." },
+            { front: "Phase 5: Installation", back: "Establishing persistent access (e.g., backdoors, registry keys) so the attacker can return even if the vulnerability is patched." },
+            { front: "Phase 6: Command & Control (C2)", back: "The attacker opens a remote communication channel to send instructions to the compromised machine." },
+            { front: "Beacon", back: "A periodic signal sent by a compromised host to the C2 server indicating it is alive and ready for commands." },
+            { front: "Phase 7: Actions on Objectives", back: "The attacker achieves their ultimate goal, such as data exfiltration, ransomware encryption, or espionage." },
+            { front: "Diamond Model Core Concept", back: "Every intrusion event can be described by four connected vertices: Adversary, Capability, Infrastructure, and Victim." },
+            { front: "Diamond Model: Adversary", back: "The actor conducting the attack (e.g., APT group, insider, hacktivist)." },
+            { front: "Diamond Model: Capability", back: "The tools or techniques used (e.g., malware family, exploit kit, zero-day)." },
+            { front: "Diamond Model: Infrastructure", back: "The physical or digital systems used to deliver the attack (e.g., C2 servers, domains, compromised emails)." },
+            { front: "Pivoting (Diamond Model)", back: "Using one discovered vertex to uncover others (e.g., using a domain to find the malware, then using malware to find the adversary)." },
+            { front: "MITRE ATT&CK Acronym", back: "Adversarial Tactics, Techniques, and Common Knowledge." },
+            { front: "ATT&CK Hierarchy: Tactic", back: "The adversary's goal or 'why' (e.g., Initial Access, Execution)." },
+            { front: "ATT&CK Hierarchy: Technique", back: "The method used to achieve the goal or 'how' (e.g., Phishing)." },
+            { front: "Gap Analysis", back: "Mapping existing detections against ATT&CK techniques to identify 'blind spots' where attacks cannot be seen." },
+            { front: "Detection Coverage Formula", back: "Coverage = (Techniques with alerts / Total techniques) × 100" },
+            { front: "Primary Use: Cyber Kill Chain", back: "Tracing the sequential timeline of an attack to determine the phase." },
+            { front: "Primary Use: Diamond Model", back: "Mapping relationships between attacker, victim, and tools for attribution and intelligence." },
+            { front: "Primary Use: MITRE ATT&CK", back: "Cataloging specific technical behaviors for detection engineering and gap analysis." }
+        ];
+
+        // State
+        let cards = [...originalData];
+        let currentIndex = 0;
+
+        // Elements
+        const cardInner = document.getElementById('card-inner');
+        const frontText = document.getElementById('card-front-text');
+        const backText = document.getElementById('card-back-text');
+        const indexDisplay = document.getElementById('current-index');
+        const totalDisplay = document.getElementById('total-cards');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        // Init
+        function init() {
+            totalDisplay.innerText = cards.length;
+            updateCardDisplay();
+        }
+
+        function updateCardDisplay() {
+            // Reset flip state if needed
+            if(cardInner.classList.contains('is-flipped')) {
+                cardInner.classList.remove('is-flipped');
+                // Wait for flip back before changing text to avoid spoiling the answer of the previous card
+                setTimeout(() => {
+                    setTexts();
+                }, 200); 
+            } else {
+                setTexts();
+            }
+
+            // Update controls
+            indexDisplay.innerText = currentIndex + 1;
+            btnPrev.disabled = currentIndex === 0;
+            btnNext.disabled = currentIndex === cards.length - 1;
+        }
+
+        function setTexts() {
+            const currentCard = cards[currentIndex];
+            frontText.innerText = currentCard.front;
+            backText.innerText = currentCard.back;
+        }
+
+        // Actions
+        function flipCard() {
+            cardInner.classList.toggle('is-flipped');
+        }
+
+        function nextCard() {
+            if (currentIndex < cards.length - 1) {
+                currentIndex++;
+                updateCardDisplay();
+            }
+        }
+
+        function prevCard() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateCardDisplay();
+            }
+        }
+
+        function shuffleDeck() {
+            // Fisher-Yates shuffle
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
+            }
+            currentIndex = 0;
+            updateCardDisplay();
+            // Optional: Visual feedback
+            const btn = document.querySelector('button[title="Shuffle Cards"]');
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check text-green-500"></i>';
+            setTimeout(() => btn.innerHTML = originalIcon, 1000);
+        }
+
+        function resetDeck() {
+            cards = [...originalData];
+            currentIndex = 0;
+            updateCardDisplay();
+        }
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault(); // Prevent scrolling
+                flipCard();
+            } else if (e.code === 'ArrowRight') {
+                nextCard();
+            } else if (e.code === 'ArrowLeft') {
+                prevCard();
+            }
+        });
+
+        // Run
+        init();
+
+    </script>
+</body>
+</html>
+
+
