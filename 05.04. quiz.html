@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Management Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at top right, #1e293b, #0f172a);
+            min-height: 100vh;
+        }
+        .option-button {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .option-button:hover:not(:disabled) {
+            transform: translateX(8px);
+        }
+    </style>
+</head>
+<body class="text-slate-200 font-sans p-4 md:p-8">
+
+<div id="quiz-container" class="max-w-3xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8 flex justify-between items-end">
+        <div>
+            <h1 class="text-3xl font-bold text-white mb-1">Security Quiz</h1>
+            <p class="text-slate-400">Asset Management & Attack Surface</p>
+        </div>
+        <div class="text-right">
+            <span id="progress-text" class="text-sm font-mono text-blue-400">Question 1 of 10</span>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="w-full bg-slate-800 rounded-full h-2 mb-8">
+        <div id="progress-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 10%"></div>
+    </div>
+
+    <!-- Question Card -->
+    <div id="question-card" class="bg-slate-800 border border-slate-700 rounded-2xl p-6 md:p-8 shadow-xl mb-6">
+        <h2 id="question-text" class="text-xl md:text-2xl font-medium text-white mb-8 leading-relaxed"></h2>
+        
+        <div id="options-container" class="space-y-4">
+            <!-- Options injected here -->
+        </div>
+    </div>
+
+    <!-- Hint & Action Section -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <button id="hint-btn" onclick="showHint()" class="text-slate-400 hover:text-blue-400 text-sm flex items-center transition-colors">
+            <i class="fas fa-lightbulb mr-2"></i> Need a hint?
+        </button>
+        
+        <div id="hint-text" class="hidden bg-blue-900/30 border border-blue-800/50 text-blue-200 text-sm p-3 rounded-lg flex-1 md:mx-4"></div>
+
+        <button id="next-btn" onclick="handleNext()" class="hidden bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-8 rounded-xl shadow-lg transition-all transform active:scale-95">
+            Next Question <i class="fas fa-arrow-right ml-2"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Results Screen (Hidden by default) -->
+<div id="results-screen" class="hidden max-w-2xl mx-auto text-center py-12">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl p-10 shadow-2xl">
+        <div id="score-circle" class="w-32 h-32 rounded-full border-4 border-blue-500 flex items-center justify-center mx-auto mb-6 text-4xl font-bold text-white">
+            0%
+        </div>
+        <h2 class="text-3xl font-bold text-white mb-2">Quiz Complete!</h2>
+        <p id="result-msg" class="text-slate-400 mb-8">Great effort in mastering asset management concepts.</p>
+        
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="bg-slate-900/50 p-4 rounded-xl">
+                <p class="text-xs uppercase text-slate-500 mb-1">Correct</p>
+                <p id="correct-count" class="text-2xl font-bold text-green-400">0</p>
+            </div>
+            <div class="bg-slate-900/50 p-4 rounded-xl">
+                <p class="text-xs uppercase text-slate-500 mb-1">Incorrect</p>
+                <p id="wrong-count" class="text-2xl font-bold text-red-400">0</p>
+            </div>
+        </div>
+
+        <button onclick="location.reload()" class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-8 rounded-xl transition-colors">
+            Try Again
+        </button>
+    </div>
+</div>
+
+<script>
+    const quizData = {
+        "questions": [
+            {
+                "question": "A security analyst discovers an undocumented Raspberry Pi connected to the corporate network running an unauthorized VPN. Which component of the attack surface does this primarily represent?",
+                "answerOptions": [
+                    { "text": "Physical Attack Surface", "rationale": "While the device is physical, the primary risk described is the unauthorized network connection and VPN service.", "isCorrect": false },
+                    { "text": "Digital Attack Surface", "rationale": "Digital surfaces typically refer to authorized applications and code, whereas this scenario involves a rogue hardware device introducing network risk.", "isCorrect": false },
+                    { "text": "Shadow IT / Network Attack Surface", "rationale": "Shadow IT involves undocumented devices like this Raspberry Pi that create unmanaged network entry points and backdoors.", "isCorrect": true },
+                    { "text": "Social Engineering Attack Surface", "rationale": "Social engineering targets human psychology to gain access, not the unauthorized installation of hardware devices.", "isCorrect": false }
+                ],
+                "hint": "Consider the term used for devices or software installed without IT's knowledge or approval."
+            },
+            {
+                "question": "Why is relying solely on external attack surface monitoring insufficient for a comprehensive security strategy?",
+                "answerOptions": [
+                    { "text": "External monitoring cannot detect public-facing websites or APIs.", "rationale": "External monitoring is specifically designed to detect public-facing assets like websites and APIs.", "isCorrect": false },
+                    { "text": "60% of breaches involve insider threats or compromised credentials behind the firewall.", "rationale": "A majority of attacks originate from or utilize access within the internal network, which external scans cannot see.", "isCorrect": true },
+                    { "text": "External monitoring is illegal without a warrant.", "rationale": "Scanning one's own external infrastructure is a standard legal security practice.", "isCorrect": false },
+                    { "text": "It generates too much traffic and causes Denial of Service attacks.", "rationale": "While aggressive scanning can cause issues, the primary deficiency is the lack of visibility into internal threats, not traffic volume.", "isCorrect": false }
+                ],
+                "hint": "Think about where a threat actor with stolen employee credentials would operate."
+            },
+            {
+                "question": "An analyst wants to map the network without triggering intrusion detection systems (IDS). Which technique should they prioritize?",
+                "answerOptions": [
+                    { "text": "Active Port Scanning", "rationale": "Port scanning involves sending packets to target ports, which is noisy and easily detected by IDS.", "isCorrect": false },
+                    { "text": "Passive Mapping (ARP/DNS Monitoring)", "rationale": "Passive mapping listens to existing broadcast traffic without generating new packets, making it virtually undetectable.", "isCorrect": true },
+                    { "text": "ICMP Sweeping", "rationale": "ICMP sweeps send ping requests to every IP address, which is a classic signature of active reconnaissance.", "isCorrect": false },
+                    { "text": "Service Fingerprinting", "rationale": "Fingerprinting requires interacting with services to grab banners, which is an active and detectable process.", "isCorrect": false }
+                ],
+                "hint": "Look for the method that observes existing traffic rather than generating new traffic."
+            },
+            {
+                "question": "During a network scan, you successfully identify a device's IP address but cannot determine what software versions are running. What step is missing?",
+                "answerOptions": [
+                    { "text": "Network Topology Mapping", "rationale": "Topology mapping focuses on how devices are connected (routers, switches), not the software running on them.", "isCorrect": false },
+                    { "text": "Service Fingerprinting / Banner Grabbing", "rationale": "Fingerprinting and banner grabbing are specifically used to interrogate open ports to identify software versions.", "isCorrect": true },
+                    { "text": "ARP Scanning", "rationale": "ARP scanning resolves IP addresses to MAC addresses but does not provide application-layer data like software versions.", "isCorrect": false },
+                    { "text": "Passive DNS Monitoring", "rationale": "DNS monitoring reveals domain lookups, not the specific software versions running on a host.", "isCorrect": false }
+                ],
+                "hint": "This technique involves reading the 'welcome message' a service sends when you connect to it."
+            },
+            {
+                "question": "Which of the following scenarios best illustrates an Integrity impact within the CIA Triad?",
+                "answerOptions": [
+                    { "text": "A hospital's patient database is encrypted by ransomware, making it inaccessible.", "rationale": "This describes a loss of Availability, as the data cannot be accessed when needed.", "isCorrect": false },
+                    { "text": "A hacker leaks a list of customer credit card numbers to the dark web.", "rationale": "This describes a loss of Confidentiality, as private data was exposed to unauthorized parties.", "isCorrect": false },
+                    { "text": "An attacker alters financial records to hide the theft of funds.", "rationale": "Integrity deals with the accuracy and trustworthiness of data; unauthorized alteration is a direct violation of integrity.", "isCorrect": true },
+                    { "text": "A break room TV loses its connection to the cable network.", "rationale": "This is a minor Availability issue with low business impact.", "isCorrect": false }
+                ],
+                "hint": "Focus on the concept of data being modified, tampered with, or corrupted rather than stolen or blocked."
+            },
+            {
+                "question": "Why is a 'Hybrid Mapping' strategy often considered the best practice for network discovery?",
+                "answerOptions": [
+                    { "text": "It strictly uses passive methods to avoid all legal liability.", "rationale": "Legal liability is managed through authorization, not just by avoiding active scans.", "isCorrect": false },
+                    { "text": "It combines the stealth of passive monitoring with the detail of targeted active scanning.", "rationale": "Hybrid mapping balances the need to stay under the radar with the need to actively probe for details that passive monitoring might miss.", "isCorrect": true },
+                    { "text": "It is the only method that can discover Shadow IT.", "rationale": "Active scanning alone can also discover Shadow IT; hybrid is preferred for efficiency and stealth, not exclusivity.", "isCorrect": false },
+                    { "text": "It relies solely on third-party vendors to map the network.", "rationale": "Hybrid refers to the mix of technical methods (active/passive), not the use of external vendors.", "isCorrect": false }
+                ],
+                "hint": "Think about the trade-off between the 'undetectable but slow' method and the 'fast but noisy' method."
+            },
+            {
+                "question": "According to the Asset Classification Framework, how should a 'Tier 1: Crown Jewel' asset be handled regarding patch management?",
+                "answerOptions": [
+                    { "text": "Patching should occur within 1 month to ensure stability.", "rationale": "Waiting a month leaves critical assets exposed to exploits for too long; this is appropriate for Tier 3.", "isCorrect": false },
+                    { "text": "Patching is not required if the system is air-gapped.", "rationale": "Even isolated systems require patching, as air gaps can be bridged (e.g., via USB).", "isCorrect": false },
+                    { "text": "Patching should occur within 24 hours of a critical update release.", "rationale": "Tier 1 assets represent the highest risk and impact, requiring immediate remediation to prevent compromise.", "isCorrect": true },
+                    { "text": "Patching should be done when convenient to avoid disrupting operations.", "rationale": "Convenience is the standard for Tier 4 assets; Tier 1 requires prioritizing security over convenience.", "isCorrect": false }
+                ],
+                "hint": "These assets are critical to the organization's survival, so the response time must be immediate."
+            },
+            {
+                "question": "In the Risk Scoring formula, why does 'Internet Exposure' carry a high weight (8/10)?",
+                "answerOptions": [
+                    { "text": "Internet-exposed assets are automatically compliant with GDPR.", "rationale": "Exposure does not imply compliance; in fact, it often complicates compliance requirements.", "isCorrect": false },
+                    { "text": "It indicates the asset is accessible to any attacker on the public web, significantly increasing the probability of attack.", "rationale": "Accessibility allows attackers to probe the asset without needing prior internal access, vastly increasing the threat landscape.", "isCorrect": true },
+                    { "text": "Internet exposure reduces the cost of maintaining the asset.", "rationale": "Maintenance costs are unrelated to the risk weight of exposure.", "isCorrect": false },
+                    { "text": "It means the asset holds PII or Financial Data.", "rationale": "Exposure refers to accessibility, not the data type. A public marketing site has exposure but might not hold PII.", "isCorrect": false }
+                ],
+                "hint": "Consider the number of potential attackers who can reach a device on the public internet versus one behind a firewall."
+            },
+            {
+                "question": "Which of the following is a limitation of using ARP scanning for network discovery?",
+                "answerOptions": [
+                    { "text": "It effectively maps the entire wide area network (WAN).", "rationale": "ARP is a local protocol and cannot cross routers, so it cannot map a WAN.", "isCorrect": false },
+                    { "text": "It is extremely noisy and always triggers firewalls.", "rationale": "ARP is a standard protocol for local communication and is generally less 'noisy' than a port scan.", "isCorrect": false },
+                    { "text": "It is only effective on the local subnet because ARP requests are not routed.", "rationale": "ARP broadcasts do not pass through routers, limiting visibility to the immediate local network segment.", "isCorrect": true },
+                    { "text": "It cannot detect active devices.", "rationale": "ARP is specifically designed to resolve MAC addresses for active IP addresses.", "isCorrect": false }
+                ],
+                "hint": "Think about the scope of broadcast traffic and whether it can cross a router."
+            },
+            {
+                "question": "If an organization has 'Tier 4' assets like guest WiFi and digital signage, what is the recommended security stance?",
+                "answerOptions": [
+                    { "text": "Apply the same rigorous controls as Tier 1 to ensure zero trust.", "rationale": "Applying Tier 1 controls to low-value assets wastes resources and budget that should be focused on critical systems.", "isCorrect": false },
+                    { "text": "Disconnect them from the internet entirely.", "rationale": "Guest WiFi and digital signage typically require internet connectivity to function.", "isCorrect": false },
+                    { "text": "Implement minimal monitoring and basic access controls.", "rationale": "Security investment should align with asset value; low-impact assets require only baseline protection.", "isCorrect": true },
+                    { "text": "Require Multi-Factor Authentication (MFA) for all guest users.", "rationale": "MFA is a high-friction control appropriate for sensitive access, not for public or guest access.", "isCorrect": false }
+                ],
+                "hint": "Security controls should be proportional to the asset's value and the impact of its loss."
+            }
+        ]
+    };
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let answered = false;
+
+    const questionTextEl = document.getElementById('question-text');
+    const optionsContainerEl = document.getElementById('options-container');
+    const progressTextEl = document.getElementById('progress-text');
+    const progressBarEl = document.getElementById('progress-bar');
+    const nextBtnEl = document.getElementById('next-btn');
+    const hintBtnEl = document.getElementById('hint-btn');
+    const hintTextEl = document.getElementById('hint-text');
+
+    function loadQuestion() {
+        answered = false;
+        nextBtnEl.classList.add('hidden');
+        hintBtnEl.classList.remove('hidden');
+        hintTextEl.classList.add('hidden');
+        
+        const q = quizData.questions[currentQuestionIndex];
+        questionTextEl.innerText = q.question;
+        
+        progressTextEl.innerText = `Question ${currentQuestionIndex + 1} of ${quizData.questions.length}`;
+        progressBarEl.style.width = `${((currentQuestionIndex + 1) / quizData.questions.length) * 100}%`;
+
+        optionsContainerEl.innerHTML = '';
+        
+        // Shuffle options for engagement
+        const shuffledOptions = [...q.answerOptions].sort(() => Math.random() - 0.5);
+
+        shuffledOptions.forEach((option) => {
+            const btn = document.createElement('button');
+            btn.className = "option-button w-full text-left p-4 rounded-xl border-2 border-slate-700 bg-slate-900/50 hover:bg-slate-700 hover:border-slate-500 transition-all flex flex-col";
+            
+            const textSpan = document.createElement('span');
+            textSpan.className = "text-lg font-medium mb-1";
+            textSpan.innerText = option.text;
+            
+            const rationaleSpan = document.createElement('span');
+            rationaleSpan.className = "text-sm text-slate-500 hidden";
+            rationaleSpan.innerText = option.rationale;
+            
+            btn.appendChild(textSpan);
+            btn.appendChild(rationaleSpan);
+            
+            btn.onclick = () => selectOption(btn, option, q.answerOptions);
+            optionsContainerEl.appendChild(btn);
+        });
+    }
+
+    function selectOption(selectedBtn, option, allOptions) {
+        if (answered) return;
+        answered = true;
+        
+        const allButtons = optionsContainerEl.querySelectorAll('button');
+        
+        allButtons.forEach(btn => {
+            btn.disabled = true;
+            const rationales = btn.querySelectorAll('span')[1];
+            rationales.classList.remove('hidden');
+            
+            // Find the data for this button to color it correctly
+            const btnText = btn.querySelectorAll('span')[0].innerText;
+            const originalOption = allOptions.find(o => o.text === btnText);
+            
+            if (originalOption.isCorrect) {
+                btn.classList.add('border-green-500', 'bg-green-900/20');
+                btn.querySelector('span').classList.add('text-green-400');
+            }
+        });
+
+        if (option.isCorrect) {
+            score++;
+            selectedBtn.classList.add('ring-2', 'ring-green-400');
+        } else {
+            selectedBtn.classList.add('border-red-500', 'bg-red-900/20');
+            selectedBtn.querySelector('span').classList.add('text-red-400');
+        }
+
+        nextBtnEl.classList.remove('hidden');
+        hintBtnEl.classList.add('hidden');
+    }
+
+    function showHint() {
+        hintTextEl.innerText = quizData.questions[currentQuestionIndex].hint;
+        hintTextEl.classList.toggle('hidden');
+    }
+
+    function handleNext() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < quizData.questions.length) {
+            loadQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    function showResults() {
+        document.getElementById('quiz-container').classList.add('hidden');
+        const resultsScreen = document.getElementById('results-screen');
+        resultsScreen.classList.remove('hidden');
+        
+        const percentage = Math.round((score / quizData.questions.length) * 100);
+        document.getElementById('score-circle').innerText = `${percentage}%`;
+        document.getElementById('correct-count').innerText = score;
+        document.getElementById('wrong-count').innerText = quizData.questions.length - score;
+        
+        const msg = document.getElementById('result-msg');
+        if (percentage >= 90) msg.innerText = "Excellent! You have a professional grasp of security assets.";
+        else if (percentage >= 70) msg.innerText = "Good job! You understand the core principles of attack surfaces.";
+        else msg.innerText = "Review the materials on asset tiers and mapping to strengthen your foundation.";
+    }
+
+    // Initialize
+    loadQuestion();
+</script>
+
+</body>
+</html>
+
+
+

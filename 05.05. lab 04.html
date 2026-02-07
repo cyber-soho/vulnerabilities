@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Exercise 4: Asset Discovery & Network Inventory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Chart container constraint classes */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Max width constraint */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom scrollbar for simulated terminal */
+        .terminal-scroll::-webkit-scrollbar { width: 8px; }
+        .terminal-scroll::-webkit-scrollbar-track { background: #1f2937; }
+        .terminal-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+    </style>
+    <!-- Chosen Palette: Secure Horizon - Warm Slate/Neutral Background with Teal/Blue accents for tech feel, Amber/Red for alerts. -->
+    <!-- Application Structure Plan: Dashboard layout simulating a Security Operations Center (SOC) interface. 
+         1. Modal Overlay: Enforces the critical legal disclaimer.
+         2. Sidebar Navigation: Logical flow through the 4 Lab Exercises + Background context.
+         3. Dynamic Content Area: Switches views based on navigation.
+         4. Interactive Simulations: Users 'click to scan' to reveal data, mimicking the tools (Nmap) described.
+         5. Data Visualization: Charts visualize the results of these 'scans' (e.g., Port distribution, Asset Criticality) to aid synthesis.
+         Rationale: This structure immerses the student in the role of an analyst, making the abstract instructions concrete tasks. -->
+    <!-- Visualization & Content Choices: 
+         - Goal: Inform -> Contextual Cards for Objectives/NIST -> Text Blocks -> Provides necessary background.
+         - Goal: Simulate/Discover -> Interactive "Run Scan" buttons -> JS Simulation -> Reveals tables of "Discovered Assets".
+         - Goal: Analyze -> Bar Chart (Ex 2) -> Shows service distribution -> Visualizes attack surface.
+         - Goal: Organize -> Doughnut Chart (Ex 3) -> Asset Criticality -> Visualizes risk posture.
+         - Goal: Compare -> Differential View (Ex 4) -> Highlights changes (red/green) -> Demonstrates continuous monitoring.
+         - Confirmation: NO SVG graphics used. NO Mermaid JS used. Canvas/Chart.js used for data viz. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Legal Disclaimer Modal (Loads first) -->
+    <div id="legalModal" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full border-l-8 border-red-600 overflow-hidden">
+            <div class="p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-red-700 mb-4 uppercase tracking-wide">Critical Legal & Ethical Warning</h2>
+                <div class="prose prose-slate text-sm mb-6 bg-red-50 p-4 rounded border border-red-100">
+                    <p class="font-bold text-red-800">READ CAREFULLY BEFORE PROCEEDING:</p>
+                    <p>This dashboard simulates network reconnaissance techniques. In a real-world scenario, these actions must <strong>exclusively</strong> be performed on networks you own or have explicit written authorization to test.</p>
+                    <ul class="list-disc pl-5 mt-2 space-y-1 text-red-800">
+                        <li>Unauthorized scanning violates computer fraud laws.</li>
+                        <li>Never scan production networks without permission.</li>
+                        <li>You bear full legal responsibility for your actions outside this simulation.</li>
+                    </ul>
+                </div>
+                <div class="flex justify-end space-x-4">
+                    <button onclick="acceptLegal()" class="bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-6 rounded transition shadow-lg flex items-center">
+                        I Understand & Accept Liability
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="flex flex-1 h-full overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-64 bg-slate-900 text-slate-300 hidden md:flex flex-col shadow-xl z-20">
+            <div class="p-6 border-b border-slate-700">
+                <h1 class="text-xl font-bold text-white tracking-tight">Cyber<span class="text-teal-400">Recon</span> Lab</h1>
+                <p class="text-xs text-slate-400 mt-1">Asset Discovery Module</p>
+            </div>
+            <nav class="flex-1 overflow-y-auto py-4">
+                <ul class="space-y-1">
+                    <li><button onclick="nav('dashboard')" class="nav-btn w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition border-l-4 border-transparent active-nav" id="btn-dashboard">Mission Briefing</button></li>
+                    <li><button onclick="nav('ex1')" class="nav-btn w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition border-l-4 border-transparent" id="btn-ex1">1. Discovery</button></li>
+                    <li><button onclick="nav('ex2')" class="nav-btn w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition border-l-4 border-transparent" id="btn-ex2">2. Enumeration</button></li>
+                    <li><button onclick="nav('ex3')" class="nav-btn w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition border-l-4 border-transparent" id="btn-ex3">3. Inventory</button></li>
+                    <li><button onclick="nav('ex4')" class="nav-btn w-full text-left px-6 py-3 hover:bg-slate-800 hover:text-white transition border-l-4 border-transparent" id="btn-ex4">4. Monitoring</button></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t border-slate-700 bg-slate-800">
+                <div class="text-xs text-slate-400">Status: <span class="text-green-400 font-bold">Lab Environment</span></div>
+            </div>
+        </aside>
+
+        <!-- Mobile Header -->
+        <div class="md:hidden fixed top-0 w-full bg-slate-900 z-30 p-4 flex justify-between items-center shadow-md">
+            <span class="text-white font-bold">CyberRecon Lab</span>
+            <button onclick="toggleMobileMenu()" class="text-white focus:outline-none">☰</button>
+        </div>
+        <div id="mobileMenu" class="md:hidden fixed top-14 w-full bg-slate-800 z-20 hidden shadow-xl text-white">
+            <button onclick="nav('dashboard')" class="block w-full text-left p-4 border-b border-slate-700">Mission Briefing</button>
+            <button onclick="nav('ex1')" class="block w-full text-left p-4 border-b border-slate-700">1. Network Discovery</button>
+            <button onclick="nav('ex2')" class="block w-full text-left p-4 border-b border-slate-700">2. Service Enumeration</button>
+            <button onclick="nav('ex3')" class="block w-full text-left p-4 border-b border-slate-700">3. Asset Inventory</button>
+            <button onclick="nav('ex4')" class="block w-full text-left p-4">4. Change Detection</button>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-10 pt-20 md:pt-10 scroll-smooth">
+            <div class="max-w-7xl mx-auto space-y-8">
+                
+                <!-- Section: Dashboard / Mission Briefing -->
+                <section id="dashboard" class="content-section fade-in">
+                    <header class="mb-8">
+                        <h2 class="text-3xl font-bold text-slate-800">Mission Briefing: Asset Discovery</h2>
+                        <p class="text-slate-600 mt-2 text-lg">Foundation of Vulnerability Management</p>
+                    </header>
+                    
+                    <div class="grid md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-teal-500">
+                            <h3 class="font-bold text-xl mb-3 text-slate-800">Scenario Context</h3>
+                            <p class="text-slate-600 mb-4">You have joined the security team of a newly merged tech startup. The IT department lacks a comprehensive inventory. Your mandate: Establish a baseline inventory of the internal test segment <code>192.168.100.0/24</code>.</p>
+                            <div class="bg-slate-100 p-3 rounded text-sm text-slate-700">
+                                <strong>Why this matters:</strong> You cannot protect what you cannot see. Unmanaged assets (Shadow IT) are prime targets for adversaries.
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500">
+                            <h3 class="font-bold text-xl mb-3 text-slate-800">Learning Objectives</h3>
+                            <ul class="space-y-2 text-slate-600">
+                                <li class="flex items-start"><span class="mr-2 text-blue-500">✓</span>Understand asset inventory in vulnerability frameworks (NIST/ISO).</li>
+                                <li class="flex items-start"><span class="mr-2 text-blue-500">✓</span>Develop skills in host discovery (ping sweeps, ARP).</li>
+                                <li class="flex items-start"><span class="mr-2 text-blue-500">✓</span>Perform service enumeration & version detection.</li>
+                                <li class="flex items-start"><span class="mr-2 text-blue-500">✓</span>Analyze changes in network posture over time.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800 text-slate-300 p-6 rounded-lg shadow-lg">
+                        <h3 class="text-white font-bold text-lg mb-4">Reference: The NIST Cybersecurity Framework</h3>
+                        <div class="grid md:grid-cols-5 gap-2 text-center text-sm">
+                            <div class="bg-teal-600 text-white p-3 rounded font-bold ring-2 ring-teal-400">1. IDENTIFY</div>
+                            <div class="bg-slate-700 p-3 rounded opacity-50">2. PROTECT</div>
+                            <div class="bg-slate-700 p-3 rounded opacity-50">3. DETECT</div>
+                            <div class="bg-slate-700 p-3 rounded opacity-50">4. RESPOND</div>
+                            <div class="bg-slate-700 p-3 rounded opacity-50">5. RECOVER</div>
+                        </div>
+                        <p class="mt-4 text-center italic text-slate-400">Asset Discovery is the cornerstone of the "Identify" function.</p>
+                    </div>
+                </section>
+
+                <!-- Section: Exercise 1 -->
+                <section id="ex1" class="content-section hidden fade-in">
+                    <header class="mb-6 border-b pb-4">
+                        <h2 class="text-2xl font-bold text-slate-800">Exercise 1: Network Discovery</h2>
+                        <p class="text-slate-600 mt-1">Objective: Identify active hosts on <code>192.168.100.0/24</code> using ping sweeps and ARP.</p>
+                    </header>
+
+                    <div class="grid lg:grid-cols-3 gap-8">
+                        <!-- Simulation Console -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="bg-slate-900 rounded-lg shadow-lg overflow-hidden font-mono text-sm">
+                                <div class="bg-slate-800 p-2 flex items-center space-x-2 border-b border-slate-700">
+                                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                    <span class="text-slate-400 text-xs ml-2">root@kali:~/lab4</span>
+                                </div>
+                                <div class="p-4 h-64 overflow-y-auto terminal-scroll text-green-400" id="terminal-ex1">
+                                    <p class="text-slate-500"># System ready. Initiate ping sweep.</p>
+                                    <p class="text-slate-500"># Target: 192.168.100.0/24</p>
+                                    <p class="animate-pulse">_</p>
+                                </div>
+                                <div class="p-3 bg-slate-800 border-t border-slate-700 flex justify-between items-center">
+                                    <span class="text-slate-400 text-xs">Recommended: Nmap Ping Scan (-sn)</span>
+                                    <button onclick="runDiscoveryScan()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded text-xs font-bold transition">EXECUTE SCAN</button>
+                                </div>
+                            </div>
+
+                            <!-- Results Table -->
+                            <div id="ex1-results" class="hidden bg-white rounded-lg shadow border border-slate-200 overflow-hidden">
+                                <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                                    <h3 class="font-bold text-slate-700">Discovered Hosts</h3>
+                                    <span class="bg-teal-100 text-teal-800 text-xs font-semibold px-2 py-1 rounded">5 Hosts Found</span>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm text-left text-slate-600">
+                                        <thead class="bg-slate-100 text-slate-700 uppercase">
+                                            <tr>
+                                                <th class="px-6 py-3">IP Address</th>
+                                                <th class="px-6 py-3">Status</th>
+                                                <th class="px-6 py-3">Response Time</th>
+                                                <th class="px-6 py-3">Probable Vendor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-200">
+                                            <tr>
+                                                <td class="px-6 py-3 font-mono text-slate-900">192.168.100.1</td>
+                                                <td class="px-6 py-3"><span class="text-green-600 font-bold">UP</span></td>
+                                                <td class="px-6 py-3">0.4 ms</td>
+                                                <td class="px-6 py-3">Cisco Systems</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-6 py-3 font-mono text-slate-900">192.168.100.10</td>
+                                                <td class="px-6 py-3"><span class="text-green-600 font-bold">UP</span></td>
+                                                <td class="px-6 py-3">1.2 ms</td>
+                                                <td class="px-6 py-3">VMware Virtual</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-6 py-3 font-mono text-slate-900">192.168.100.25</td>
+                                                <td class="px-6 py-3"><span class="text-green-600 font-bold">UP</span></td>
+                                                <td class="px-6 py-3">4.5 ms</td>
+                                                <td class="px-6 py-3">HP Printers</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-6 py-3 font-mono text-slate-900">192.168.100.50</td>
+                                                <td class="px-6 py-3"><span class="text-green-600 font-bold">UP</span></td>
+                                                <td class="px-6 py-3">2.1 ms</td>
+                                                <td class="px-6 py-3">Microsoft Corp</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="px-6 py-3 font-mono text-slate-900">192.168.100.200</td>
+                                                <td class="px-6 py-3"><span class="text-green-600 font-bold">UP</span></td>
+                                                <td class="px-6 py-3">1.8 ms</td>
+                                                <td class="px-6 py-3">Unknown (Linux)</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info Panel -->
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                                <h4 class="font-bold text-blue-800 mb-2">Toolbox</h4>
+                                <ul class="text-sm space-y-2">
+                                    <li class="p-2 bg-white rounded shadow-sm"><strong>Nmap:</strong> Industry standard. Use <code>-sn</code> for ping scan.</li>
+                                    <li class="p-2 bg-white rounded shadow-sm"><strong>Angry IP Scanner:</strong> Fast GUI alternative.</li>
+                                    <li class="p-2 bg-white rounded shadow-sm"><strong>Netdiscover:</strong> Good for ARP on local segments.</li>
+                                </ul>
+                            </div>
+                            <div class="bg-amber-50 p-4 rounded-lg border border-amber-100 text-sm text-amber-900">
+                                <strong class="block mb-1">Analyst Note:</strong>
+                                Some hosts block ICMP (ping). If a scan misses a host, try ARP scanning or TCP SYN discovery.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Exercise 2 -->
+                <section id="ex2" class="content-section hidden fade-in">
+                    <header class="mb-6 border-b pb-4">
+                        <h2 class="text-2xl font-bold text-slate-800">Exercise 2: Service Enumeration</h2>
+                        <p class="text-slate-600 mt-1">Objective: Determine running services, open ports, and OS versions for vulnerability mapping.</p>
+                    </header>
+
+                    <div class="grid lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-1 space-y-4">
+                            <div class="bg-white p-5 rounded-lg shadow border border-slate-200">
+                                <h3 class="font-bold text-slate-700 mb-4">Select Target to Enumerate</h3>
+                                <div class="space-y-2">
+                                    <button onclick="scanTarget('192.168.100.10')" class="w-full text-left p-3 rounded border hover:bg-slate-50 focus:ring-2 focus:ring-teal-500 transition target-btn group" id="target-10">
+                                        <div class="font-mono font-bold text-slate-800 group-hover:text-teal-700">192.168.100.10</div>
+                                        <div class="text-xs text-slate-500">Likely Server</div>
+                                    </button>
+                                    <button onclick="scanTarget('192.168.100.50')" class="w-full text-left p-3 rounded border hover:bg-slate-50 focus:ring-2 focus:ring-teal-500 transition target-btn group" id="target-50">
+                                        <div class="font-mono font-bold text-slate-800 group-hover:text-teal-700">192.168.100.50</div>
+                                        <div class="text-xs text-slate-500">Workstation (Windows)</div>
+                                    </button>
+                                    <button onclick="scanTarget('192.168.100.200')" class="w-full text-left p-3 rounded border hover:bg-slate-50 focus:ring-2 focus:ring-teal-500 transition target-btn group" id="target-200">
+                                        <div class="font-mono font-bold text-slate-800 group-hover:text-teal-700">192.168.100.200</div>
+                                        <div class="text-xs text-slate-500">Unknown Linux</div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-slate-100 p-4 rounded text-sm text-slate-600">
+                                <p><strong>Key Concept:</strong> Service Version Detection (e.g., <code>Apache 2.4.49</code>) is critical because specific versions have specific known vulnerabilities (CVEs).</p>
+                            </div>
+                        </div>
+
+                        <div class="lg:col-span-2">
+                            <div id="ex2-placeholder" class="h-full flex items-center justify-center bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg text-slate-400">
+                                <p>Select a target to run Service Enumeration</p>
+                            </div>
+
+                            <div id="ex2-results" class="hidden space-y-6">
+                                <div class="bg-white p-6 rounded-lg shadow-lg border border-slate-200">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <div>
+                                            <h3 class="text-xl font-bold text-slate-800" id="scan-target-title">Target Analysis</h3>
+                                            <p class="text-sm text-slate-500" id="scan-target-os">OS Fingerprint: ...</p>
+                                        </div>
+                                        <div class="bg-slate-100 px-3 py-1 rounded text-xs font-mono text-slate-600">Scan intensity: T4 (Aggressive)</div>
+                                    </div>
+                                    
+                                    <div class="grid md:grid-cols-2 gap-6">
+                                        <div>
+                                            <h4 class="font-bold text-sm text-slate-700 uppercase mb-2">Open Ports & Services</h4>
+                                            <div class="overflow-y-auto max-h-60 border rounded">
+                                                <table class="w-full text-sm text-left">
+                                                    <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+                                                        <tr>
+                                                            <th class="px-4 py-2">Port</th>
+                                                            <th class="px-4 py-2">Service</th>
+                                                            <th class="px-4 py-2">Version</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="scan-table-body" class="divide-y divide-slate-100">
+                                                        <!-- JS Populated -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold text-sm text-slate-700 uppercase mb-2">Service Portfolio</h4>
+                                            <div class="chart-container">
+                                                <canvas id="portChart"></canvas>
+                                            </div>
+                                            <p class="text-xs text-slate-500 mt-2 text-center" id="chart-caption">Distribution of detected service types</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Exercise 3 -->
+                <section id="ex3" class="content-section hidden fade-in">
+                    <header class="mb-6 border-b pb-4">
+                        <h2 class="text-2xl font-bold text-slate-800">Exercise 3: Asset Inventory & Prioritization</h2>
+                        <p class="text-slate-600 mt-1">Objective: Classify assets and identify critical gaps to prioritize vulnerability assessment.</p>
+                    </header>
+
+                    <div class="grid lg:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-white p-4 rounded-lg shadow border border-slate-200">
+                            <h3 class="text-sm font-bold text-slate-500 uppercase">Total Assets</h3>
+                            <p class="text-3xl font-bold text-slate-800">5</p>
+                            <div class="mt-2 text-xs text-green-600">+1 from last month</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow border border-slate-200">
+                            <h3 class="text-sm font-bold text-slate-500 uppercase">Critical Infrastructure</h3>
+                            <p class="text-3xl font-bold text-red-600">2</p>
+                            <div class="mt-2 text-xs text-slate-500">Requires immediate patching</div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow border border-slate-200">
+                            <h3 class="text-sm font-bold text-slate-500 uppercase">Unknown/Shadow IT</h3>
+                            <p class="text-3xl font-bold text-amber-500">1</p>
+                            <div class="mt-2 text-xs text-slate-500">Investigate IP .200</div>
+                        </div>
+                    </div>
+
+                    <div class="grid lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-2">
+                            <div class="bg-white rounded-lg shadow border border-slate-200 overflow-hidden">
+                                <div class="p-4 border-b bg-slate-50 flex justify-between items-center">
+                                    <h3 class="font-bold text-slate-800">Master Asset Inventory</h3>
+                                    <select id="criticalityFilter" onchange="filterInventory()" class="text-sm border-slate-300 rounded shadow-sm focus:ring-teal-500 focus:border-teal-500 p-1">
+                                        <option value="all">All Criticalities</option>
+                                        <option value="High">High</option>
+                                        <option value="Medium">Medium</option>
+                                        <option value="Low">Low</option>
+                                    </select>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm text-left">
+                                        <thead class="bg-slate-100 text-slate-600 uppercase text-xs">
+                                            <tr>
+                                                <th class="px-4 py-3">IP Address</th>
+                                                <th class="px-4 py-3">Role/Function</th>
+                                                <th class="px-4 py-3">OS Family</th>
+                                                <th class="px-4 py-3">Criticality</th>
+                                                <th class="px-4 py-3">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="inventoryBody" class="divide-y divide-slate-200 bg-white">
+                                            <!-- JS Populated -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="lg:col-span-1">
+                            <div class="bg-white p-6 rounded-lg shadow border border-slate-200">
+                                <h3 class="font-bold text-slate-800 mb-4 text-center">Asset Criticality Distribution</h3>
+                                <div class="chart-container" style="height: 250px;">
+                                    <canvas id="inventoryChart"></canvas>
+                                </div>
+                                <div class="mt-4 p-3 bg-slate-50 rounded text-xs text-slate-600">
+                                    <p><strong>Methodology:</strong> Classify based on business impact, data sensitivity, and exposure. High criticality assets should be scanned first.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Exercise 4 -->
+                <section id="ex4" class="content-section hidden fade-in">
+                    <header class="mb-6 border-b pb-4">
+                        <h2 class="text-2xl font-bold text-slate-800">Exercise 4: Continuous Monitoring</h2>
+                        <p class="text-slate-600 mt-1">Objective: Detect changes (New Hosts, Port Drift) by comparing Baseline vs. Current scans.</p>
+                    </header>
+
+                    <div class="bg-slate-800 text-white p-4 rounded-lg shadow mb-6 flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold">Differential Analysis Tool</h3>
+                            <p class="text-sm text-slate-400">Baseline established: 2023-10-01 08:00 UTC</p>
+                        </div>
+                        <button onclick="toggleDiff()" id="diff-btn" class="bg-blue-600 hover:bg-blue-700 px-5 py-2 rounded font-bold transition shadow">Run Comparison</button>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Baseline Column -->
+                        <div class="bg-white rounded-lg shadow border border-slate-200">
+                            <div class="p-3 bg-slate-100 border-b font-bold text-slate-600 text-center">BASELINE STATE</div>
+                            <div class="p-4 space-y-2 text-sm text-slate-600 opacity-75">
+                                <div class="flex justify-between border-b pb-1"><span>192.168.100.1</span> <span>Gateway</span></div>
+                                <div class="flex justify-between border-b pb-1"><span>192.168.100.10</span> <span>Web Server (80, 443)</span></div>
+                                <div class="flex justify-between border-b pb-1"><span>192.168.100.25</span> <span>Printer</span></div>
+                                <div class="flex justify-between border-b pb-1"><span>192.168.100.50</span> <span>Workstation</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Current Column -->
+                        <div class="bg-white rounded-lg shadow border border-slate-200 relative overflow-hidden">
+                            <div class="p-3 bg-slate-100 border-b font-bold text-slate-800 text-center">CURRENT STATE</div>
+                            <div id="current-state-list" class="p-4 space-y-2 text-sm text-slate-800">
+                                <div class="flex justify-between border-b pb-1"><span>192.168.100.1</span> <span>Gateway</span></div>
+                                <div class="flex justify-between border-b pb-1 diff-target transition-colors duration-500 p-1 rounded">
+                                    <span>192.168.100.10</span> 
+                                    <span>Web Server (80, 443, <span class="hidden diff-alert font-bold text-red-600">+22 SSH</span>)</span>
+                                </div>
+                                <div class="flex justify-between border-b pb-1"><span>192.168.100.25</span> <span>Printer</span></div>
+                                <div class="flex justify-between border-b pb-1"><span>192.168.100.50</span> <span>Workstation</span></div>
+                                <div class="flex justify-between border-b pb-1 diff-target transition-colors duration-500 p-1 rounded hidden" id="new-host-row">
+                                    <span class="font-bold text-red-600">+ 192.168.100.200</span> 
+                                    <span class="text-red-600">NEW HOST (Unknown)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="diff-analysis" class="mt-6 hidden fade-in">
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                            <h4 class="font-bold text-red-800">Anomalies Detected:</h4>
+                            <ul class="list-disc pl-5 mt-2 text-sm text-red-800 space-y-1">
+                                <li><strong>New Host:</strong> 192.168.100.200 appeared on network. Unclassified asset.</li>
+                                <li><strong>Configuration Drift:</strong> 192.168.100.10 now exposing Port 22 (SSH). Was this change authorized?</li>
+                            </ul>
+                            <div class="mt-3 pt-3 border-t border-red-200">
+                                <p class="text-xs text-red-900 font-bold">Recommended Action: Initiate immediate investigation on .200 and verify change request for .10.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+            
+            <footer class="mt-12 text-center text-slate-400 text-xs pb-6">
+                <p>Educational Lab Environment - Not connected to real networks.</p>
+                <p>Based on "Lab Exercise 4: Asset Discovery"</p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // State Management
+        const state = {
+            legalAccepted: false,
+            ex1Scanned: false,
+            ex2Target: null,
+        };
+
+        // Data Store
+        const inventoryData = [
+            { ip: '192.168.100.1', role: 'Network Gateway', os: 'Cisco IOS', criticality: 'High', type: 'Infrastructure' },
+            { ip: '192.168.100.10', role: 'App Server', os: 'Ubuntu Linux', criticality: 'High', type: 'Server' },
+            { ip: '192.168.100.25', role: 'Office Printer', os: 'HP Firmware', criticality: 'Low', type: 'IoT' },
+            { ip: '192.168.100.50', role: 'HR Workstation', os: 'Windows 10', criticality: 'Medium', type: 'Workstation' },
+            { ip: '192.168.100.200', role: 'Unknown Device', os: 'Linux Kernel', criticality: 'Medium', type: 'Unknown' },
+        ];
+
+        const scanData = {
+            '192.168.100.10': {
+                os: 'Linux 5.4 (Ubuntu 20.04)',
+                ports: [
+                    { port: 80, service: 'http', version: 'Apache 2.4.41' },
+                    { port: 443, service: 'https', version: 'Apache 2.4.41' },
+                    { port: 22, service: 'ssh', version: 'OpenSSH 8.2p1' },
+                    { port: 3306, service: 'mysql', version: 'MySQL 8.0.21' }
+                ],
+                chartData: [2, 1, 1], // Web, Remote, DB
+                chartLabels: ['Web (80/443)', 'Remote (22)', 'Database (3306)']
+            },
+            '192.168.100.50': {
+                os: 'Windows 10 Pro',
+                ports: [
+                    { port: 135, service: 'msrpc', version: 'Microsoft RPC' },
+                    { port: 139, service: 'netbios-ssn', version: 'Windows' },
+                    { port: 445, service: 'microsoft-ds', version: 'Windows 10' },
+                    { port: 3389, service: 'ms-wbt-server', version: 'RDP' }
+                ],
+                chartData: [3, 1], // File Share, Remote
+                chartLabels: ['File/RPC (SMB)', 'Remote (RDP)']
+            },
+            '192.168.100.200': {
+                os: 'Linux Kernel 2.6.x (Embedded)',
+                ports: [
+                    { port: 23, service: 'telnet', version: 'BusyBox telnetd' },
+                    { port: 80, service: 'http', version: 'Boa 0.94' }
+                ],
+                chartData: [1, 1], // Web, Insecure Remote
+                chartLabels: ['Web (80)', 'Insecure (Telnet)']
+            }
+        };
+
+        // Charts Instances
+        let portChart = null;
+        let inventoryChartInstance = null;
+
+        // --- Core Functions ---
+
+        function acceptLegal() {
+            document.getElementById('legalModal').classList.add('opacity-0');
+            setTimeout(() => {
+                document.getElementById('legalModal').classList.add('hidden');
+            }, 300);
+            state.legalAccepted = true;
+        }
+
+        function nav(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(el => {
+                el.classList.add('hidden');
+            });
+            // Remove active classes
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active-nav', 'bg-slate-800', 'text-white', 'border-teal-500');
+                btn.classList.add('border-transparent');
+            });
+
+            // Show selected section
+            const target = document.getElementById(sectionId);
+            target.classList.remove('hidden');
+            
+            // Add active class to button
+            const btn = document.getElementById(`btn-${sectionId}`);
+            if(btn) {
+                btn.classList.add('active-nav', 'bg-slate-800', 'text-white', 'border-teal-500');
+                btn.classList.remove('border-transparent');
+            }
+
+            // Mobile menu close
+            document.getElementById('mobileMenu').classList.add('hidden');
+
+            // Init charts if navigating to sections that need them
+            if (sectionId === 'ex3' && !inventoryChartInstance) {
+                setTimeout(initInventoryChart, 100);
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // --- Exercise 1 Logic ---
+
+        function runDiscoveryScan() {
+            const terminal = document.getElementById('terminal-ex1');
+            const btn = document.querySelector('button[onclick="runDiscoveryScan()"]');
+            btn.disabled = true;
+            btn.innerText = "SCANNING...";
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            const steps = [
+                "Initializing ARP ping scan...",
+                "Sending probes to 192.168.100.0/24...",
+                "Host 192.168.100.1 responded (0.4ms)",
+                "Host 192.168.100.10 responded (1.2ms)",
+                "Host 192.168.100.25 responded (4.5ms)",
+                "Host 192.168.100.50 responded (2.1ms)",
+                "Host 192.168.100.200 responded (1.8ms)",
+                "Scan complete. 5 hosts up."
+            ];
+
+            let delay = 0;
+            steps.forEach((step, index) => {
+                setTimeout(() => {
+                    const p = document.createElement('p');
+                    p.innerText = `> ${step}`;
+                    p.className = "font-mono";
+                    terminal.insertBefore(p, terminal.lastElementChild);
+                    terminal.scrollTop = terminal.scrollHeight;
+                    
+                    if (index === steps.length - 1) {
+                        document.getElementById('ex1-results').classList.remove('hidden');
+                        document.getElementById('ex1-results').classList.add('fade-in');
+                        btn.innerText = "SCAN COMPLETE";
+                        state.ex1Scanned = true;
+                    }
+                }, delay);
+                delay += 600;
+            });
+        }
+
+        // --- Exercise 2 Logic ---
+
+        function scanTarget(ip) {
+            // UI Update
+            document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('bg-teal-50', 'ring-2', 'ring-teal-500'));
+            
+            const btnId = `target-${ip.split('.')[3]}`;
+            document.getElementById(btnId).classList.add('bg-teal-50', 'ring-2', 'ring-teal-500');
+
+            document.getElementById('ex2-placeholder').classList.add('hidden');
+            document.getElementById('ex2-results').classList.remove('hidden');
+
+            // Populate Data
+            const data = scanData[ip];
+            document.getElementById('scan-target-title').innerText = `Target: ${ip}`;
+            document.getElementById('scan-target-os').innerHTML = `<strong>OS Fingerprint:</strong> ${data.os}`;
+
+            // Table
+            const tbody = document.getElementById('scan-table-body');
+            tbody.innerHTML = '';
+            data.ports.forEach(p => {
+                const tr = document.createElement('tr');
+                // Highlight risky ports
+                const isRisky = (p.port === 23 || p.port === 21);
+                const colorClass = isRisky ? 'text-red-600 font-bold' : 'text-slate-600';
+                
+                tr.innerHTML = `
+                    <td class="px-4 py-2 ${colorClass}">${p.port}/tcp</td>
+                    <td class="px-4 py-2">${p.service}</td>
+                    <td class="px-4 py-2 font-mono text-xs">${p.version}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Chart
+            updatePortChart(data.chartLabels, data.chartData);
+        }
+
+        function updatePortChart(labels, data) {
+            const ctx = document.getElementById('portChart').getContext('2d');
+            
+            if (portChart) {
+                portChart.destroy();
+            }
+
+            portChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Open Ports',
+                        data: data,
+                        backgroundColor: [
+                            'rgba(20, 184, 166, 0.7)', // Teal
+                            'rgba(59, 130, 246, 0.7)', // Blue
+                            'rgba(245, 158, 11, 0.7)', // Amber
+                            'rgba(239, 68, 68, 0.7)'   // Red
+                        ],
+                        borderColor: [
+                            'rgb(20, 184, 166)',
+                            'rgb(59, 130, 246)',
+                            'rgb(245, 158, 11)',
+                            'rgb(239, 68, 68)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // --- Exercise 3 Logic ---
+
+        function initInventoryChart() {
+            const ctx = document.getElementById('inventoryChart').getContext('2d');
+            inventoryChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['High Criticality', 'Medium Criticality', 'Low Criticality'],
+                    datasets: [{
+                        data: [2, 2, 1], // Based on inventoryData
+                        backgroundColor: [
+                            'rgb(220, 38, 38)', // Red
+                            'rgb(245, 158, 11)', // Amber
+                            'rgb(16, 185, 129)'  // Green
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+            renderInventoryTable(inventoryData);
+        }
+
+        function renderInventoryTable(data) {
+            const tbody = document.getElementById('inventoryBody');
+            tbody.innerHTML = '';
+            
+            data.forEach(asset => {
+                let badgeColor = 'bg-slate-100 text-slate-800';
+                if(asset.criticality === 'High') badgeColor = 'bg-red-100 text-red-800';
+                if(asset.criticality === 'Medium') badgeColor = 'bg-amber-100 text-amber-800';
+                if(asset.criticality === 'Low') badgeColor = 'bg-green-100 text-green-800';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-mono text-slate-900">${asset.ip}</td>
+                    <td class="px-4 py-3">${asset.role}</td>
+                    <td class="px-4 py-3 text-slate-500">${asset.os}</td>
+                    <td class="px-4 py-3"><span class="${badgeColor} text-xs font-bold px-2 py-1 rounded">${asset.criticality}</span></td>
+                    <td class="px-4 py-3">
+                        <button class="text-blue-600 hover:text-blue-800 text-xs font-bold">Details</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterInventory() {
+            const filter = document.getElementById('criticalityFilter').value;
+            if (filter === 'all') {
+                renderInventoryTable(inventoryData);
+            } else {
+                const filtered = inventoryData.filter(item => item.criticality === filter);
+                renderInventoryTable(filtered);
+            }
+        }
+
+        // --- Exercise 4 Logic ---
+        
+        function toggleDiff() {
+            const btn = document.getElementById('diff-btn');
+            const newHostRow = document.getElementById('new-host-row');
+            const analysis = document.getElementById('diff-analysis');
+            const diffAlerts = document.querySelectorAll('.diff-alert');
+            const diffTargets = document.querySelectorAll('.diff-target');
+
+            btn.innerText = "Comparing...";
+            
+            setTimeout(() => {
+                newHostRow.classList.remove('hidden');
+                newHostRow.classList.add('bg-red-50'); // Highlight new row
+                
+                diffTargets.forEach(el => el.classList.add('bg-amber-50')); // Highlight modified row
+                diffAlerts.forEach(el => el.classList.remove('hidden'));
+                
+                analysis.classList.remove('hidden');
+                btn.innerText = "Comparison Complete";
+                btn.disabled = true;
+                btn.classList.add('opacity-75');
+            }, 800);
+        }
+
+        // Initial Load
+        window.onload = function() {
+            // Simulate accepting legal for dev (remove for prod feel if needed)
+            // acceptLegal(); 
+        };
+
+    </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Management & Attack Surface Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .perspective-1000 { perspective: 1000px; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .preserve-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        
+        .card-container {
+            transition: transform 0.6s;
+        }
+        
+        .flipped {
+            transform: rotateY(180deg);
+        }
+
+        body {
+            background: radial-gradient(circle at top left, #1a1a2e, #16213e);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body class="text-gray-100 font-sans">
+
+<div id="app" class="max-w-4xl mx-auto px-4 py-8 flex flex-col items-center">
+    <!-- Header -->
+    <header class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-blue-400 mb-2">Cybersecurity Fundamentals</h1>
+        <p class="text-gray-400">Asset Management & Attack Surface Analysis</p>
+    </header>
+
+    <!-- Progress Bar -->
+    <div class="w-full max-w-md bg-gray-800 rounded-full h-2.5 mb-6">
+        <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+    </div>
+
+    <!-- Flashcard Section -->
+    <div class="perspective-1000 w-full max-w-md h-80 cursor-pointer mb-8" onclick="toggleFlip()">
+        <div id="card-inner" class="card-container preserve-3d relative w-full h-full shadow-2xl">
+            
+            <!-- Front of Card -->
+            <div class="backface-hidden absolute inset-0 bg-gray-800 border-2 border-blue-500 rounded-2xl flex flex-col items-center justify-center p-8 text-center">
+                <span class="text-xs uppercase tracking-widest text-blue-400 mb-4">Front</span>
+                <h2 id="card-front-text" class="text-2xl font-semibold leading-tight"></h2>
+                <p class="mt-6 text-gray-500 text-sm italic">Click to flip</p>
+            </div>
+
+            <!-- Back of Card -->
+            <div class="backface-hidden rotate-y-180 absolute inset-0 bg-blue-900 border-2 border-blue-300 rounded-2xl flex flex-col items-center justify-center p-8 text-center overflow-y-auto">
+                <span class="text-xs uppercase tracking-widest text-blue-200 mb-4">Back</span>
+                <p id="card-back-text" class="text-xl leading-relaxed"></p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Navigation Controls -->
+    <div class="flex items-center space-x-8 mb-12">
+        <button onclick="prevCard()" class="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors flex items-center justify-center">
+            <i class="fas fa-chevron-left text-blue-400"></i>
+        </button>
+        
+        <span class="text-lg font-medium">
+            <span id="current-index">1</span> / <span id="total-count">0</span>
+        </span>
+
+        <button onclick="nextCard()" class="w-12 h-12 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-600 transition-colors flex items-center justify-center">
+            <i class="fas fa-chevron-right text-blue-400"></i>
+        </button>
+    </div>
+
+    <!-- Quick Shortcuts -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 text-center">
+            <p class="text-xs text-gray-500 uppercase">Space</p>
+            <p class="text-sm">Flip Card</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 text-center">
+            <p class="text-xs text-gray-500 uppercase">Arrows</p>
+            <p class="text-sm">Prev/Next</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 text-center">
+            <p class="text-xs text-gray-500 uppercase">R</p>
+            <p class="text-sm">Shuffle</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded-xl border border-gray-700 text-center">
+            <p class="text-xs text-gray-500 uppercase">Status</p>
+            <p id="status-text" class="text-sm text-green-400">Learning</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const flashcardData = [
+        { front: "Definition of Attack Surface", back: "Every possible way an attacker could interact with systems to extract data, cause damage, or gain unauthorized access." },
+        { front: "Four Components of Attack Surface", back: "Physical, Digital, Social Engineering, and Network." },
+        { front: "External Attack Surface", back: "Everything visible from the public internet, such as public websites, email servers, and VPN gateways." },
+        { front: "Internal Attack Surface", back: "Everything behind the firewall, including internal applications, file servers, databases, and admin panels." },
+        { front: "Shadow IT", back: "Undocumented devices or software on a network that IT is unaware of, creating unmanaged risk." },
+        { front: "Passive Network Mapping", back: "Observing traffic (via ARP, DNS, or broadcast) without sending packets; it is undetectable but slow." },
+        { front: "Active Network Mapping", back: "Sending probes (like ping sweeps or port scans) to discover hosts; it is fast and comprehensive but easily detected." },
+        { front: "Hybrid Network Mapping", back: "Combining passive observation to understand normal traffic with targeted active scanning to fill gaps." },
+        { front: "Limitation of ARP Scanning", back: "It is only effective on the local subnet because ARP requests are not routed." },
+        { front: "Banner Grabbing", back: "Reading service welcome messages to reveal specific software versions (e.g., 'Apache 2.4.41')." },
+        { front: "Service Fingerprinting", back: "Identifying software and version numbers running on open ports to assess vulnerabilities." },
+        { front: "CIA Triad for Asset Prioritization", back: "Confidentiality, Integrity, and Availability." },
+        { front: "Tier 1 Assets (Crown Jewels)", back: "Critical systems like customer databases, financial records, Active Directory, and backup systems." },
+        { front: "Tier 4 Assets (Low Priority)", back: "Assets with minimal business impact, such as guest WiFi, wayfinding kiosks, and break room TVs." },
+        { front: "Risk Scoring Factor: Internet Exposure", back: "Assets accessible from the internet receive a higher risk weight due to the larger attack surface." },
+        { front: "High Risk Data Sensitivity Categories", back: "PII (Personally Identifiable Information), PHI (Protected Health Information), and Financial data." },
+        { front: "Tier 1 Patch Management Standard", back: "Critical assets should be patched within 24 hours." },
+        { front: "CIS Control 1", back: "Inventory and Control of Enterprise Assets." },
+        { front: "ICMP Sweeping", back: "Sending ping requests across an IP range to quickly discover active hosts." },
+        { front: "Network Topology Mapping", back: "Understanding device connections to identify routers, switches, firewalls, and network segments." },
+        { front: "Social Engineering Attack Surface Vectors", back: "Employees, contractors, interns, vendors, and anyone with system access." },
+        { front: "Primary Goal of Network Mapping", back: "Creating a detailed inventory, because you cannot defend what you don't know exists." },
+        { front: "NIST Cybersecurity Framework - Identify Function", back: "Identifies asset management as the first step: maintain inventory and map data flows." },
+        { front: "Impact of Availability Loss on Tier 1 Assets", back: "Critical impact, such as financial loss per second (e.g., payment processing) or safety risks (e.g., hospital systems)." },
+        { front: "Normalized Risk Score Calculation", back: "(Total Risk Score / Max Possible Score) × 100." }
+    ];
+
+    let currentIndex = 0;
+    let isFlipped = false;
+
+    function init() {
+        document.getElementById('total-count').innerText = flashcardData.length;
+        updateCard();
+    }
+
+    function updateCard() {
+        isFlipped = false;
+        document.getElementById('card-inner').classList.remove('flipped');
+        
+        setTimeout(() => {
+            document.getElementById('card-front-text').innerText = flashcardData[currentIndex].front;
+            document.getElementById('card-back-text').innerText = flashcardData[currentIndex].back;
+            document.getElementById('current-index').innerText = currentIndex + 1;
+            
+            const progress = ((currentIndex + 1) / flashcardData.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }, isFlipped ? 300 : 0);
+    }
+
+    function toggleFlip() {
+        isFlipped = !isFlipped;
+        document.getElementById('card-inner').classList.toggle('flipped');
+    }
+
+    function nextCard() {
+        if (currentIndex < flashcardData.length - 1) {
+            currentIndex++;
+            updateCard();
+        } else {
+            // Loop back to start
+            currentIndex = 0;
+            updateCard();
+        }
+    }
+
+    function prevCard() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateCard();
+        } else {
+            // Loop to end
+            currentIndex = flashcardData.length - 1;
+            updateCard();
+        }
+    }
+
+    function shuffleCards() {
+        flashcardData.sort(() => Math.random() - 0.5);
+        currentIndex = 0;
+        updateCard();
+    }
+
+    // Keyboard controls
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            toggleFlip();
+        } else if (e.code === 'ArrowRight') {
+            nextCard();
+        } else if (e.code === 'ArrowLeft') {
+            prevCard();
+        } else if (e.key.toLowerCase() === 'r') {
+            shuffleCards();
+        }
+    });
+
+    window.onload = init;
+</script>
+
+</body>
+</html>
+
+
+

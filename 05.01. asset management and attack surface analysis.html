@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Management & Attack Surface Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom transitions and utilities */
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Chart Container Utilities */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Scrollbar for internal panels */
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+    <!-- Chosen Palette: Secure Horizon
+         Background: Warm Neutral (bg-stone-50)
+         Primary Text: Slate 800
+         Accents: Teal (Safe/Info), Amber (Warning), Rose (Critical), Indigo (Interactive)
+    -->
+    
+    <!-- Application Structure Plan: 
+         Designed as a "Security Operations Center" (SOC) Dashboard with a tabs-based navigation to separate distinct cognitive tasks.
+         1. "Overview & Strategy": High-level context, defining the problem (Attack Surface), and the "Why".
+         2. "Discovery Lab": Focuses on Network Mapping techniques and the BrandForce case study (Before vs After). Includes a simulation.
+         3. "Risk Assessment": Dedicated to the Asset Classification Framework. Features an interactive Risk Calculator to teach the scoring logic.
+         4. "Action Plan": A linear timeline of the 4-week execution strategy.
+         Why this structure? The report moves from definition to discovery to classification. A tabbed view allows users to focus on one complex methodology at a time without endless scrolling, while the interactive calculator and scan simulation encourage active learning of the core concepts.
+    -->
+
+    <!-- Visualization & Content Choices:
+         1. Overview - Attack Surface Components: 
+            - Goal: Inform/Organize. 
+            - Method: Interactive Grid of Cards. 
+            - Interaction: Click to expand details. 
+            - Justification: Breaks down the "4 Components" text into digestible chunks.
+         2. Overview - Breach Sources:
+            - Goal: Compare.
+            - Method: Chart.js Doughnut.
+            - Interaction: Tooltip.
+            - Justification: Visually reinforces the "60% internal" statistic.
+         3. Discovery - BrandForce Case Study:
+            - Goal: Compare/Shock.
+            - Method: Chart.js Grouped Bar Chart.
+            - Interaction: Toggle views.
+            - Justification: Shows the stark contrast between "Expected" and "Actual" assets found in the case study.
+         4. Risk Assessment - Asset Scorer:
+            - Goal: Calculate/Analyze.
+            - Method: Interactive Form Inputs + Chart.js Gauge (Doughnut).
+            - Interaction: Sliders for risk factors update the score and tier in real-time.
+            - Justification: Gamifies the complex scoring matrix to help users understand how sensitivity and impact drive classification.
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-stone-50 text-slate-800 font-sans antialiased selection:bg-teal-100 selection:text-teal-900">
+
+    <!-- Main App Container -->
+    <div id="app" class="min-h-screen flex flex-col max-w-7xl mx-auto shadow-xl bg-white">
+        
+        <!-- Header -->
+        <header class="bg-slate-900 text-white p-6 md:p-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight text-teal-400">Managing Vulnerabilities</h1>
+                    <p class="text-slate-400 mt-2 text-lg">Module: Asset Management & Attack Surface Analysis</p>
+                </div>
+                <div class="bg-slate-800 p-4 rounded-lg border-l-4 border-rose-500 shadow-lg max-w-sm">
+                    <p class="text-sm font-semibold text-rose-400 uppercase tracking-wide">Why This Matters</p>
+                    <p class="text-2xl font-bold mt-1">$1.76 Million</p>
+                    <p class="text-xs text-slate-400">Average savings for orgs with quick breach identification</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="bg-white border-b border-slate-200 sticky top-0 z-50">
+            <div class="flex overflow-x-auto no-scrollbar">
+                <button onclick="switchTab('overview')" id="tab-overview" class="nav-tab px-6 py-4 font-semibold text-slate-600 border-b-2 border-transparent hover:text-teal-600 hover:bg-stone-50 transition-colors whitespace-nowrap active-tab">Attack Surface</button>
+                <button onclick="switchTab('discovery')" id="tab-discovery" class="nav-tab px-6 py-4 font-semibold text-slate-600 border-b-2 border-transparent hover:text-teal-600 hover:bg-stone-50 transition-colors whitespace-nowrap">Network Mapping</button>
+                <button onclick="switchTab('risk')" id="tab-risk" class="nav-tab px-6 py-4 font-semibold text-slate-600 border-b-2 border-transparent hover:text-teal-600 hover:bg-stone-50 transition-colors whitespace-nowrap">Critical Assets</button>
+                <button onclick="switchTab('action')" id="tab-action" class="nav-tab px-6 py-4 font-semibold text-slate-600 border-b-2 border-transparent hover:text-teal-600 hover:bg-stone-50 transition-colors whitespace-nowrap">Action Plan</button>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow p-4 md:p-8 bg-stone-50">
+
+            <!-- TAB 1: OVERVIEW & ATTACK SURFACE -->
+            <section id="view-overview" class="space-y-8 fade-in block">
+                <div class="prose max-w-none mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">Defining the Attack Surface</h2>
+                    <p class="text-slate-600 leading-relaxed max-w-4xl">
+                        Before you can defend an organization, you must define exactly what you are defending. An <strong>Attack Surface</strong> is the sum of every possible point where an unauthorized user can try to enter data to or extract data from an environment. Think of it as all the doors, windows, vents, and crawl spaces in a digital building.
+                    </p>
+                </div>
+
+                <!-- Top Row: Components & Chart -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    <!-- 4 Components Interactive Cards -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-700 mb-4 flex items-center">
+                            <span class="bg-teal-100 text-teal-800 p-1 rounded mr-2">1</span> The Four Components
+                        </h3>
+                        <p class="text-sm text-slate-500 mb-4">Click a component to see examples.</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="showComponent('physical')" class="comp-btn p-4 rounded-lg bg-stone-100 hover:bg-teal-50 border border-transparent hover:border-teal-300 text-left transition-all">
+                                <div class="text-2xl mb-1">🖥️</div>
+                                <div class="font-bold text-slate-700">Physical</div>
+                            </button>
+                            <button onclick="showComponent('digital')" class="comp-btn p-4 rounded-lg bg-stone-100 hover:bg-teal-50 border border-transparent hover:border-teal-300 text-left transition-all">
+                                <div class="text-2xl mb-1">☁️</div>
+                                <div class="font-bold text-slate-700">Digital</div>
+                            </button>
+                            <button onclick="showComponent('social')" class="comp-btn p-4 rounded-lg bg-stone-100 hover:bg-teal-50 border border-transparent hover:border-teal-300 text-left transition-all">
+                                <div class="text-2xl mb-1">👥</div>
+                                <div class="font-bold text-slate-700">Social</div>
+                            </button>
+                            <button onclick="showComponent('network')" class="comp-btn p-4 rounded-lg bg-stone-100 hover:bg-teal-50 border border-transparent hover:border-teal-300 text-left transition-all">
+                                <div class="text-2xl mb-1">🌐</div>
+                                <div class="font-bold text-slate-700">Network</div>
+                            </button>
+                        </div>
+                        <div id="component-detail" class="mt-4 p-4 bg-teal-50 rounded border border-teal-100 text-sm text-slate-700 h-32 overflow-y-auto">
+                            <strong>Select a component above to see details.</strong>
+                        </div>
+                    </div>
+
+                    <!-- Internal vs External Chart -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                        <h3 class="text-lg font-bold text-slate-700 mb-2">Internal vs. External Risk</h3>
+                        <p class="text-sm text-slate-500 mb-4">While external surfaces (Public Web, APIs) are visible to everyone, the internal surface is often where the greatest risk lies.</p>
+                        
+                        <div class="flex-grow flex items-center justify-center bg-stone-50 rounded-lg p-2">
+                             <div class="chart-container">
+                                <canvas id="attackSurfaceChart"></canvas>
+                            </div>
+                        </div>
+                        <p class="text-center text-xs text-slate-400 mt-2">Source: Verizon DBIR / Ponemon Institute</p>
+                    </div>
+                </div>
+
+                <!-- Coffee Shop Analogy -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4">Real-World Analysis: JavaBeans Café</h3>
+                    <p class="text-slate-600 mb-6">Even small businesses have massive attack surfaces. Hover over the items in the café below to identify the risks.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Visual Layout -->
+                        <div class="col-span-2 bg-stone-100 p-6 rounded-lg relative min-h-[300px] grid grid-cols-2 grid-rows-2 gap-4 border border-stone-200">
+                            <!-- Zone 1: Counter -->
+                            <div class="bg-white p-4 rounded shadow-sm border border-stone-200 relative group cursor-pointer hover:border-rose-400 transition-colors" onmouseenter="showCafeDetail('pos')">
+                                <div class="absolute top-2 right-2 text-rose-500">💳</div>
+                                <h4 class="font-bold text-slate-700">Checkout Counter</h4>
+                                <div class="text-4xl text-center mt-2">💻</div>
+                                <p class="text-xs text-center text-slate-400 mt-2">POS Terminal</p>
+                            </div>
+
+                            <!-- Zone 2: Customer Area -->
+                            <div class="bg-white p-4 rounded shadow-sm border border-stone-200 relative group cursor-pointer hover:border-rose-400 transition-colors" onmouseenter="showCafeDetail('wifi')">
+                                <div class="absolute top-2 right-2 text-rose-500">📶</div>
+                                <h4 class="font-bold text-slate-700">Customer Seating</h4>
+                                <div class="text-4xl text-center mt-2">📱 💻</div>
+                                <p class="text-xs text-center text-slate-400 mt-2">Public WiFi</p>
+                            </div>
+
+                            <!-- Zone 3: Back Office -->
+                            <div class="bg-white p-4 rounded shadow-sm border border-stone-200 relative group cursor-pointer hover:border-rose-400 transition-colors" onmouseenter="showCafeDetail('server')">
+                                <div class="absolute top-2 right-2 text-rose-500">🔒</div>
+                                <h4 class="font-bold text-slate-700">Back Office</h4>
+                                <div class="text-4xl text-center mt-2">🖥️ 📠</div>
+                                <p class="text-xs text-center text-slate-400 mt-2">Accounting & Router</p>
+                            </div>
+
+                             <!-- Zone 4: People -->
+                             <div class="bg-white p-4 rounded shadow-sm border border-stone-200 relative group cursor-pointer hover:border-rose-400 transition-colors" onmouseenter="showCafeDetail('human')">
+                                <div class="absolute top-2 right-2 text-rose-500">⚠️</div>
+                                <h4 class="font-bold text-slate-700">Staff & Owner</h4>
+                                <div class="text-4xl text-center mt-2">🤵 👩‍💼</div>
+                                <p class="text-xs text-center text-slate-400 mt-2">Social Vectors</p>
+                            </div>
+                        </div>
+
+                        <!-- Detail Panel -->
+                        <div class="bg-slate-800 text-white p-6 rounded-lg flex flex-col justify-center">
+                            <h4 id="cafe-title" class="text-xl font-bold text-teal-400 mb-2">Hover to Explore</h4>
+                            <p id="cafe-desc" class="text-slate-300 text-sm">Explore the physical, digital, and human risks in a simple coffee shop environment.</p>
+                            <div id="cafe-tags" class="mt-4 flex flex-wrap gap-2">
+                                <!-- Tags injected via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: NETWORK MAPPING -->
+            <section id="view-discovery" class="space-y-8 fade-in hidden">
+                <div class="prose max-w-none mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">Network Mapping Techniques</h2>
+                    <p class="text-slate-600 leading-relaxed max-w-4xl">
+                        You cannot defend what you don't know exists. Network mapping creates a detailed inventory of devices and connections. It is the "floor plan" of your digital security. We use <strong>Passive</strong> (undetectable monitoring), <strong>Active</strong> (sending probes), or <strong>Hybrid</strong> mapping strategies.
+                    </p>
+                </div>
+
+                <!-- Simulation & Comparison -->
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                    
+                    <!-- BrandForce Case Study Chart -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-700 mb-2">Case Study: BrandForce Media</h3>
+                        <p class="text-sm text-slate-500 mb-6">A 50-person agency thought they knew their network. A simple mapping exercise revealed a massive "Shadow IT" problem.</p>
+                        
+                        <div class="chart-container">
+                            <canvas id="mappingChart"></canvas>
+                        </div>
+                        <div class="mt-4 p-3 bg-rose-50 border-l-4 border-rose-500 rounded text-sm text-rose-800">
+                            <strong>Key Finding:</strong> 23 unexpected devices were found, including a Raspberry Pi backdoor and 2 undocumented AWS servers.
+                        </div>
+                    </div>
+
+                    <!-- Interactive Scan Simulation -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-slate-700">Discovery Simulation</h3>
+                            <button onclick="runScan()" id="scan-btn" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded shadow transition-colors font-medium text-sm flex items-center">
+                                <span id="scan-icon" class="mr-2">📡</span> Run Hybrid Scan
+                            </button>
+                        </div>
+                        
+                        <div class="bg-slate-900 rounded-lg p-4 flex-grow font-mono text-sm overflow-hidden flex flex-col relative h-[350px]">
+                            <!-- Progress Bar -->
+                            <div id="scan-progress-container" class="w-full bg-slate-700 h-1 absolute top-0 left-0 hidden">
+                                <div id="scan-progress" class="bg-teal-400 h-1 w-0 transition-all duration-[2000ms]"></div>
+                            </div>
+                            
+                            <!-- Console Output -->
+                            <div id="scan-output" class="text-green-400 space-y-1 overflow-y-auto custom-scroll flex-grow">
+                                <span class="text-slate-500">// System ready. Click 'Run Hybrid Scan' to begin discovery...</span>
+                            </div>
+
+                            <!-- Summary Overlay (Hidden initially) -->
+                            <div id="scan-summary" class="hidden absolute bottom-4 left-4 right-4 bg-slate-800 border border-slate-600 p-3 rounded shadow-lg">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-white font-bold">Total Assets Found: <span class="text-teal-400 text-lg">14</span></span>
+                                    <span class="text-rose-400 text-xs uppercase tracking-wider font-bold">3 Rogue Devices</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3">Simulates a hybrid map using ARP monitoring followed by active Service Fingerprinting.</p>
+                    </div>
+                </div>
+
+                <!-- Methods Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 hover:shadow-md transition-shadow">
+                        <div class="text-teal-600 font-bold mb-2">Passive Mapping</div>
+                        <p class="text-sm text-slate-600">Observes traffic (ARP, DNS) without sending packets. Slow but stealthy.</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 hover:shadow-md transition-shadow">
+                        <div class="text-indigo-600 font-bold mb-2">Active Mapping</div>
+                        <p class="text-sm text-slate-600">Sends probes (Ping, Port Scans) to discover hosts. Fast but noisy.</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg border border-slate-200 hover:shadow-md transition-shadow border-l-4 border-l-teal-500">
+                        <div class="text-slate-800 font-bold mb-2">Hybrid (Best Practice)</div>
+                        <p class="text-sm text-slate-600">Combine passive observation with targeted active scans to minimize detection.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: CRITICAL ASSETS & RISK -->
+            <section id="view-risk" class="space-y-8 fade-in hidden">
+                <div class="prose max-w-none mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">Asset Classification & Risk Scoring</h2>
+                    <p class="text-slate-600 leading-relaxed max-w-4xl">
+                        Not all assets are equal. A customer database is worth far more than a break room TV. We prioritize assets using the <strong>CIA Triad</strong> (Confidentiality, Integrity, Availability) and assign them to Tiers (1-4).
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    
+                    <!-- Left Col: Interactive Calculator (8 cols) -->
+                    <div class="lg:col-span-8 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-700 mb-4 border-b border-slate-100 pb-2">Interactive Risk Calculator</h3>
+                        <p class="text-sm text-slate-500 mb-6">Adjust the factors below to see how different assets are scored and classified.</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Inputs -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Data Sensitivity (Weight: 10)</label>
+                                    <select id="risk-sensitivity" class="w-full p-2 border border-slate-300 rounded text-sm bg-stone-50 focus:ring-2 focus:ring-teal-500 outline-none" onchange="calculateRisk()">
+                                        <option value="10">PII / PHI / Financial (10)</option>
+                                        <option value="9">Credentials / IP (9)</option>
+                                        <option value="7">Employee Data (7)</option>
+                                        <option value="1">Public Info (1)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Business Impact (Weight: 9)</label>
+                                    <select id="risk-impact" class="w-full p-2 border border-slate-300 rounded text-sm bg-stone-50 focus:ring-2 focus:ring-teal-500 outline-none" onchange="calculateRisk()">
+                                        <option value="10">Critical Operation (10)</option>
+                                        <option value="5">Standard Ops (5)</option>
+                                        <option value="0">Convenience Only (0)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Internet Exposure (Weight: 8)</label>
+                                    <select id="risk-exposure" class="w-full p-2 border border-slate-300 rounded text-sm bg-stone-50 focus:ring-2 focus:ring-teal-500 outline-none" onchange="calculateRisk()">
+                                        <option value="10">Directly Accessible (10)</option>
+                                        <option value="0">Internal Only (0)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Compliance Req (Weight: 8)</label>
+                                    <select id="risk-compliance" class="w-full p-2 border border-slate-300 rounded text-sm bg-stone-50 focus:ring-2 focus:ring-teal-500 outline-none" onchange="calculateRisk()">
+                                        <option value="10">Regulated (HIPAA/PCI) (10)</option>
+                                        <option value="0">Unregulated (0)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Visual Output -->
+                            <div class="flex flex-col items-center justify-center bg-stone-50 rounded-lg p-4 border border-stone-100">
+                                <div class="relative h-40 w-full flex justify-center">
+                                    <canvas id="riskGauge"></canvas>
+                                    <div class="absolute bottom-0 text-center">
+                                        <span id="score-display" class="text-4xl font-bold text-slate-800">0</span>
+                                        <span class="text-xs block text-slate-400">/ 100</span>
+                                    </div>
+                                </div>
+                                <div id="tier-display" class="mt-4 w-full text-center p-3 rounded font-bold text-white bg-slate-400 transition-colors">
+                                    Calculating...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Col: Tier Reference (4 cols) -->
+                    <div class="lg:col-span-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-700 mb-4">Tier Hierarchy</h3>
+                        <div class="space-y-3">
+                            <div class="p-3 bg-rose-50 border-l-4 border-rose-500 rounded">
+                                <div class="font-bold text-rose-700 text-sm">Tier 1: Critical (75-100)</div>
+                                <p class="text-xs text-rose-800 mt-1">Crown Jewels. EMR, Active Directory, Backups. 24/7 Monitoring req.</p>
+                            </div>
+                            <div class="p-3 bg-orange-50 border-l-4 border-orange-400 rounded">
+                                <div class="font-bold text-orange-700 text-sm">Tier 2: Important (50-74)</div>
+                                <p class="text-xs text-orange-800 mt-1">Email, HR systems. Encryption & Weekly backups.</p>
+                            </div>
+                            <div class="p-3 bg-blue-50 border-l-4 border-blue-400 rounded">
+                                <div class="font-bold text-blue-700 text-sm">Tier 3: Standard (25-49)</div>
+                                <p class="text-xs text-blue-800 mt-1">Workstations, Internal Wikis. Quarterly patching.</p>
+                            </div>
+                            <div class="p-3 bg-slate-50 border-l-4 border-slate-300 rounded">
+                                <div class="font-bold text-slate-700 text-sm">Tier 4: Low (0-24)</div>
+                                <p class="text-xs text-slate-600 mt-1">Guest WiFi, IoT. Minimal monitoring.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: ACTION PLAN -->
+            <section id="view-action" class="space-y-8 fade-in hidden">
+                <div class="prose max-w-none mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800">4-Week Execution Plan</h2>
+                    <p class="text-slate-600 leading-relaxed max-w-4xl">
+                        Move from chaos to control. Follow this structured timeline to implement a robust asset management program.
+                    </p>
+                </div>
+
+                <div class="relative border-l-4 border-teal-200 ml-6 space-y-12 my-10">
+                    
+                    <!-- Week 1 -->
+                    <div class="relative pl-8">
+                        <div class="absolute -left-3 top-0 bg-teal-500 h-6 w-6 rounded-full border-4 border-white shadow"></div>
+                        <h3 class="text-xl font-bold text-slate-800">Week 1: Discovery</h3>
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 mt-3 max-w-3xl">
+                            <p class="text-slate-600 mb-3">Perform network discovery scan of your environment.</p>
+                            <ul class="list-disc list-inside text-sm text-slate-500 space-y-1">
+                                <li>Use Nmap or similar tools for active scanning.</li>
+                                <li>Monitor ARP tables for passive discovery.</li>
+                                <li>Identify all subnets.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Week 2 -->
+                    <div class="relative pl-8">
+                        <div class="absolute -left-3 top-0 bg-teal-500 h-6 w-6 rounded-full border-4 border-white shadow"></div>
+                        <h3 class="text-xl font-bold text-slate-800">Week 2: Inventory</h3>
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 mt-3 max-w-3xl">
+                            <p class="text-slate-600 mb-3">Create asset inventory with all discovered devices.</p>
+                            <ul class="list-disc list-inside text-sm text-slate-500 space-y-1">
+                                <li>Document IP, MAC address, OS, and Owners.</li>
+                                <li>Flag "Shadow IT" or unknown devices.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Week 3 -->
+                    <div class="relative pl-8">
+                        <div class="absolute -left-3 top-0 bg-teal-500 h-6 w-6 rounded-full border-4 border-white shadow"></div>
+                        <h3 class="text-xl font-bold text-slate-800">Week 3: Classification</h3>
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 mt-3 max-w-3xl">
+                            <p class="text-slate-600 mb-3">Classify assets by criticality tier using the framework.</p>
+                            <ul class="list-disc list-inside text-sm text-slate-500 space-y-1">
+                                <li>Apply Risk Score (Sensitivity + Impact).</li>
+                                <li>Identify Tier 1 (Crown Jewels).</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Week 4 -->
+                    <div class="relative pl-8">
+                        <div class="absolute -left-3 top-0 bg-teal-500 h-6 w-6 rounded-full border-4 border-white shadow"></div>
+                        <h3 class="text-xl font-bold text-slate-800">Week 4: Remediation</h3>
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 mt-3 max-w-3xl">
+                            <p class="text-slate-600 mb-3">Document gaps and create remediation plan.</p>
+                            <ul class="list-disc list-inside text-sm text-slate-500 space-y-1">
+                                <li>Apply missing patches to Tier 1 assets immediately.</li>
+                                <li>Isolate vulnerable legacy systems.</li>
+                                <li>Establish monitoring alerts.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 text-white p-6 rounded-xl mt-8">
+                    <h3 class="text-lg font-bold text-teal-400 mb-2">Continuous Responsibilities</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                        <div class="bg-slate-800 p-3 rounded">
+                            <strong class="block text-slate-300 mb-1">Monthly</strong>
+                            Review new assets
+                        </div>
+                        <div class="bg-slate-800 p-3 rounded">
+                            <strong class="block text-slate-300 mb-1">Quarterly</strong>
+                            Full Discovery Scan
+                        </div>
+                        <div class="bg-slate-800 p-3 rounded">
+                            <strong class="block text-slate-300 mb-1">Annually</strong>
+                            Reassess Classifications
+                        </div>
+                        <div class="bg-slate-800 p-3 rounded border border-teal-500">
+                            <strong class="block text-teal-400 mb-1">Continuously</strong>
+                            Monitor Tier 1 Assets
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+        
+        <footer class="bg-white border-t border-slate-200 p-6 text-center text-slate-500 text-sm">
+            <p>© Cyber.SoHo | Educational Asset Management Tool</p>
+        </footer>
+
+    </div>
+
+    <!-- Logic -->
+    <script>
+        // --- NAVIGATION STATE ---
+        function switchTab(tabId) {
+            // Hide all sections
+            ['overview', 'discovery', 'risk', 'action'].forEach(id => {
+                document.getElementById(`view-${id}`).classList.add('hidden');
+                document.getElementById(`view-${id}`).classList.remove('block');
+                
+                // Update Nav Styles
+                const btn = document.getElementById(`tab-${id}`);
+                if(id === tabId) {
+                    btn.classList.add('border-teal-500', 'text-teal-700');
+                    btn.classList.remove('border-transparent', 'text-slate-600');
+                } else {
+                    btn.classList.remove('border-teal-500', 'text-teal-700');
+                    btn.classList.add('border-transparent', 'text-slate-600');
+                }
+            });
+
+            // Show selected
+            const activeSection = document.getElementById(`view-${tabId}`);
+            activeSection.classList.remove('hidden');
+            activeSection.classList.add('block');
+        }
+
+        // --- MODULE 1: ATTACK SURFACE ---
+        
+        // Component Data
+        const components = {
+            physical: { title: "Physical Attack Surface", content: "Hardware devices, USB ports, Network jacks, Printers, Physical access points." },
+            digital: { title: "Digital Attack Surface", content: "Software apps, Websites, APIs, Databases, Cloud services, Mobile apps." },
+            social: { title: "Social Engineering", content: "Employees, Contractors, Interns, Third-party vendors. Anyone with access." },
+            network: { title: "Network Attack Surface", content: "Open ports, Wireless APs, VPN endpoints, Firewall rules." }
+        };
+
+        function showComponent(type) {
+            const display = document.getElementById('component-detail');
+            display.innerHTML = `
+                <strong class="text-teal-700 block mb-1">${components[type].title}</strong>
+                <p>${components[type].content}</p>
+            `;
+        }
+
+        // Internal vs External Chart
+        const ctxSurface = document.getElementById('attackSurfaceChart').getContext('2d');
+        const attackSurfaceChart = new Chart(ctxSurface, {
+            type: 'doughnut',
+            data: {
+                labels: ['Insider Threats/Internal', 'External Threats'],
+                datasets: [{
+                    data: [60, 40],
+                    backgroundColor: ['#f43f5e', '#2dd4bf'], // Rose-500, Teal-400
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.label}: ${context.raw}% of Breaches`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Cafe Interaction
+        const cafeData = {
+            pos: { title: "POS Terminal", desc: "Physical & Digital Vector. Often has USB ports exposed and processes credit card data. Requires segmenting from Guest WiFi.", tags: ['Internal', 'Physical', 'Digital'] },
+            wifi: { title: "Public WiFi", desc: "External Vector. Attackers can probe for unsecure devices connected to this network. Should be completely isolated.", tags: ['External', 'Network'] },
+            server: { title: "Back Office Router", desc: "Network Vector. Often uses default passwords or outdated firmware. The gateway to the entire business.", tags: ['Internal', 'Network', 'Physical'] },
+            human: { title: "Staff & Owner", desc: "Social Vector. Susceptible to phishing, sharing credentials, or plugging in unknown USB drives.", tags: ['Social', 'Human'] }
+        };
+
+        function showCafeDetail(key) {
+            const data = cafeData[key];
+            document.getElementById('cafe-title').innerText = data.title;
+            document.getElementById('cafe-desc').innerText = data.desc;
+            
+            const tagsContainer = document.getElementById('cafe-tags');
+            tagsContainer.innerHTML = '';
+            data.tags.forEach(tag => {
+                const span = document.createElement('span');
+                span.className = "px-2 py-1 bg-slate-700 rounded text-xs text-teal-300 font-mono";
+                span.innerText = tag;
+                tagsContainer.appendChild(span);
+            });
+        }
+
+        // --- MODULE 2: DISCOVERY ---
+
+        // BrandForce Chart
+        const ctxMapping = document.getElementById('mappingChart').getContext('2d');
+        const mappingChart = new Chart(ctxMapping, {
+            type: 'bar',
+            data: {
+                labels: ['Workstations', 'Servers', 'Active IPs', 'IoT Devices'],
+                datasets: [
+                    {
+                        label: 'Documented (Before Scan)',
+                        data: [50, 3, 55, 3], // Estimates
+                        backgroundColor: '#cbd5e1' // slate-300
+                    },
+                    {
+                        label: 'Actual Found (After Scan)',
+                        data: [50, 5, 73, 11],
+                        backgroundColor: '#0f766e' // teal-700
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: true, text: 'BrandForce Media: Perception vs Reality' }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Scan Simulation
+        const scanLog = [
+            { t: 500, msg: "> Initiating ARP sweep on 192.168.1.0/24..." },
+            { t: 1200, msg: "> Host 192.168.1.1 is up (Gateway)" },
+            { t: 1400, msg: "> Host 192.168.1.5 is up (Workstation)" },
+            { t: 1600, msg: "> Host 192.168.1.6 is up (Workstation)" },
+            { t: 2000, msg: "> [!] Host 192.168.1.105 found (Unknown Device)" },
+            { t: 2500, msg: "> Switching to Active Service Fingerprinting..." },
+            { t: 3000, msg: "> 192.168.1.105: Port 80 Open (Apache 2.4)" },
+            { t: 3200, msg: "> [!] 192.168.1.200: Port 1194 Open (OpenVPN - Unauthorized?)" },
+            { t: 3800, msg: "> Scan Complete. 14 Assets Identified." }
+        ];
+
+        function runScan() {
+            const btn = document.getElementById('scan-btn');
+            const output = document.getElementById('scan-output');
+            const progressContainer = document.getElementById('scan-progress-container');
+            const progress = document.getElementById('scan-progress');
+            const summary = document.getElementById('scan-summary');
+            
+            // Reset
+            output.innerHTML = '';
+            summary.classList.add('hidden');
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            progressContainer.classList.remove('hidden');
+            progress.style.width = "0%";
+            
+            // Animate Progress
+            setTimeout(() => { progress.style.width = "100%"; }, 100);
+
+            // Print Logs
+            let delay = 0;
+            scanLog.forEach(log => {
+                delay += (Math.random() * 500) + 200;
+                setTimeout(() => {
+                    const p = document.createElement('div');
+                    p.innerText = log.msg;
+                    if(log.msg.includes("[!]")) p.classList.add("text-rose-400", "font-bold");
+                    else if(log.msg.includes(">")) p.classList.add("text-teal-200");
+                    output.appendChild(p);
+                    output.scrollTop = output.scrollHeight;
+                }, delay);
+            });
+
+            // Finish
+            setTimeout(() => {
+                summary.classList.remove('hidden');
+                summary.classList.add('fade-in');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                progressContainer.classList.add('hidden');
+            }, delay + 500);
+        }
+
+        // --- MODULE 3: RISK CALCULATOR ---
+
+        let riskChart;
+        function initRiskChart() {
+            const ctxRisk = document.getElementById('riskGauge').getContext('2d');
+            riskChart = new Chart(ctxRisk, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Risk Score', 'Remaining'],
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#cbd5e1', '#f1f5f9'],
+                        circumference: 180,
+                        rotation: 270,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { tooltip: { enabled: false }, legend: { display: false } },
+                    cutout: '80%'
+                }
+            });
+            calculateRisk(); // Initial calc
+        }
+
+        function calculateRisk() {
+            // Weights from report: Sens(10), Impact(9), Exposure(8), Auth(9 - defaulting to low for simpler UI), Compliance(8), Prod(7)
+            // Simplified formula for UI clarity:
+            const wSens = 10, wImp = 9, wExp = 8, wComp = 8;
+            
+            const vSens = parseInt(document.getElementById('risk-sensitivity').value);
+            const vImp = parseInt(document.getElementById('risk-impact').value);
+            const vExp = parseInt(document.getElementById('risk-exposure').value);
+            const vComp = parseInt(document.getElementById('risk-compliance').value);
+
+            // Max possible raw score: (10*10) + (10*9) + (10*8) + (10*8) = 100 + 90 + 80 + 80 = 350
+            const maxScore = 350;
+            const currentRaw = (vSens * wSens) + (vImp * wImp) + (vExp * wExp) + (vComp * wComp);
+            
+            const normalized = Math.round((currentRaw / maxScore) * 100);
+            
+            // Determine Tier
+            let tier = "";
+            let color = "";
+            let tierClass = "";
+            
+            if(normalized >= 75) {
+                tier = "Tier 1: CRITICAL";
+                color = "#f43f5e"; // rose-500
+                tierClass = "bg-rose-500";
+            } else if (normalized >= 50) {
+                tier = "Tier 2: HIGH PRIORITY";
+                color = "#fb923c"; // orange-400
+                tierClass = "bg-orange-400";
+            } else if (normalized >= 25) {
+                tier = "Tier 3: MEDIUM";
+                color = "#60a5fa"; // blue-400
+                tierClass = "bg-blue-400";
+            } else {
+                tier = "Tier 4: LOW";
+                color = "#94a3b8"; // slate-400
+                tierClass = "bg-slate-400";
+            }
+
+            // Update DOM
+            document.getElementById('score-display').innerText = normalized;
+            const tierEl = document.getElementById('tier-display');
+            tierEl.innerText = tier;
+            tierEl.className = `mt-4 w-full text-center p-3 rounded font-bold text-white transition-colors ${tierClass}`;
+
+            // Update Chart
+            riskChart.data.datasets[0].data = [normalized, 100 - normalized];
+            riskChart.data.datasets[0].backgroundColor = [color, '#e2e8f0'];
+            riskChart.update();
+        }
+
+        // Initialize Charts on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            initRiskChart();
+        });
+
+    </script>
+</body>
+</html>
+
+
+
