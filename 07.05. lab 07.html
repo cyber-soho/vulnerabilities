@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 7: Scanner Installation and Configuration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafaf9; /* Stone-50 - Warm Neutral */
+            color: #1c1917; /* Stone-900 */
+        }
+
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #e7e5e4; }
+        ::-webkit-scrollbar-thumb { background: #a8a29e; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #78716c; }
+
+        /* Chart Container - Mandatory Constraints */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        /* Navigation Active State */
+        .nav-link.active {
+            color: #dc2626; /* Red-600 */
+            border-bottom: 2px solid #dc2626;
+            font-weight: 600;
+        }
+
+        /* Card Hover Effects */
+        .hover-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .hover-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Step Progress Line */
+        .step-line {
+            position: absolute;
+            left: 24px;
+            top: 40px;
+            bottom: 0;
+            width: 2px;
+            background-color: #e5e7eb;
+            z-index: 0;
+        }
+    </style>
+    <!-- Chosen Palette: "Secure Stone" - Warm Stone/Neutral background (#fafaf9) with Red (#dc2626) accents for security/alert context and Slate/Zinc for structural elements. -->
+    <!-- Application Structure Plan: 
+         1. Mission Briefing (Hero): Sets the stage, duration, and legal disclaimer (CRITICAL).
+         2. Knowledge Core (Concepts): Interactive cards for Learning Objectives and a visual "Lifecycle" component.
+         3. Readiness Check (Prerequisites): A functional checklist for students to verify their environment before starting.
+         4. Operations Center (The Lab Walkthrough): A vertical, interactive timeline. Each step (A, B, C) is a distinct section with "Action Items" and "Simulation" inputs to practice config.
+         5. Analysis Deck (Results): Interactive CVSS chart to teach scoring and a "Reflection" accordion section.
+         6. Report Generator (Deliverable): A dynamic checklist that helps students organize their final PDF report.
+         Why: This structure transforms a linear PDF into a "Mission-based" workflow, keeping the student engaged and tracking their progress through the technical steps.
+    -->
+    <!-- Visualization & Content Choices:
+         1. Goal: Inform -> CVSS Scoring Guide -> Interactive Bar Chart (Chart.js) -> Shows the relationship between score and severity visually.
+         2. Goal: Organize -> Lab Steps -> Vertical Timeline with Collapsible Details -> Helps manage the density of technical instructions.
+         3. Goal: Change -> "Mock Configuration" Forms -> HTML/JS Inputs -> Allows users to "practice" entering target details before doing it in the VM.
+         4. Goal: Compare -> Auth vs Unauth Scan -> Toggle View -> Clearly distinguishes the two scan types described in concepts.
+         CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+</head>
+<body class="antialiased">
+
+    <!-- Sticky Navigation -->
+    <nav class="sticky top-0 z-50 bg-[#fafaf9]/95 backdrop-blur border-b border-stone-200 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="bg-red-600 text-white p-1.5 rounded mr-3 font-bold text-lg">L7</div>
+                    <span class="font-bold text-lg tracking-tight text-stone-800">Vuln. Mgmt Lab</span>
+                </div>
+                <div class="hidden md:flex space-x-8 items-center">
+                    <button onclick="scrollToSection('briefing')" class="nav-link text-stone-600 hover:text-red-600 transition-colors py-5">Briefing</button>
+                    <button onclick="scrollToSection('concepts')" class="nav-link text-stone-600 hover:text-red-600 transition-colors py-5">Concepts</button>
+                    <button onclick="scrollToSection('walkthrough')" class="nav-link text-stone-600 hover:text-red-600 transition-colors py-5">Lab Ops</button>
+                    <button onclick="scrollToSection('analysis')" class="nav-link text-stone-600 hover:text-red-600 transition-colors py-5">Analysis</button>
+                    <button onclick="scrollToSection('report')" class="nav-link text-stone-600 hover:text-red-600 transition-colors py-5">Report</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
+
+        <!-- Section 1: Mission Briefing -->
+        <section id="briefing" class="animate-fade-in">
+            <div class="bg-white rounded-2xl p-8 shadow-sm border border-stone-200">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                    <div>
+                        <h1 class="text-3xl md:text-4xl font-bold text-stone-900 mb-2">Scanner Installation & Configuration</h1>
+                        <p class="text-stone-500 font-medium">Cybersecurity Programme • Managing Vulnerabilities • Lab 7</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex gap-3">
+                        <span class="px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-sm font-semibold"><i class="fa-regular fa-clock mr-1"></i> 3 Hours Max</span>
+                        <span class="px-3 py-1 bg-stone-100 text-stone-600 rounded-full text-sm font-semibold"><i class="fa-solid fa-weight-scale mr-1"></i> Weight: 1-2-1</span>
+                    </div>
+                </div>
+
+                <!-- Legal Disclaimer - Critical -->
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg mb-8">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-bold text-red-800 uppercase tracking-wide">Legal & Ethical Disclaimer</h3>
+                            <div class="mt-2 text-sm text-red-700">
+                                <p>Tools used in this lab resemble real-world attack vectors. <strong>ONLY scan systems you are explicitly authorised to scan</strong> (lab VMs). Unauthorised scanning is illegal and may result in prosecution. Adhere strictly to the Acceptable Use Policy.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats / Requirements Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-stone-50 p-4 rounded-xl border border-stone-100">
+                        <h4 class="font-bold text-stone-700 mb-2"><i class="fa-solid fa-laptop-code text-red-500 mr-2"></i>Primary Tool</h4>
+                        <p class="text-sm text-stone-600">OpenVAS (Greenbone) or Nessus Essentials</p>
+                    </div>
+                    <div class="bg-stone-50 p-4 rounded-xl border border-stone-100">
+                        <h4 class="font-bold text-stone-700 mb-2"><i class="fa-solid fa-bullseye text-red-500 mr-2"></i>Target</h4>
+                        <p class="text-sm text-stone-600">Metasploitable 2 or DVWA (Isolated Network)</p>
+                    </div>
+                    <div class="bg-stone-50 p-4 rounded-xl border border-stone-100">
+                        <h4 class="font-bold text-stone-700 mb-2"><i class="fa-solid fa-network-wired text-red-500 mr-2"></i>Network</h4>
+                        <p class="text-sm text-stone-600">Host-Only / Internal. No Internet Exposure.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Concepts -->
+        <section id="concepts">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-stone-800 mb-2">Conceptual Background</h2>
+                <p class="text-stone-600 max-w-3xl">Understanding the role of vulnerability scanners within the NIST framework and the Vulnerability Management (VM) lifecycle is crucial before executing tools.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Objectives Card -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                    <h3 class="font-bold text-lg text-stone-800 mb-4 border-b pb-2">Learning Objectives</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-500 mt-1 mr-3"></i>
+                            <span class="text-sm text-stone-600">Understand architecture of automated scanners in VM programmes.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-500 mt-1 mr-3"></i>
+                            <span class="text-sm text-stone-600">Install & Configure OpenVAS (GVM) or Nessus.</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-500 mt-1 mr-3"></i>
+                            <span class="text-sm text-stone-600">Interpret CVSS ratings (Critical, High, Medium, Low).</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-500 mt-1 mr-3"></i>
+                            <span class="text-sm text-stone-600">Differentiate between Authenticated vs. Unauthenticated scans.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Comparison Interactive -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm flex flex-col">
+                    <h3 class="font-bold text-lg text-stone-800 mb-4 border-b pb-2">Scan Types Comparison</h3>
+                    <div class="flex bg-stone-100 p-1 rounded-lg mb-4">
+                        <button onclick="toggleScanType('unauth')" id="btn-unauth" class="flex-1 py-2 rounded-md text-sm font-semibold bg-white shadow-sm text-stone-800 transition-all">Unauthenticated</button>
+                        <button onclick="toggleScanType('auth')" id="btn-auth" class="flex-1 py-2 rounded-md text-sm font-semibold text-stone-500 hover:text-stone-800 transition-all">Authenticated</button>
+                    </div>
+                    
+                    <div id="content-unauth" class="flex-1">
+                        <div class="text-stone-700 font-medium mb-2">External Observer View</div>
+                        <p class="text-sm text-stone-600 mb-4">Connects like a hacker from the outside. Identifies open ports, grabs banners, and infers vulnerabilities based on responses.</p>
+                        <div class="bg-yellow-50 text-yellow-800 text-xs p-3 rounded border border-yellow-200">
+                            <strong>Pros:</strong> Fast, no credentials needed.<br>
+                            <strong>Cons:</strong> Higher false positives, misses local config flaws.
+                        </div>
+                    </div>
+
+                    <div id="content-auth" class="hidden flex-1">
+                        <div class="text-stone-700 font-medium mb-2">Insider View (Trusted)</div>
+                        <p class="text-sm text-stone-600 mb-4">Logs in using SSH/Windows credentials. Inspects file versions, patch levels, and local registry/config settings directly.</p>
+                        <div class="bg-green-50 text-green-800 text-xs p-3 rounded border border-green-200">
+                            <strong>Pros:</strong> Highly accurate, detailed, detects missing patches.<br>
+                            <strong>Cons:</strong> Requires credential management, slower.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Lab Walkthrough (The Operations Center) -->
+        <section id="walkthrough">
+            <div class="mb-8">
+                <h2 class="text-2xl font-bold text-stone-800 mb-2">Lab Operations Center</h2>
+                <p class="text-stone-600">Follow the operational phases to deploy and utilize the scanner. Check off items as you proceed.</p>
+            </div>
+
+            <!-- Vertical Timeline Container -->
+            <div class="relative space-y-12">
+                <!-- Timeline Line -->
+                <div class="absolute left-6 top-6 bottom-6 w-0.5 bg-stone-200 z-0 hidden md:block"></div>
+
+                <!-- Phase A -->
+                <div class="relative z-10 md:pl-20">
+                    <div class="hidden md:flex absolute left-0 top-0 w-12 h-12 bg-white border-2 border-stone-300 rounded-full items-center justify-center font-bold text-stone-500">A</div>
+                    
+                    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <h3 class="text-xl font-bold text-stone-800 mb-4">Phase A: Preparation & Installation</h3>
+                        <p class="text-sm text-stone-600 mb-4">Establishing the isolated environment and deploying the scanner engine.</p>
+                        
+                        <div class="space-y-3 mb-6">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" class="form-checkbox h-5 w-5 text-red-600 rounded border-stone-300 focus:ring-red-500" onclick="updateProgress()">
+                                <span class="text-sm text-stone-700">Verify Network Isolation (Host-Only/Internal)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" class="form-checkbox h-5 w-5 text-red-600 rounded border-stone-300 focus:ring-red-500" onclick="updateProgress()">
+                                <span class="text-sm text-stone-700">Run <code>ip addr show</code> and record IPs</span>
+                            </label>
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" class="form-checkbox h-5 w-5 text-red-600 rounded border-stone-300 focus:ring-red-500" onclick="updateProgress()">
+                                <span class="text-sm text-stone-700">Install/Update GVM: <code>sudo apt install gvm</code></span>
+                            </label>
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" class="form-checkbox h-5 w-5 text-red-600 rounded border-stone-300 focus:ring-red-500" onclick="updateProgress()">
+                                <span class="text-sm text-stone-700"><strong>CRITICAL:</strong> Save the admin password generated by <code>gvm-setup</code></span>
+                            </label>
+                        </div>
+
+                        <div class="bg-stone-800 text-stone-300 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                            <p class="text-stone-500"># Start Services & Verify</p>
+                            <p>$ sudo gvm-start</p>
+                            <p>$ sudo gvm-check-setup</p>
+                            <p class="text-stone-500 mt-2"># Access Interface</p>
+                            <p>https://127.0.0.1:9392</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase B -->
+                <div class="relative z-10 md:pl-20">
+                    <div class="hidden md:flex absolute left-0 top-0 w-12 h-12 bg-white border-2 border-stone-300 rounded-full items-center justify-center font-bold text-stone-500">B</div>
+                    
+                    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <h3 class="text-xl font-bold text-stone-800 mb-4">Phase B: Target Configuration</h3>
+                        <p class="text-sm text-stone-600 mb-4">Defining the scope. Practice configuring the target settings below before doing it in the lab VM.</p>
+
+                        <!-- Interactive Mock Form -->
+                        <div class="bg-stone-50 p-5 rounded-lg border border-stone-200 mb-4">
+                            <h4 class="text-xs font-bold text-stone-500 uppercase mb-3">Target Definition Simulation</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-stone-600 mb-1">Name</label>
+                                    <input type="text" placeholder="e.g. Metasploitable2-Lab7" class="w-full text-sm p-2 rounded border border-stone-300 focus:border-red-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-stone-600 mb-1">Hosts (IP)</label>
+                                    <input type="text" placeholder="192.168.x.x" class="w-full text-sm p-2 rounded border border-stone-300 focus:border-red-500 outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-stone-600 mb-1">Port List</label>
+                                    <select class="w-full text-sm p-2 rounded border border-stone-300 outline-none bg-white">
+                                        <option>OpenVAS Default</option>
+                                        <option>All IANA Assigned TCP</option>
+                                        <option>All TCP and Nmap top 100 UDP</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-stone-600 mb-1">Alive Test</label>
+                                    <select class="w-full text-sm p-2 rounded border border-stone-300 outline-none bg-white">
+                                        <option>Scan Config Default</option>
+                                        <option>ICMP Ping</option>
+                                        <option>TCP-ACK Service Ping</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex items-center justify-between">
+                                <span class="text-xs text-stone-400 italic">This is a simulation. Enter data in your VM.</span>
+                                <button class="px-4 py-2 bg-stone-200 text-stone-600 text-sm font-bold rounded hover:bg-stone-300 transition" onclick="alert('Configuration valid! Proceed to apply this in your OpenVAS instance.')">Validate Config</button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" class="form-checkbox h-5 w-5 text-red-600 rounded border-stone-300 focus:ring-red-500" onclick="updateProgress()">
+                                <span class="text-sm text-stone-700">Create Target in GSA (Config > Targets)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" class="form-checkbox h-5 w-5 text-red-600 rounded border-stone-300 focus:ring-red-500" onclick="updateProgress()">
+                                <span class="text-sm text-stone-700">Optional: Configure SSH Credentials (msfadmin/msfadmin)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase C -->
+                <div class="relative z-10 md:pl-20">
+                    <div class="hidden md:flex absolute left-0 top-0 w-12 h-12 bg-white border-2 border-stone-300 rounded-full items-center justify-center font-bold text-stone-500">C</div>
+                    
+                    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <h3 class="text-xl font-bold text-stone-800 mb-4">Phase C: Execution & Analysis</h3>
+                        <p class="text-sm text-stone-600 mb-4">Launching the scan task and interpreting the CVSS data.</p>
+                        
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4 text-sm text-blue-800">
+                            <strong>Scan Policy:</strong> Select "Full and fast". <br>
+                            <span class="text-xs text-blue-600">This balances depth with speed and safety for the target environment.</span>
+                        </div>
+
+                        <div class="space-y-3 mb-6">
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" class="form-checkbox h-5 w-5 text-red-600 rounded border-stone-300 focus:ring-red-500" onclick="updateProgress()">
+                                <span class="text-sm text-stone-700">Create Task (Scans > Tasks) linked to your Target</span>
+                            </label>
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" class="form-checkbox h-5 w-5 text-red-600 rounded border-stone-300 focus:ring-red-500" onclick="updateProgress()">
+                                <span class="text-sm text-stone-700">Start Scan (Play Button) & Wait (15-30 mins)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 cursor-pointer">
+                                <input type="checkbox" class="form-checkbox h-5 w-5 text-red-600 rounded border-stone-300 focus:ring-red-500" onclick="updateProgress()">
+                                <span class="text-sm text-stone-700">Export Report as PDF</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Analysis & Tools -->
+        <section id="analysis">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-stone-800 mb-2">Result Analysis Tools</h2>
+                <p class="text-stone-600 max-w-3xl">Understanding the results requires familiarity with the CVSS scoring system. Use the chart below to visualize severity thresholds.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- CVSS Chart -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                    <h3 class="font-bold text-stone-800 mb-4">CVSS v3.1 Severity Distribution</h3>
+                    <div class="chart-container">
+                        <canvas id="cvssChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-xs text-stone-500 text-center">
+                        <span class="inline-block w-3 h-3 bg-red-800 rounded-full mr-1"></span>Critical (9.0+)
+                        <span class="inline-block w-3 h-3 bg-red-500 rounded-full mx-2"></span>High (7.0-8.9)
+                        <span class="inline-block w-3 h-3 bg-yellow-500 rounded-full mx-2"></span>Medium (4.0-6.9)
+                        <span class="inline-block w-3 h-3 bg-green-500 rounded-full mx-2"></span>Low (0.1-3.9)
+                    </div>
+                </div>
+
+                <!-- Reflection Questions -->
+                <div class="lg:col-span-1 bg-stone-100 p-6 rounded-xl border border-stone-200">
+                    <h3 class="font-bold text-stone-800 mb-4">Reflection Prompts</h3>
+                    <div class="space-y-4">
+                        <div class="bg-white p-4 rounded-lg shadow-sm">
+                            <p class="text-sm font-semibold text-stone-700 mb-2">Why do Auth scans matter?</p>
+                            <button onclick="revealHint('hint1')" class="text-xs text-red-600 font-bold hover:underline">Reveal Insight</button>
+                            <p id="hint1" class="hidden text-xs text-stone-600 mt-2 pt-2 border-t border-stone-100">
+                                Unauthenticated scans only see the outside. Authenticated scans log in to find outdated software versions, bad configs, and missing patches that aren't visible externally.
+                            </p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow-sm">
+                            <p class="text-sm font-semibold text-stone-700 mb-2">Ethics of Scanning?</p>
+                            <button onclick="revealHint('hint2')" class="text-xs text-red-600 font-bold hover:underline">Reveal Insight</button>
+                            <p id="hint2" class="hidden text-xs text-stone-600 mt-2 pt-2 border-t border-stone-100">
+                                Scans can crash fragile services (DoS). Always have authorization, scan during maintenance windows, and start with "safe" policies in production.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alternative Tools -->
+             <div class="mt-8">
+                <h3 class="font-bold text-stone-800 mb-4">Alternative Tools Ecosystem</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded border border-stone-200 hover:border-red-400 transition cursor-help" title="Web Server Scanner">
+                        <div class="font-bold text-stone-800">Nikto</div>
+                        <div class="text-xs text-stone-500">Web Server Specific</div>
+                    </div>
+                    <div class="bg-white p-4 rounded border border-stone-200 hover:border-red-400 transition cursor-help" title="Template-based Scanner">
+                        <div class="font-bold text-stone-800">Nuclei</div>
+                        <div class="text-xs text-stone-500">Modern/Template-based</div>
+                    </div>
+                    <div class="bg-white p-4 rounded border border-stone-200 hover:border-red-400 transition cursor-help" title="Black-box Web Scanner">
+                        <div class="font-bold text-stone-800">Wapiti</div>
+                        <div class="text-xs text-stone-500">Web App Fuzzing</div>
+                    </div>
+                    <div class="bg-white p-4 rounded border border-stone-200 hover:border-red-400 transition cursor-help" title="Network Mapper + Scripts">
+                        <div class="font-bold text-stone-800">Nmap + NSE</div>
+                        <div class="text-xs text-stone-500">Network Discovery</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Deliverable Checklist -->
+        <section id="report" class="bg-stone-900 text-stone-300 rounded-2xl p-8 mb-16">
+            <h2 class="text-2xl font-bold text-white mb-4">Report Generator Checklist</h2>
+            <p class="mb-6 text-stone-400">Ensure your MAX 2-page PDF report includes:</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <label class="flex items-center space-x-3 bg-stone-800 p-3 rounded hover:bg-stone-700 transition cursor-pointer">
+                    <input type="checkbox" class="form-checkbox text-red-500 bg-stone-900 border-stone-600">
+                    <span class="text-sm">Title, Name, Date, Lab Number</span>
+                </label>
+                <label class="flex items-center space-x-3 bg-stone-800 p-3 rounded hover:bg-stone-700 transition cursor-pointer">
+                    <input type="checkbox" class="form-checkbox text-red-500 bg-stone-900 border-stone-600">
+                    <span class="text-sm">Environment Summary (IPs, Setup)</span>
+                </label>
+                <label class="flex items-center space-x-3 bg-stone-800 p-3 rounded hover:bg-stone-700 transition cursor-pointer">
+                    <input type="checkbox" class="form-checkbox text-red-500 bg-stone-900 border-stone-600">
+                    <span class="text-sm">Installation Notes/Issues Resolved</span>
+                </label>
+                <label class="flex items-center space-x-3 bg-stone-800 p-3 rounded hover:bg-stone-700 transition cursor-pointer">
+                    <input type="checkbox" class="form-checkbox text-red-500 bg-stone-900 border-stone-600">
+                    <span class="text-sm">Configuration Choices Rationale</span>
+                </label>
+                <label class="flex items-center space-x-3 bg-stone-800 p-3 rounded hover:bg-stone-700 transition cursor-pointer">
+                    <input type="checkbox" class="form-checkbox text-red-500 bg-stone-900 border-stone-600">
+                    <span class="text-sm">Scan Results Summary (Counts)</span>
+                </label>
+                <label class="flex items-center space-x-3 bg-stone-800 p-3 rounded hover:bg-stone-700 transition cursor-pointer">
+                    <input type="checkbox" class="form-checkbox text-red-500 bg-stone-900 border-stone-600">
+                    <span class="text-sm">Analysis of ONE High/Crit Vulnerability</span>
+                </label>
+                <label class="flex items-center space-x-3 bg-stone-800 p-3 rounded hover:bg-stone-700 transition cursor-pointer">
+                    <input type="checkbox" class="form-checkbox text-red-500 bg-stone-900 border-stone-600">
+                    <span class="text-sm">Required Screenshots (Dashboard, Target, Results)</span>
+                </label>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-stone-200 py-8 text-center">
+        <p class="text-sm text-stone-500">Based on Cybersecurity Programme Lab 7: Managing Vulnerabilities.</p>
+        <p class="text-xs text-stone-400 mt-2">Educational Material. Do not use tools on unauthorized networks.</p>
+    </footer>
+
+    <script>
+        // --- NAVIGATION LOGIC ---
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+            
+            // Update active state
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // --- CONCEPTS TOGGLE ---
+        function toggleScanType(type) {
+            const btnUnauth = document.getElementById('btn-unauth');
+            const btnAuth = document.getElementById('btn-auth');
+            const contentUnauth = document.getElementById('content-unauth');
+            const contentAuth = document.getElementById('content-auth');
+
+            if (type === 'unauth') {
+                btnUnauth.classList.add('bg-white', 'shadow-sm', 'text-stone-800');
+                btnUnauth.classList.remove('text-stone-500');
+                btnAuth.classList.remove('bg-white', 'shadow-sm', 'text-stone-800');
+                btnAuth.classList.add('text-stone-500');
+                
+                contentUnauth.classList.remove('hidden');
+                contentAuth.classList.add('hidden');
+            } else {
+                btnAuth.classList.add('bg-white', 'shadow-sm', 'text-stone-800');
+                btnAuth.classList.remove('text-stone-500');
+                btnUnauth.classList.remove('bg-white', 'shadow-sm', 'text-stone-800');
+                btnUnauth.classList.add('text-stone-500');
+
+                contentAuth.classList.remove('hidden');
+                contentUnauth.classList.add('hidden');
+            }
+        }
+
+        // --- PROGRESS TRACKER ---
+        function updateProgress() {
+            // Placeholder function to simulate progress tracking logic
+            // In a full app, this would save state to localStorage
+            console.log("Progress updated");
+        }
+
+        // --- HINT REVEAL ---
+        function revealHint(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        // --- CHART INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const ctx = document.getElementById('cvssChart').getContext('2d');
+            
+            // CVSS Severity Distribution Chart
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Low (0.1-3.9)', 'Medium (4.0-6.9)', 'High (7.0-8.9)', 'Critical (9.0-10.0)'],
+                    datasets: [{
+                        label: 'CVSS Score Range',
+                        data: [3.9, 6.9, 8.9, 10], // The max values for visualization
+                        backgroundColor: [
+                            '#22c55e', // Green
+                            '#eab308', // Yellow
+                            '#ef4444', // Red
+                            '#991b1b'  // Dark Red
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Severity Cap: ${context.raw}`;
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Severity Score Thresholds'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            title: {
+                                display: true,
+                                text: 'CVSS Score'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
+
+

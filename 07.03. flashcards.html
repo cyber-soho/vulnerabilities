@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vulnerability Scanning Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        /* Card Container */
+        .card-container {
+            width: 100%;
+            max-width: 600px;
+            height: 350px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        /* The Card Inner (Flipper) */
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transform-style: preserve-3d;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* Front and Back common styles */
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            border-radius: 1rem;
+            background-color: white;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Front Face */
+        .card-face-front {
+            z-index: 2;
+        }
+
+        /* Back Face */
+        .card-face-back {
+            transform: rotateY(180deg);
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+        }
+
+        /* Decorative Elements */
+        .card-label {
+            position: absolute;
+            top: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #9ca3af;
+            font-weight: 600;
+        }
+
+        /* Smooth button transitions */
+        .btn {
+            transition: all 0.2s ease;
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 flex items-center justify-center">
+
+    <div class="w-full max-w-3xl flex flex-col items-center gap-8">
+        
+        <!-- Header -->
+        <div class="text-center space-y-2">
+            <h1 class="text-2xl font-bold text-gray-800">Vulnerability Scanning</h1>
+            <p class="text-sm text-gray-500">20 Cards • Study Mode</p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full max-w-xl h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div id="progress-bar" class="h-full bg-blue-600 transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- The Flashcard -->
+        <div class="card-container perspective-1000" onclick="flipCard()">
+            <div id="card-inner" class="card-inner transform-style-3d">
+                
+                <!-- Front Side -->
+                <div class="card-face card-face-front">
+                    <span class="card-label">Question</span>
+                    <p id="card-front-text" class="text-xl md:text-2xl font-medium text-gray-800 leading-relaxed">
+                        <!-- Content injected via JS -->
+                    </p>
+                    <div class="absolute bottom-6 text-xs text-gray-400 font-medium animate-bounce">
+                        Tap to flip
+                    </div>
+                </div>
+
+                <!-- Back Side -->
+                <div class="card-face card-face-back">
+                    <span class="card-label text-blue-500">Answer</span>
+                    <p id="card-back-text" class="text-lg md:text-xl text-gray-700 leading-relaxed">
+                        <!-- Content injected via JS -->
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center justify-between w-full max-w-lg px-4">
+            <button onclick="prevCard()" class="btn flex items-center gap-2 px-6 py-3 bg-white text-gray-700 rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 hover:border-gray-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed" id="btn-prev">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Prev
+            </button>
+
+            <span id="counter" class="text-sm font-semibold text-gray-400 font-mono">1 / 20</span>
+
+            <button onclick="nextCard()" class="btn flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed" id="btn-next">
+                Next
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+        </div>
+
+        <div class="mt-4 flex gap-2">
+             <button onclick="shuffleCards()" class="btn text-sm text-gray-500 hover:text-gray-800 underline">
+                Shuffle Deck
+            </button>
+            <span class="text-gray-300">|</span>
+            <button onclick="resetCards()" class="btn text-sm text-gray-500 hover:text-gray-800 underline">
+                Reset
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // Data derived from the JSON flashcards provided in context
+        const initialFlashcards = [
+            {
+                front: "Primary cause of the 2017 Equifax breach",
+                back: "An unpatched Apache Struts server (CVE-2017-5638) that was never scanned."
+            },
+            {
+                front: "The two main decisions when configuring a scanner",
+                back: "1. Where the scanner lives (Network vs. Agent)\n2. How much access it gets (Unauthenticated vs. Authenticated)"
+            },
+            {
+                front: "Analogy for Network-Based Scanners",
+                back: "A doctor examining a patient from the end of the bed (observes externally but doesn't enter the body)."
+            },
+            {
+                front: "Analogy for Agent-Based Scanners",
+                back: "A fitness tracker on every patient (continuous internal monitoring without needing a doctor's visit)."
+            },
+            {
+                front: "Primary strength of Network-Based Scanners",
+                back: "They require no installation on targets, making them ideal for discovering Shadow IT, IoT devices, and legacy servers."
+            },
+            {
+                front: "Primary limitation of Network-Based Scanners",
+                back: "They can only see what the network allows (blocked by firewalls) and lack depth into local configurations."
+            },
+            {
+                front: "Primary strength of Agent-Based Scanners",
+                back: "They provide deep visibility and work off-network (e.g., for remote workers or laptops behind VPNs)."
+            },
+            {
+                front: "Definition of Unauthenticated Scanning",
+                back: "The scanner connects without credentials, seeing the target exactly as an external attacker would."
+            },
+            {
+                front: "Definition of Authenticated Scanning",
+                back: "The scanner uses login credentials (e.g., admin account, SSH key) to log into the host and examine it from the inside."
+            },
+            {
+                front: "Vulnerability detection rate: Authenticated vs. Unauthenticated",
+                back: "Authenticated scans find ~90-98% of vulnerabilities, while Unauthenticated scans find only ~40-60%."
+            },
+            {
+                front: "Shadow IT",
+                back: "Devices or services deployed without the security team's awareness, often discovered by network scanners."
+            },
+            {
+                front: "Phase 1 of the Scanning Strategy (Discovery)",
+                back: "Network + Unauthenticated scan. A broad sweep to find every device, port, and service."
+            },
+            {
+                front: "Phase 2 of the Scanning Strategy (Deep Assessment)",
+                back: "Network + Authenticated scan. Used to query patch levels, read configs, and verify compliance."
+            },
+            {
+                front: "Phase 3 of the Scanning Strategy (Continuous Monitoring)",
+                back: "Agent-Based + Authenticated scan. Agents on critical endpoints report status 24/7 in near real-time."
+            },
+            {
+                front: "Banner Grabbing",
+                back: "A technique used by unauthenticated scanners to read version strings from open ports to identify software."
+            },
+            {
+                front: "BOM (Bill of Materials) in the context of scanning",
+                back: "A complete inventory of installed software and versions compiled by an agent-based scanner."
+            },
+            {
+                front: "Best use case for Unauthenticated Scanning",
+                back: "First-pass external perimeter scans and penetration test reconnaissance."
+            },
+            {
+                front: "Best use case for Authenticated Scanning",
+                back: "Compliance auditing (PCI DSS, CIS benchmarks) and deep internal security assessments."
+            },
+            {
+                front: "CVSS (Common Vulnerability Scoring System)",
+                back: "A standard framework for rating the severity of vulnerabilities."
+            },
+            {
+                front: "The 'Housing Inspector' analogy for scanning types",
+                back: "Unauthenticated = Inspector walking *around* the building.\nAuthenticated = Inspector with the *keys* to check inside."
+            }
+        ];
+
+        // State
+        let cards = [...initialFlashcards];
+        let currentIndex = 0;
+        let isFlipped = false;
+
+        // Elements
+        const cardInner = document.getElementById('card-inner');
+        const frontText = document.getElementById('card-front-text');
+        const backText = document.getElementById('card-back-text');
+        const counter = document.getElementById('counter');
+        const progressBar = document.getElementById('progress-bar');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        // Functions
+        function init() {
+            renderCard();
+            updateControls();
+        }
+
+        function renderCard() {
+            // Reset flip state before changing content if needed, 
+            // but for smooth flow we usually want to unflip first if flipped
+            if (isFlipped) {
+                cardInner.classList.remove('is-flipped');
+                isFlipped = false;
+                // Wait for animation to finish half-way to switch text? 
+                // For simplicity, we switch text immediately but opacity transition could be added.
+                // Here we just switch immediately for responsiveness.
+            }
+            
+            const card = cards[currentIndex];
+            frontText.innerText = card.front;
+            // Handle newlines in back text for better readability
+            backText.innerText = card.back;
+            
+            // Update counter
+            counter.innerText = `${currentIndex + 1} / ${cards.length}`;
+            
+            // Update Progress
+            const progress = ((currentIndex + 1) / cards.length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        function updateControls() {
+            btnPrev.disabled = currentIndex === 0;
+            btnNext.disabled = currentIndex === cards.length - 1;
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            if (isFlipped) {
+                cardInner.classList.add('is-flipped');
+            } else {
+                cardInner.classList.remove('is-flipped');
+            }
+        }
+
+        function nextCard() {
+            if (currentIndex < cards.length - 1) {
+                // If flipped, flip back first
+                if(isFlipped) {
+                    flipCard();
+                    setTimeout(() => {
+                        currentIndex++;
+                        renderCard();
+                        updateControls();
+                    }, 300); // Wait half the transition time
+                } else {
+                    currentIndex++;
+                    renderCard();
+                    updateControls();
+                }
+            }
+        }
+
+        function prevCard() {
+            if (currentIndex > 0) {
+                 if(isFlipped) {
+                    flipCard();
+                    setTimeout(() => {
+                        currentIndex--;
+                        renderCard();
+                        updateControls();
+                    }, 300);
+                } else {
+                    currentIndex--;
+                    renderCard();
+                    updateControls();
+                }
+            }
+        }
+
+        function shuffleCards() {
+            // Fisher-Yates Shuffle
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
+            }
+            // Reset to start
+            currentIndex = 0;
+            isFlipped = false;
+            cardInner.classList.remove('is-flipped');
+            renderCard();
+            updateControls();
+        }
+
+        function resetCards() {
+            cards = [...initialFlashcards];
+            currentIndex = 0;
+            isFlipped = false;
+            cardInner.classList.remove('is-flipped');
+            renderCard();
+            updateControls();
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault(); // Prevent scrolling
+                flipCard();
+            } else if (e.code === 'ArrowRight') {
+                nextCard();
+            } else if (e.code === 'ArrowLeft') {
+                prevCard();
+            }
+        });
+
+        // Start
+        init();
+
+    </script>
+</body>
+</html>
+
+
+

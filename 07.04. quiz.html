@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vulnerability Scanning Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .option-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .option-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .option-btn:disabled {
+            cursor: default;
+        }
+
+        /* Custom Scrollbar for rationale text if it gets long */
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Quiz Container -->
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[600px]">
+        
+        <!-- Header -->
+        <div class="bg-slate-900 p-6 text-white flex justify-between items-center sticky top-0 z-10">
+            <div>
+                <h1 class="text-xl font-bold">Vulnerability Scanning</h1>
+                <p class="text-slate-400 text-sm">Knowledge Check</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="text-right">
+                    <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Score</div>
+                    <div class="font-mono font-bold text-lg"><span id="score-display">0</span>/10</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-100 h-1.5">
+            <div id="progress-bar" class="bg-blue-600 h-1.5 transition-all duration-500 ease-out" style="width: 0%"></div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow p-6 md:p-8 flex flex-col relative">
+            
+            <!-- Question Screen -->
+            <div id="quiz-screen" class="flex-grow flex flex-col fade-in">
+                <!-- Question Tracker -->
+                <span class="text-xs font-bold text-blue-600 tracking-wider uppercase mb-2">Question <span id="current-question-num">1</span> of 10</span>
+                
+                <!-- Question Text -->
+                <h2 id="question-text" class="text-xl md:text-2xl font-semibold text-slate-800 mb-6 leading-relaxed">
+                    <!-- Question injected here -->
+                </h2>
+
+                <!-- Hint Section (Collapsible) -->
+                <div class="mb-6">
+                    <button onclick="toggleHint()" class="text-sm text-amber-600 font-medium flex items-center gap-2 hover:text-amber-700 transition-colors focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                        Need a hint?
+                    </button>
+                    <div id="hint-box" class="hidden mt-2 p-3 bg-amber-50 border border-amber-100 rounded-lg text-amber-800 text-sm italic">
+                        <!-- Hint text -->
+                    </div>
+                </div>
+
+                <!-- Options Grid -->
+                <div id="options-container" class="grid gap-3 mb-6">
+                    <!-- Options injected here -->
+                </div>
+
+                <!-- Rationale / Feedback Area -->
+                <div id="feedback-area" class="hidden mt-auto pt-4 border-t border-slate-100 fade-in">
+                    <div id="feedback-header" class="font-bold text-lg mb-1 flex items-center gap-2">
+                        <!-- Correct/Incorrect Label -->
+                    </div>
+                    <p id="feedback-text" class="text-slate-600 leading-relaxed text-sm md:text-base">
+                        <!-- Rationale text -->
+                    </p>
+                    <button id="next-btn" onclick="nextQuestion()" class="mt-4 w-full md:w-auto px-6 py-2.5 bg-slate-900 text-white font-medium rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
+                        Next Question
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Screen (Hidden initially) -->
+            <div id="results-screen" class="hidden flex-col items-center justify-center h-full text-center fade-in py-10">
+                <div class="mb-6 relative">
+                    <svg class="w-32 h-32 text-slate-100" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span id="final-score" class="text-4xl font-bold text-slate-800">0</span>
+                    </div>
+                </div>
+                
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Quiz Complete!</h2>
+                <p id="final-message" class="text-slate-500 mb-8 max-w-md">
+                    <!-- Dynamic message -->
+                </p>
+
+                <button onclick="restartQuiz()" class="px-8 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-lg hover:bg-blue-700 hover:shadow-xl transition-all transform hover:-translate-y-0.5">
+                    Retake Quiz
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Data from the quiz JSON
+        const quizData = [
+            {
+                question: "A CISO is concerned about the security posture of sales employees who frequently work from coffee shops and hotels without always connecting to the corporate VPN. Which scanning technology best addresses this visibility gap?",
+                answerOptions: [
+                    { text: "Agent-Based Scanner", rationale: "Agent-based scanners reside on the endpoint itself, allowing them to report status and vulnerabilities even when the device is off the corporate network.", isCorrect: true },
+                    { text: "Network-Based Unauthenticated Scanner", rationale: "Network scanners generally require a direct network path to the target, which is blocked by NAT and firewalls in remote locations like coffee shops.", isCorrect: false },
+                    { text: "Passive Network Sniffer", rationale: "Passive sniffers monitor traffic crossing a specific network point; they cannot inspect the internal state of a remote, disconnected device.", isCorrect: false },
+                    { text: "Perimeter Firewall Logs", rationale: "Firewall logs only show traffic attempting to cross the corporate boundary, not the vulnerability state of a remote laptop.", isCorrect: false }
+                ],
+                hint: "Think about the 'Fitness Tracker' analogy: which tool stays with the 'patient' wherever they go?"
+            },
+            {
+                question: "You are tasked with inventorying a segment of legacy manufacturing equipment (IoT/OT). Installing third-party software on these devices is strictly prohibited by the vendor. Which scanning approach is required?",
+                answerOptions: [
+                    { text: "Network-Based Scanning", rationale: "Network-based scanners probe from the outside without requiring any software installation on the target, making them ideal for IoT and legacy systems.", isCorrect: true },
+                    { text: "Agent-Based Scanning", rationale: "Agent-based scanning requires installing software on the endpoint, which is explicitly prohibited in this scenario.", isCorrect: false },
+                    { text: "Local Package Manager Query", rationale: "Querying local package managers is a function of an installed agent or local shell access, which requires installation or interaction inconsistent with the constraints.", isCorrect: false },
+                    { text: "BOM Compilation", rationale: "Compiling a Bill of Materials (BOM) typically requires an agent to query the local OS, which is not feasible here.", isCorrect: false }
+                ],
+                hint: "Consider the 'Doctor at the bedside' analogy—observing from a distance without performing invasive surgery."
+            },
+            {
+                question: "A security analyst wants to simulate the exact perspective of an external hacker attempting to breach the network perimeter. Which scan configuration should they choose?",
+                answerOptions: [
+                    { text: "Unauthenticated Network Scan", rationale: "Unauthenticated scans operate without credentials, seeing only exposed ports and public services, exactly as an external attacker would.", isCorrect: true },
+                    { text: "Authenticated Network Scan", rationale: "Authenticated scans use insider credentials (keys/passwords), providing a 'defender's view' rather than an external attacker's view.", isCorrect: false },
+                    { text: "Agent-Based Scan", rationale: "Agents inherently have local access (insider view) and do not simulate an external network attack vector.", isCorrect: false },
+                    { text: "Configuration Audit", rationale: "Configuration audits usually require high-level privileges (authenticated), representing a post-exploitation or insider perspective.", isCorrect: false }
+                ],
+                hint: "Which method is described as the 'Housing Inspector walking around the building' rather than entering it?"
+            },
+            {
+                question: "After switching from unauthenticated to authenticated scanning, a systems administrator notices the vulnerability count for a specific server jumped from 10 to 85. What is the most likely reason for this increase?",
+                answerOptions: [
+                    { text: "Authenticated scans have deep visibility into local patch levels and client-side applications.", rationale: "Logging in allows the scanner to see missing patches and configuration issues inside the OS that are invisible to the network, typically increasing detection by 40-60%.", isCorrect: true },
+                    { text: "The server was compromised by malware between the two scans.", rationale: "While possible, a consistent jump across scans upon changing methods is a documented characteristic of authenticated scanning, not necessarily an indicator of compromise.", isCorrect: false },
+                    { text: "Unauthenticated scans generate more false positives, inflating the count.", rationale: "Unauthenticated scans usually find *fewer* confirmed vulnerabilities; the increase here suggests the previous method missed valid issues, not that the new one is wrong.", isCorrect: false },
+                    { text: "The network firewall blocked the authenticated scan packets.", rationale: "If the scan was blocked, the vulnerability count would likely decrease or drop to zero, not increase significantly.", isCorrect: false }
+                ],
+                hint: "Remember the statistic: detection rates jump from ~50% to ~95% when the scanner is given 'keys' to the building."
+            },
+            {
+                question: "In the 4-Phase Scanning Strategy, the 'Discovery' phase primarily relies on which combination to find unknown assets?",
+                answerOptions: [
+                    { text: "Network-Based + Unauthenticated", rationale: "The goal of discovery is a 'helicopter view' to find every live IP and port, which is best achieved by a broad network sweep without needing credentials.", isCorrect: true },
+                    { text: "Agent-Based + Authenticated", rationale: "You cannot install an agent on a device you haven't discovered yet; agents are for monitoring known assets.", isCorrect: false },
+                    { text: "Network-Based + Authenticated", rationale: "Authenticated scans target specific, known hosts. You can't authenticate to a machine if you don't know it exists.", isCorrect: false },
+                    { text: "Passive Monitoring", rationale: "While passive monitoring finds assets, the specific strategy outlined defines Phase 1 as an active Network scan to map the IP range.", isCorrect: false }
+                ],
+                hint: "To find 'Shadow IT' devices nobody told you about, you need a broad tool that sweeps the whole IP range."
+            },
+            {
+                question: "The 2017 Equifax breach was attributed to an unpatched Apache Struts server (CVE-2017-5638). What was the fundamental failure in their vulnerability management process?",
+                answerOptions: [
+                    { text: "The server was missed by scans entirely.", rationale: "The root cause was not that the scanner failed to detect the vuln, but that the server was never scanned in the first place ('One missed host').", isCorrect: true },
+                    { text: "It was a Zero-Day exploit with no available patch.", rationale: "A patch had been available for 2+ months prior to the breach.", isCorrect: false },
+                    { text: "The scanner used was only agent-based.", rationale: "The issue was a lack of coverage/scanning of that specific host, not necessarily the type of scanner used.", isCorrect: false },
+                    { text: "They were only using unauthenticated scans.", rationale: "Even an unauthenticated scan likely would have flagged the exposed web server vulnerability if the host had been included in the target list.", isCorrect: false }
+                ],
+                hint: "The lesson from this case study is summarized as: 'Scanning is not optional. One _____ host = millions of lives disrupted.'"
+            },
+            {
+                question: "You are deploying agent-based scanners to 5,000 endpoints. Which resource constraint is the primary concern for the endpoint engineering team?",
+                answerOptions: [
+                    { text: "CPU and RAM consumption on the host", rationale: "Agents run locally and consume system resources to process queries, which can impact user experience if not managed.", isCorrect: true },
+                    { text: "Network bandwidth saturation during scan windows", rationale: "Agent-based scanners are noted for minimal network noise; bandwidth is a primary concern for *network-based* scanners.", isCorrect: false },
+                    { text: "Inability to scan off-network", rationale: "Agents are specifically designed to work off-network, so this is a strength, not a constraint.", isCorrect: false },
+                    { text: "Lack of credential management", rationale: "Agents run with local system privileges (elevated) automatically; they don't require managing external credentials like network scanners do.", isCorrect: false }
+                ],
+                hint: "Since the software lives on the user's laptop, what local resources does it need to 'eat' to do its job?"
+            },
+            {
+                question: "How does an unauthenticated network scanner typically identify the software version running on an open port?",
+                answerOptions: [
+                    { text: "Banner Grabbing", rationale: "Unauthenticated scanners read the 'banner' or welcome message presented by a service (e.g., 'Apache 2.4.41') to guess the version.", isCorrect: true },
+                    { text: "Querying the Registry", rationale: "Accessing the registry requires authentication and local access.", isCorrect: false },
+                    { text: "Checking the RPM database", rationale: "Checking package managers like RPM is a function of authenticated or agent-based scanning.", isCorrect: false },
+                    { text: "Reading the Bill of Materials (BOM)", rationale: "A BOM is compiled by an agent or authenticated scan, not by looking at open ports from the outside.", isCorrect: false }
+                ],
+                hint: "This technique involves reading the 'welcome message' a service sends when you connect to its port."
+            },
+            {
+                question: "Why is an unauthenticated network scan generally considered insufficient for meeting compliance standards like PCI DSS?",
+                answerOptions: [
+                    { text: "It misses client-side applications and local configuration settings.", rationale: "Compliance requires checking strict configuration benchmarks and non-network software (like PDF readers), which unauth scans cannot see.", isCorrect: true },
+                    { text: "It takes too long to complete per host.", rationale: "Unauthenticated scans are actually faster (shorter duration) than authenticated scans.", isCorrect: false },
+                    { text: "It provides a 'defender's view' which is too detailed.", rationale: "Unauth scans provide an 'attacker's view' (shallow), whereas compliance usually mandates the 'defender's truth' (deep).", isCorrect: false },
+                    { text: "It requires installing software on every server.", rationale: "This describes agent-based scanning. Network scans require no installation.", isCorrect: false }
+                ],
+                hint: "If a vulnerability exists in a PDF reader that doesn't listen on a network port, an unauthenticated scan will likely score 0% in finding it."
+            },
+            {
+                question: "Which strategy aligns best with the 'Defense-in-Depth' principle for vulnerability management?",
+                answerOptions: [
+                    { text: "Using both Network and Agent-based scanners.", rationale: "Combining network scans (for breadth/perimeter) and agents (for depth/mobility) covers the weaknesses of each individual method.", isCorrect: true },
+                    { text: "Relying solely on Unauthenticated Network scans to minimize risk.", rationale: "This leaves huge visibility gaps regarding internal configurations and missing patches.", isCorrect: false },
+                    { text: "Using only Agent-based scanning to avoid network traffic.", rationale: "This fails to detect Shadow IT, IoT devices, and unmanaged assets that cannot run agents.", isCorrect: false },
+                    { text: "Scanning only once per year to save resources.", rationale: "Effective management requires continuous or frequent scanning (iterative cycle), not annual checks.", isCorrect: false }
+                ],
+                hint: "Think about the 'Formula': Breadth (Network) + Depth (Agent) = Comprehensive Coverage."
+            }
+        ];
+
+        // State
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let isAnswered = false;
+
+        // Elements
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackHeader = document.getElementById('feedback-header');
+        const feedbackText = document.getElementById('feedback-text');
+        const scoreDisplay = document.getElementById('score-display');
+        const progressBar = document.getElementById('progress-bar');
+        const currentQuestionNum = document.getElementById('current-question-num');
+        const hintBox = document.getElementById('hint-box');
+        
+        // Screens
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        const finalScore = document.getElementById('final-score');
+        const finalMessage = document.getElementById('final-message');
+
+        // Functions
+        function init() {
+            currentQuestionIndex = 0;
+            score = 0;
+            scoreDisplay.innerText = 0;
+            showQuestion();
+        }
+
+        function showQuestion() {
+            const q = quizData[currentQuestionIndex];
+            
+            // Reset UI
+            isAnswered = false;
+            feedbackArea.classList.add('hidden');
+            hintBox.classList.add('hidden');
+            optionsContainer.innerHTML = '';
+            
+            // Update Text
+            questionText.innerText = q.question;
+            currentQuestionNum.innerText = currentQuestionIndex + 1;
+            hintBox.innerText = q.hint;
+
+            // Progress Bar
+            const progress = (currentQuestionIndex / quizData.length) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            // Randomize Options
+            const shuffledOptions = [...q.answerOptions].sort(() => Math.random() - 0.5);
+
+            // Render Options
+            shuffledOptions.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = `option-btn w-full text-left p-4 rounded-xl border border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50 text-slate-700 font-medium`;
+                btn.innerText = opt.text;
+                btn.onclick = () => selectOption(btn, opt);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function toggleHint() {
+            hintBox.classList.toggle('hidden');
+        }
+
+        function selectOption(btn, optionData) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            // Highlight chosen button
+            const allBtns = optionsContainer.children;
+            for(let b of allBtns) {
+                b.disabled = true;
+                b.classList.add('opacity-70');
+            }
+            btn.classList.remove('opacity-70');
+
+            // Feedback Logic
+            feedbackArea.classList.remove('hidden');
+            
+            if (optionData.isCorrect) {
+                // Correct styling
+                btn.classList.remove('border-slate-200', 'bg-white');
+                btn.classList.add('bg-green-50', 'border-green-500', 'text-green-800');
+                
+                feedbackHeader.innerHTML = `<span class="text-green-600 bg-green-100 px-2 py-0.5 rounded text-sm uppercase tracking-wide">Correct</span>`;
+                score++;
+                scoreDisplay.innerText = score;
+                // Trigger localized confetti or success sound ideally
+            } else {
+                // Incorrect styling
+                btn.classList.remove('border-slate-200', 'bg-white');
+                btn.classList.add('bg-red-50', 'border-red-500', 'text-red-800');
+                
+                feedbackHeader.innerHTML = `<span class="text-red-600 bg-red-100 px-2 py-0.5 rounded text-sm uppercase tracking-wide">Incorrect</span>`;
+            }
+
+            // Show Rationale
+            feedbackText.innerText = optionData.rationale;
+            
+            // Update Progress bar to full for this question step
+            const progress = ((currentQuestionIndex + 1) / quizData.length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < quizData.length - 1) {
+                currentQuestionIndex++;
+                showQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            quizScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+            resultsScreen.classList.add('flex');
+            
+            finalScore.innerText = `${score} / ${quizData.length}`;
+            
+            if (score === 10) {
+                finalMessage.innerText = "Perfect score! You're a scanning expert.";
+            } else if (score >= 7) {
+                finalMessage.innerText = "Great job! You have a solid grasp of the concepts.";
+            } else {
+                finalMessage.innerText = "Keep practicing! Review the material and try again.";
+            }
+        }
+
+        function restartQuiz() {
+            resultsScreen.classList.add('hidden');
+            resultsScreen.classList.remove('flex');
+            quizScreen.classList.remove('hidden');
+            init();
+        }
+
+        // Initialize
+        init();
+
+    </script>
+</body>
+</html>
+
+
+
+
