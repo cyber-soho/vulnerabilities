@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 6: Vulnerability Scan Policy Designer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Chosen Palette: Warm Stone & Teal -->
+    <!-- Palette: Background: Stone-50 (#fafaf9), Primary Text: Stone-800 (#292524), Accents: Teal-600 (#0d9488) and Amber-600 (#d97706) -->
+    
+    <!-- Application Structure Plan:
+        1. Hero/Intro: Contextualizes the lab as a professional role-playing scenario.
+        2. Scenario Dashboard: Visualizes the "MediBridge" asset inventory using Chart.js to help students grasp the attack surface magnitude immediately.
+        3. Scoping Workshop: Breaks down the "Criticality Tiers" into an interactive accordion/card system, allowing users to explore definitions and examples.
+        4. Scheduling & Compliance: An interactive "Regulatory Explorer" where users click specific regulations (PCI, HIPAA) to see how they dictate the scan schedule.
+        5. The Toolbox: A filterable grid of the open-source tools mentioned in the lab, categorized by function (Network, Web, Cloud, Policy).
+        6. Deliverable Checklist: A dynamic checklist for the final report requirements.
+        Rationale: This structure moves from understanding the "Client" (Scenario) to defining the "Rules" (Scope/Schedule) to selecting the "Weapons" (Tools), mimicking the actual workflow of a security consultant.
+    -->
+
+    <!-- Visualization & Content Choices:
+        1. Scenario Asset Chart (Doughnut):
+           - Goal: Inform/Organize. Quickly show the scale of the environment.
+           - Justification: A list of numbers is dry; a chart highlights the dominance of workstations vs. critical servers.
+           - Interaction: Tooltips with details.
+        2. Tier Cards (Interactive HTML):
+           - Goal: Organize. Clarify the 3-tier classification system.
+           - Justification: Accordion style keeps the UI clean while allowing deep dives into definitions.
+        3. Compliance Matrix (Dynamic Text):
+           - Goal: Inform/Change. Show how regulations impact frequency.
+           - Interaction: Buttons to toggle regulation details.
+        4. Tool Explorer (Filterable Grid):
+           - Goal: Organize. Help students find the right tool for the specific task.
+           - Interaction: Category filters (Network, Web, etc.).
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used.
+    -->
+
+    <style>
+        /* Custom scrollbar for cleanliness */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f5f5f4; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a29e; 
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 400px;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Smooth transitions */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-stone-50 text-stone-800 font-sans antialiased selection:bg-teal-100 selection:text-teal-900">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-stone-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold tracking-tight text-teal-700">Cyber.SoHo <span class="text-stone-500 font-normal">| Lab 6</span></span>
+                </div>
+                <div class="hidden md:flex space-x-8 items-center">
+                    <button onclick="scrollToSection('scenario')" class="text-sm font-medium hover:text-teal-600 transition-colors">Scenario</button>
+                    <button onclick="scrollToSection('scoping')" class="text-sm font-medium hover:text-teal-600 transition-colors">Scope</button>
+                    <button onclick="scrollToSection('schedule')" class="text-sm font-medium hover:text-teal-600 transition-colors">Schedule</button>
+                    <button onclick="scrollToSection('tools')" class="text-sm font-medium hover:text-teal-600 transition-colors">Toolbox</button>
+                    <button onclick="scrollToSection('deliverable')" class="px-4 py-2 rounded-full bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors shadow-md">Start Report</button>
+                </div>
+                <!-- Mobile menu button stub -->
+                <div class="flex items-center md:hidden">
+                    <button id="mobile-menu-btn" class="text-stone-500 hover:text-stone-800 focus:outline-none p-2">
+                        <span class="text-2xl">≡</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu (Hidden by default) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-stone-200">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <button onclick="scrollToSection('scenario')" class="block w-full text-left px-3 py-2 text-base font-medium hover:bg-stone-50">Scenario</button>
+                <button onclick="scrollToSection('scoping')" class="block w-full text-left px-3 py-2 text-base font-medium hover:bg-stone-50">Scope</button>
+                <button onclick="scrollToSection('schedule')" class="block w-full text-left px-3 py-2 text-base font-medium hover:bg-stone-50">Schedule</button>
+                <button onclick="scrollToSection('tools')" class="block w-full text-left px-3 py-2 text-base font-medium hover:bg-stone-50">Toolbox</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="bg-gradient-to-b from-stone-100 to-stone-50 pt-16 pb-12 border-b border-stone-200">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <span class="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold tracking-wide uppercase mb-4">Optional Lab Exercise</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-stone-900 mb-6 tracking-tight">Designing a Vulnerability Scan Policy</h1>
+            <p class="text-lg md:text-xl text-stone-600 max-w-3xl mx-auto leading-relaxed">
+                Step into the role of a <strong>Junior Security Consultant</strong> for MediBridge Health Solutions. Your mission: Design a comprehensive vulnerability management policy that protects sensitive patient data (ePHI) and meets rigorous compliance standards.
+            </p>
+            <div class="mt-8 flex justify-center gap-4">
+                <div class="flex items-center text-sm text-stone-500">
+                    <span class="bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded mr-2">Est. Time</span> 3 Hours
+                </div>
+                <div class="flex items-center text-sm text-stone-500">
+                    <span class="bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded mr-2">Deliverable</span> 2-Page Policy
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-24">
+
+        <!-- SECTION 1: THE SCENARIO (Interactive Dashboard) -->
+        <section id="scenario" class="scroll-mt-24">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-stone-900 mb-4">The Scenario: MediBridge Health Solutions</h2>
+                <p class="text-stone-600 max-w-3xl text-lg">
+                    Before drafting policy, you must understand the client. MediBridge is a mid-sized healthcare tech company handling sensitive ePHI and payments. Explore their asset inventory below to identify the attack surface.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <!-- Text Details -->
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <h3 class="font-bold text-teal-700 text-lg mb-3">Key Characteristics</h3>
+                        <ul class="space-y-3 text-sm text-stone-600">
+                            <li class="flex items-start"><span class="mr-2 text-teal-500">➤</span> <strong>Locations:</strong> HQ, Data Centre, Remote Workforce (VPN).</li>
+                            <li class="flex items-start"><span class="mr-2 text-teal-500">➤</span> <strong>Compliance:</strong> HIPAA (ePHI) & PCI-DSS (Payments).</li>
+                            <li class="flex items-start"><span class="mr-2 text-teal-500">➤</span> <strong>Employees:</strong> 350 Total (120 Remote).</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-amber-50 p-6 rounded-xl border border-amber-100">
+                        <h3 class="font-bold text-amber-800 text-lg mb-2">Architectural Zones</h3>
+                        <p class="text-sm text-stone-700 mb-2">Network segmentation is critical for your scope:</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="px-2 py-1 bg-white border border-amber-200 rounded text-xs font-mono text-stone-600">DMZ</span>
+                            <span class="px-2 py-1 bg-white border border-amber-200 rounded text-xs font-mono text-stone-600">Internal Prod</span>
+                            <span class="px-2 py-1 bg-white border border-amber-200 rounded text-xs font-mono text-stone-600">Corp LAN</span>
+                            <span class="px-2 py-1 bg-white border border-amber-200 rounded text-xs font-mono text-stone-600">VPN</span>
+                            <span class="px-2 py-1 bg-white border border-amber-200 rounded text-xs font-mono text-stone-600">AWS Cloud</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Container -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-stone-200 shadow-sm flex flex-col items-center">
+                    <h3 class="font-bold text-stone-800 mb-2 w-full text-left">Asset Inventory Visualization</h3>
+                    <p class="text-sm text-stone-500 mb-6 w-full text-left">Distribution of ~550 Total Assets. Hover over segments to see details.</p>
+                    
+                    <div class="chart-container">
+                        <canvas id="assetChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-xs text-stone-400 italic text-center w-full">
+                        Data Source: MediBridge IT Inventory
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: SCOPING & TIERS (Interactive Cards) -->
+        <section id="scoping" class="scroll-mt-24 bg-white rounded-3xl p-8 border border-stone-200 shadow-sm">
+            <div class="mb-8 border-b border-stone-100 pb-6">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="bg-teal-100 text-teal-800 text-xs font-bold px-2 py-1 rounded uppercase">Exercise 1</span>
+                    <h2 class="text-3xl font-bold text-stone-900">Defining Scope & Tiers</h2>
+                </div>
+                <p class="text-stone-600 max-w-3xl">
+                    Not all assets are equal. A good policy prioritizes scanning based on criticality. Review the definitions below and consider where MediBridge's assets fit.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Tier 1 -->
+                <div class="group relative bg-stone-50 rounded-xl p-6 border border-stone-200 hover:border-red-300 hover:bg-red-50 transition-all duration-300 card-hover">
+                    <div class="absolute top-4 right-4 w-8 h-8 bg-red-100 text-red-600 rounded-full flex items-center justify-center font-bold">1</div>
+                    <h3 class="text-xl font-bold text-stone-800 group-hover:text-red-800 mb-3">Mission-Critical</h3>
+                    <p class="text-sm text-stone-600 mb-4">Systems whose compromise would directly expose ePHI or halt business operations.</p>
+                    <div class="bg-white p-3 rounded border border-stone-100 text-xs text-stone-500">
+                        <strong>Think about:</strong> EHR Databases, Production App Servers, Key Network Core.
+                    </div>
+                </div>
+
+                <!-- Tier 2 -->
+                <div class="group relative bg-stone-50 rounded-xl p-6 border border-stone-200 hover:border-amber-300 hover:bg-amber-50 transition-all duration-300 card-hover">
+                    <div class="absolute top-4 right-4 w-8 h-8 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center font-bold">2</div>
+                    <h3 class="text-xl font-bold text-stone-800 group-hover:text-amber-800 mb-3">Business-Important</h3>
+                    <p class="text-sm text-stone-600 mb-4">Systems supporting operations but not directly housing regulated data.</p>
+                    <div class="bg-white p-3 rounded border border-stone-100 text-xs text-stone-500">
+                        <strong>Think about:</strong> Corporate Email, HR Systems, Internal File Shares.
+                    </div>
+                </div>
+
+                <!-- Tier 3 -->
+                <div class="group relative bg-stone-50 rounded-xl p-6 border border-stone-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-300 card-hover">
+                    <div class="absolute top-4 right-4 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">3</div>
+                    <h3 class="text-xl font-bold text-stone-800 group-hover:text-blue-800 mb-3">Standard</h3>
+                    <p class="text-sm text-stone-600 mb-4">Systems with limited exposure or impact if compromised.</p>
+                    <div class="bg-white p-3 rounded border border-stone-100 text-xs text-stone-500">
+                        <strong>Think about:</strong> Guest Wi-Fi, Test/Dev Environments, Non-critical Workstations.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 bg-teal-50 p-4 rounded-lg border border-teal-100 flex items-start">
+                <span class="text-teal-600 text-2xl mr-4">💡</span>
+                <div class="text-sm text-teal-900">
+                    <strong>Critical Consideration:</strong> Where do "Remote Work Laptops" fit? Even if they don't store data, they connect via VPN to the corporate network. Could they be a Tier 2 entry point?
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: SCHEDULE & COMPLIANCE (Interactive Matrix) -->
+        <section id="schedule" class="scroll-mt-24">
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-2">
+                    <span class="bg-teal-100 text-teal-800 text-xs font-bold px-2 py-1 rounded uppercase">Exercise 2</span>
+                    <h2 class="text-3xl font-bold text-stone-900">Designing the Schedule</h2>
+                </div>
+                <p class="text-stone-600 max-w-3xl mb-6">
+                    Scanning frequency is dictated by regulatory requirements (the "floor") and risk appetite (the "ceiling"). Click the regulations below to see what they mandate.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Regulation Selector -->
+                <div class="lg:col-span-4 space-y-3">
+                    <button onclick="showRegulation('pci')" id="btn-pci" class="reg-btn w-full text-left px-5 py-4 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 transition-all focus:ring-2 focus:ring-teal-500 shadow-sm active-reg">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-stone-800">PCI-DSS v4.0</span>
+                            <span class="text-xs font-mono text-stone-400">Payments</span>
+                        </div>
+                    </button>
+                    <button onclick="showRegulation('hipaa')" id="btn-hipaa" class="reg-btn w-full text-left px-5 py-4 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 transition-all focus:ring-2 focus:ring-teal-500 shadow-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-stone-800">HIPAA</span>
+                            <span class="text-xs font-mono text-stone-400">Healthcare</span>
+                        </div>
+                    </button>
+                    <button onclick="showRegulation('nist')" id="btn-nist" class="reg-btn w-full text-left px-5 py-4 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 transition-all focus:ring-2 focus:ring-teal-500 shadow-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-stone-800">NIST SP 800-53</span>
+                            <span class="text-xs font-mono text-stone-400">Best Practice</span>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Content Display -->
+                <div class="lg:col-span-8">
+                    <div id="reg-content" class="bg-white border border-stone-200 rounded-2xl p-8 h-full shadow-sm relative overflow-hidden">
+                        <!-- Dynamic Content injected here by JS -->
+                        <div class="absolute top-0 right-0 p-4 opacity-10">
+                            <span class="text-9xl">⚖️</span>
+                        </div>
+                        <h3 id="reg-title" class="text-2xl font-bold text-teal-800 mb-4">Select a Regulation</h3>
+                        <div id="reg-body" class="prose text-stone-600">
+                            Select a standard on the left to view its specific scanning requirements. This will form the baseline for your policy's schedule.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule Factors Grid -->
+            <div class="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-stone-100 p-4 rounded-lg">
+                    <h4 class="font-bold text-stone-700 text-sm mb-1">Scan Windows</h4>
+                    <p class="text-xs text-stone-500">Production EHR systems are fragile. Schedule during maintenance windows (nights/weekends).</p>
+                </div>
+                <div class="bg-stone-100 p-4 rounded-lg">
+                    <h4 class="font-bold text-stone-700 text-sm mb-1">Authenticated Scans</h4>
+                    <p class="text-xs text-stone-500">Required for deep visibility (patch levels). Needs service account management.</p>
+                </div>
+                <div class="bg-stone-100 p-4 rounded-lg">
+                    <h4 class="font-bold text-stone-700 text-sm mb-1">ASV Scans</h4>
+                    <p class="text-xs text-stone-500">External scanning must be done by an Approved Scanning Vendor for PCI compliance.</p>
+                </div>
+                <div class="bg-stone-100 p-4 rounded-lg">
+                    <h4 class="font-bold text-stone-700 text-sm mb-1">Triggers</h4>
+                    <p class="text-xs text-stone-500">Emergency scans must occur immediately after critical CVE disclosures.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: THE TOOLBOX (Filterable Grid) -->
+        <section id="tools" class="scroll-mt-24">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+                <div>
+                    <h2 class="text-3xl font-bold text-stone-900 mb-2">The Consultant's Toolbox</h2>
+                    <p class="text-stone-600 max-w-xl">
+                        Reference these open-source tools in your policy. Use the filters to find the right tool for the job.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="filterTools('all')" class="tool-filter px-4 py-1.5 rounded-full text-sm font-medium bg-stone-800 text-white transition-all shadow-sm">All</button>
+                    <button onclick="filterTools('network')" class="tool-filter px-4 py-1.5 rounded-full text-sm font-medium bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-all shadow-sm">Network</button>
+                    <button onclick="filterTools('web')" class="tool-filter px-4 py-1.5 rounded-full text-sm font-medium bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-all shadow-sm">Web App</button>
+                    <button onclick="filterTools('cloud')" class="tool-filter px-4 py-1.5 rounded-full text-sm font-medium bg-white text-stone-600 border border-stone-200 hover:bg-stone-50 transition-all shadow-sm">Cloud/Infra</button>
+                </div>
+            </div>
+
+            <div id="tools-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Tools injected by JS -->
+            </div>
+        </section>
+
+        <!-- SECTION 5: DELIVERABLE GUIDE -->
+        <section id="deliverable" class="bg-teal-900 rounded-3xl p-8 lg:p-12 text-white shadow-xl">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div>
+                    <h2 class="text-3xl font-bold mb-4 text-white">Ready to Write?</h2>
+                    <p class="text-teal-100 mb-6 text-lg">
+                        Exercise 3 asks you to assemble a <strong>2-page A4 Policy Document</strong>. Use this checklist to ensure you hit all grading criteria before submitting.
+                    </p>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-teal-800/50 rounded-xl border border-teal-700">
+                            <h4 class="font-bold text-teal-200 text-sm mb-1 uppercase tracking-wide">Ponderation 1-2-1</h4>
+                            <p class="text-sm text-teal-100">
+                                25% Structure, 50% Technical Content, 25% Critical Thinking.
+                            </p>
+                        </div>
+                        <div class="text-xs text-teal-300 italic">
+                            * Remember: This is an optional lab, but highly recommended for portfolio building.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                    <h3 class="font-bold text-xl mb-4 text-white">Submission Checklist</h3>
+                    <ul class="space-y-3" id="checklist">
+                        <li class="flex items-center gap-3 cursor-pointer group" onclick="toggleCheck(this)">
+                            <div class="w-6 h-6 rounded border-2 border-teal-300 flex items-center justify-center text-transparent group-hover:border-white transition-colors">✓</div>
+                            <span class="text-teal-50 group-hover:text-white transition-colors">Max 2 pages A4 (PDF/DOCX)</span>
+                        </li>
+                        <li class="flex items-center gap-3 cursor-pointer group" onclick="toggleCheck(this)">
+                            <div class="w-6 h-6 rounded border-2 border-teal-300 flex items-center justify-center text-transparent group-hover:border-white transition-colors">✓</div>
+                            <span class="text-teal-50 group-hover:text-white transition-colors">Includes Scope & Criticality Tiers</span>
+                        </li>
+                        <li class="flex items-center gap-3 cursor-pointer group" onclick="toggleCheck(this)">
+                            <div class="w-6 h-6 rounded border-2 border-teal-300 flex items-center justify-center text-transparent group-hover:border-white transition-colors">✓</div>
+                            <span class="text-teal-50 group-hover:text-white transition-colors">Schedule addresses PCI-DSS & HIPAA</span>
+                        </li>
+                        <li class="flex items-center gap-3 cursor-pointer group" onclick="toggleCheck(this)">
+                            <div class="w-6 h-6 rounded border-2 border-teal-300 flex items-center justify-center text-transparent group-hover:border-white transition-colors">✓</div>
+                            <span class="text-teal-50 group-hover:text-white transition-colors">Governance table assigns all roles</span>
+                        </li>
+                        <li class="flex items-center gap-3 cursor-pointer group" onclick="toggleCheck(this)">
+                            <div class="w-6 h-6 rounded border-2 border-teal-300 flex items-center justify-center text-transparent group-hover:border-white transition-colors">✓</div>
+                            <span class="text-teal-50 group-hover:text-white transition-colors">Exception handling process defined</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="border-t border-stone-200 py-12 text-center text-stone-400 text-sm">
+            <p class="mb-2">© 2026 Cyber.SoHo. Educational Use Only.</p>
+            <p>Tools and regulations cited are property of their respective owners.</p>
+        </footer>
+
+    </main>
+
+    <!-- Application Logic -->
+    <script>
+        // --- DATA STORAGE ---
+
+        // Regulation Data
+        const regulations = {
+            pci: {
+                title: "PCI-DSS v4.0 Requirements",
+                content: `
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li><strong>Internal Vulnerability Scans (Req 11.3.1):</strong> Must be performed at least <strong>once every three months</strong> and after any significant change.</li>
+                        <li><strong>External Vulnerability Scans (Req 11.3.2):</strong> Must be performed at least <strong>quarterly</strong> by an Approved Scanning Vendor (ASV).</li>
+                        <li><strong>Rescans:</strong> Required until all "High-Risk" vulnerabilities are resolved.</li>
+                    </ul>
+                    <div class="mt-4 p-3 bg-amber-50 text-amber-800 rounded border border-amber-100 text-sm">
+                        <strong>Impact:</strong> MediBridge processes payments, so these are mandatory "hard" constraints for the schedule.
+                    </div>
+                `
+            },
+            hipaa: {
+                title: "HIPAA Security Rule",
+                content: `
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li><strong>Risk Analysis (§164.308(a)(1)(ii)(A)):</strong> Requires accurate and thorough assessment of potential risks and vulnerabilities to ePHI.</li>
+                        <li><strong>Evaluation (§164.308(a)(8)):</strong> Requires periodic technical and non-technical evaluation.</li>
+                    </ul>
+                    <div class="mt-4 p-3 bg-blue-50 text-blue-800 rounded border border-blue-100 text-sm">
+                        <strong>Impact:</strong> HIPAA is less prescriptive than PCI about specific timeframes (e.g., "quarterly"), but implies a "continuous" or "reasonable" frequency appropriate to the organization's size.
+                    </div>
+                `
+            },
+            nist: {
+                title: "NIST SP 800-53 (RA-5)",
+                content: `
+                    <ul class="list-disc pl-5 space-y-2">
+                        <li><strong>Vulnerability Monitoring:</strong> The organization monitors vulnerabilities in organizational systems and hosted applications.</li>
+                        <li><strong>Frequency:</strong> Should be defined by the organization based on risk assessments (e.g., every 7 days, 30 days, or real-time).</li>
+                    </ul>
+                    <div class="mt-4 p-3 bg-stone-50 text-stone-700 rounded border border-stone-200 text-sm">
+                        <strong>Impact:</strong> Good practice for Tier 1 assets. Consider exceeding PCI minimums (quarterly) and moving closer to monthly or weekly for critical systems.
+                    </div>
+                `
+            }
+        };
+
+        // Tool Data
+        const tools = [
+            { name: "OpenVAS (GVM)", category: "network", desc: "Comprehensive network vulnerability scanner. Good for authenticated/unauthenticated scans.", link: "https://www.openvas.org/" },
+            { name: "Nmap", category: "network", desc: "Network discovery and host enumeration. The foundation for scope definition.", link: "https://nmap.org/" },
+            { name: "OWASP ZAP", category: "web", desc: "Web application scanner (DAST). Free alternative to Burp Suite for testing portals.", link: "https://www.zaproxy.org/" },
+            { name: "Nikto", category: "web", desc: "Web server scanner. Quick ID of server misconfigurations.", link: "https://cirt.net/Nikto2" },
+            { name: "Trivy", category: "cloud", desc: "Container and cloud scanner. Checks Docker images and AWS configs.", link: "https://trivy.dev/" },
+            { name: "Scout Suite", category: "cloud", desc: "Multi-cloud security auditing (AWS, Azure, GCP).", link: "https://github.com/nccgroup/ScoutSuite" },
+            { name: "Lynis", category: "network", desc: "Host-based auditing tool for Linux/Unix hardening.", link: "https://cisofy.com/lynis/" },
+            { name: "Netbox", category: "policy", desc: "IPAM and DCIM. Excellent for maintaining the 'Source of Truth' asset inventory.", link: "https://netbox.dev/" },
+            { name: "Nuclei", category: "web", desc: "Template-based scanner. Fast and customizable.", link: "https://nuclei.projectdiscovery.io/" }
+        ];
+
+        // --- VISUALIZATION LOGIC ---
+
+        function initCharts() {
+            const ctx = document.getElementById('assetChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Workstations (380)', 'Servers (85)', 'Network Devices (40)', 'Cloud Instances (25)', 'IoT Devices (15)', 'Web Apps (6)'],
+                    datasets: [{
+                        data: [380, 85, 40, 25, 15, 6],
+                        backgroundColor: [
+                            '#e7e5e4', // Workstations - Stone 200 (Background noise)
+                            '#dc2626', // Servers - Red 600 (High Risk)
+                            '#f59e0b', // Network - Amber 500
+                            '#0d9488', // Cloud - Teal 600
+                            '#78716c', // IoT - Stone 500
+                            '#4f46e5'  // Web Apps - Indigo 600
+                        ],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: { family: 'ui-sans-serif, system-ui' },
+                                boxWidth: 12
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Asset Distribution by Category',
+                            font: { size: 16, weight: 'bold' },
+                            padding: { bottom: 20 }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label = label.split('(')[0].trim() + ': ';
+                                    }
+                                    let value = context.raw;
+                                    let total = context.chart._metasets[context.datasetIndex].total;
+                                    let percentage = Math.round((value / total) * 100) + '%';
+                                    return label + value + ' (' + percentage + ')';
+                                }
+                            }
+                        }
+                    },
+                    layout: {
+                        padding: 10
+                    }
+                }
+            });
+        }
+
+        // --- INTERACTION LOGIC ---
+
+        // Regulation Tab Switcher
+        function showRegulation(regKey) {
+            // Update buttons
+            document.querySelectorAll('.reg-btn').forEach(btn => {
+                btn.classList.remove('bg-stone-100', 'border-teal-500', 'ring-2', 'ring-teal-500');
+                btn.classList.add('bg-white', 'border-stone-200');
+            });
+            
+            const activeBtn = document.getElementById(`btn-${regKey}`);
+            activeBtn.classList.remove('bg-white', 'border-stone-200');
+            activeBtn.classList.add('bg-stone-50', 'border-teal-500', 'ring-2', 'ring-teal-500');
+
+            // Update Content with animation
+            const container = document.getElementById('reg-content');
+            const title = document.getElementById('reg-title');
+            const body = document.getElementById('reg-body');
+
+            // Simple fade out/in effect
+            container.classList.remove('fade-in');
+            void container.offsetWidth; // trigger reflow
+            
+            title.textContent = regulations[regKey].title;
+            body.innerHTML = regulations[regKey].content;
+            
+            container.classList.add('fade-in');
+        }
+
+        // Tool Filtering
+        function renderTools(filter) {
+            const grid = document.getElementById('tools-grid');
+            grid.innerHTML = ''; // Clear existing
+
+            const filteredTools = filter === 'all' ? tools : tools.filter(t => t.category === filter || t.category === 'policy');
+
+            filteredTools.forEach(tool => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-6 rounded-xl border border-stone-200 shadow-sm hover:shadow-md transition-shadow fade-in';
+                
+                // Category Badge Logic
+                let badgeColor = 'bg-stone-100 text-stone-600';
+                if(tool.category === 'web') badgeColor = 'bg-indigo-100 text-indigo-700';
+                if(tool.category === 'cloud') badgeColor = 'bg-teal-100 text-teal-700';
+                if(tool.category === 'network') badgeColor = 'bg-amber-100 text-amber-700';
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <h3 class="font-bold text-lg text-stone-800">${tool.name}</h3>
+                        <span class="text-xs px-2 py-1 rounded font-medium uppercase tracking-wide ${badgeColor}">${tool.category}</span>
+                    </div>
+                    <p class="text-sm text-stone-600 mb-4 h-10 overflow-hidden text-ellipsis">${tool.desc}</p>
+                    <a href="${tool.link}" target="_blank" class="text-teal-600 hover:text-teal-800 text-sm font-semibold flex items-center">
+                        Visit Site <span class="ml-1">→</span>
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterTools(category) {
+            // Update buttons
+            document.querySelectorAll('.tool-filter').forEach(btn => {
+                // Reset to unselected state
+                btn.classList.remove('bg-stone-800', 'text-white');
+                btn.classList.add('bg-white', 'text-stone-600', 'border', 'border-stone-200');
+            });
+
+            // Highlight clicked button (find it based on onclick attribute or text, simpler to just use event target in production, but here we iterate)
+            // For simplicity in this generated code, we re-apply styles based on logic:
+            const buttons = document.querySelectorAll('.tool-filter');
+            buttons.forEach(btn => {
+                if(btn.innerText.toLowerCase().includes(category) || (category === 'all' && btn.innerText === 'All')) {
+                    btn.classList.remove('bg-white', 'text-stone-600', 'border', 'border-stone-200');
+                    btn.classList.add('bg-stone-800', 'text-white');
+                }
+            });
+
+            renderTools(category);
+        }
+
+        // Navigation Scroll
+        function scrollToSection(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+            // Close mobile menu if open
+            document.getElementById('mobile-menu').classList.add('hidden');
+        }
+
+        // Checklist Logic
+        function toggleCheck(el) {
+            const check = el.querySelector('div');
+            const text = el.querySelector('span');
+            
+            if (check.classList.contains('bg-teal-400')) {
+                // Uncheck
+                check.classList.remove('bg-teal-400', 'text-teal-900', 'border-transparent');
+                check.classList.add('text-transparent', 'border-teal-300');
+                text.classList.remove('line-through', 'text-teal-300');
+                text.classList.add('text-teal-50');
+            } else {
+                // Check
+                check.classList.add('bg-teal-400', 'text-teal-900', 'border-transparent');
+                check.classList.remove('text-transparent', 'border-teal-300');
+                text.classList.add('line-through', 'text-teal-300');
+                text.classList.remove('text-teal-50');
+            }
+        }
+
+        // Mobile Menu Toggle
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            showRegulation('pci'); // Default regulation
+            renderTools('all'); // Default tools
+        });
+
+    </script>
+</body>
+</html>
+
+
+

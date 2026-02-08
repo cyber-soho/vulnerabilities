@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VM Policy & Compliance Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .perspective {
+            perspective: 1000px;
+        }
+        .card-inner {
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+        .card-face {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center py-12 px-4 font-sans text-slate-800">
+
+    <div class="max-w-2xl w-full">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">Vulnerability Management</h1>
+            <p class="text-slate-600">Policy & Compliance Flashcards</p>
+        </header>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-slate-200 rounded-full h-2 mb-8">
+            <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+
+        <!-- Card Container -->
+        <div class="perspective w-full aspect-[3/2] relative mb-8">
+            <div id="card-inner" class="card-inner w-full h-full relative">
+                <!-- Front -->
+                <div class="card-face card-front bg-white border-2 border-slate-100">
+                    <p id="front-text" class="text-2xl font-semibold text-slate-800"></p>
+                </div>
+                <!-- Back -->
+                <div class="card-face card-back bg-indigo-600 text-white">
+                    <p id="back-text" class="text-xl leading-relaxed"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center justify-between">
+            <button id="prev-btn" class="px-6 py-2 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                Previous
+            </button>
+            <span id="counter" class="text-slate-500 font-medium italic"></span>
+            <button id="next-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                Next
+            </button>
+        </div>
+
+        <p class="mt-8 text-center text-sm text-slate-400">Click the card to flip</p>
+    </div>
+
+    <script>
+        const flashcards = [
+            { front: "Primary purpose of a VM Policy", back: "To transform vulnerability management from ad-hoc guesswork into a structured, repeatable, measurable process." },
+            { front: "5 Core Questions a VM Policy Answers", back: "What do we protect? How bad is it? How fast must we fix it? Who owns the fix? What if we cannot patch in time?" },
+            { front: "VM Policy Scope Rule of Thumb", back: "If it has an IP address, it belongs in your inventory." },
+            { front: "Role responsible for running scans and triaging findings", back: "SOC (Security Operations Center)" },
+            { front: "Role responsible for applying patches and rebooting systems", back: "IT Operations" },
+            { front: "CVSS Score Range for Critical Severity", back: "9.0 – 10.0" },
+            { front: "Standard Remediation SLA for Critical Vulnerabilities", back: "24 – 48 hours" },
+            { front: "Standard Remediation SLA for High Vulnerabilities (CVSS 7.0–8.9)", back: "7 days" },
+            { front: "Formula for SLA Compliance", back: "Compliance Status = Days Since Discovery $\\le$ SLA Allowed Days" },
+            { front: "5 Steps of the Exception Workflow", back: "Request, Compensating Controls, Approval, Expiration Date, Re-Assessment" },
+            { front: "Definition of MTTR (Metric)", back: "Mean Time To Remediate: The average days from discovery to fix (lower is better)." },
+            { front: "Definition of CMDB", back: "Configuration Management Database: A catalogue of every asset, its owner, criticality, and data handled." },
+            { front: "Data protected by PCI-DSS", back: "Credit card data (Cardholder Data)" },
+            { front: "Data protected by HIPAA", back: "PHI (Protected Health Information) and ePHI (Electronic Protected Health Information)" },
+            { front: "Data protected by GDPR", back: "All personal data of individuals within the EU/EEA" },
+            { front: "PCI-DSS Requirement 6.3.3 Mandate", back: "Install critical security patches within one month of release." },
+            { front: "PCI-DSS Requirement 11.3 Scanning Cadence", back: "Internal and external vulnerability scans at least quarterly." },
+            { front: "PCI-DSS Compliance Cycle", back: "Scan → Fix → Rescan (Verify) → Prove" },
+            { front: "HIPAA Risk Calculation Formula", back: "Risk = Likelihood of Exploitation × Impact on ePHI" },
+            { front: "Concept of 'ePHI Elevation' in HIPAA", back: "A vulnerability on a system containing ePHI is treated as higher risk than the same vulnerability on a regular system." },
+            { front: "HIPAA Documentation Retention Period", back: "Minimum of 6 years" },
+            { front: "GDPR Article 33 Breach Notification Deadline", back: "Within 72 hours of becoming aware of the breach." },
+            { front: "Maximum GDPR Fine (Upper Tier)", back: "€20 million or 4% of annual global turnover (whichever is greater)." },
+            { front: "Regulatory Golden Rule for VM Policies", back: "Design your VM policy to satisfy the strictest regulation that applies to you." },
+            { front: "4 Common Vulnerability Scanning Tools", back: "Nessus (Tenable), Qualys VMDR, Rapid7 InsightVM, OpenVAS" }
+        ];
+
+        let currentIndex = 0;
+        const cardInner = document.getElementById('card-inner');
+        const frontText = document.getElementById('front-text');
+        const backText = document.getElementById('back-text');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const counter = document.getElementById('counter');
+        const progressBar = document.getElementById('progress-bar');
+
+        function updateCard() {
+            // Reset flip before changing text
+            cardInner.classList.remove('is-flipped');
+            
+            setTimeout(() => {
+                const card = flashcards[currentIndex];
+                frontText.innerText = card.front;
+                backText.innerText = card.back;
+                
+                counter.innerText = `${currentIndex + 1} / ${flashcards.length}`;
+                prevBtn.disabled = currentIndex === 0;
+                nextBtn.disabled = currentIndex === flashcards.length - 1;
+                
+                const progress = ((currentIndex + 1) / flashcards.length) * 100;
+                progressBar.style.width = `${progress}%`;
+            }, 150);
+        }
+
+        cardInner.addEventListener('click', () => {
+            cardInner.classList.toggle('is-flipped');
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateCard();
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentIndex < flashcards.length - 1) {
+                currentIndex++;
+                updateCard();
+            }
+        });
+
+        // Initialize
+        updateCard();
+    </script>
+</body>
+</html>
+
+
+
+
