@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberDefend: Managing Vulnerabilities Mid-Term Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chosen Palette: Cyber Defense Academy -->
+    <!-- Application Structure Plan: The app is designed as a "Security Operations Center (SOC) Learning Dashboard". Instead of linear reading, users switch between "Modules" (Thematic Sections) representing different SOC functions. 1. Dashboard Home: High-level overview and context. 2. Intel & Risk (Module 1): Interactive Risk Matrix and Definition Cards. 3. Frameworks (Module 2): Interactive Kill Chain & Diamond Model visualization. 4. Asset Ops (Module 3): Metrics on asset mgmt (Ponemon data) and surface reduction. 5. Policy & Scans (Module 4 & 5): Comparison tools for scanners and policy logic. 6. Case Logs (Case Studies): Interactive scenario/solution reveals. 7. Exam Simulator: A massive quiz engine containing all 100 required questions (MCQs, MSQs, and Essays) to prepare for the mid-term. -->
+    <!-- Visualization & Content Choices: 1. Risk Matrix: Scatter Plot (Chart.js) -> Goal: Visualize Risk = Likelihood x Impact -> Interaction: Visual only, clear quadrant mapping. 2. Kill Chain: CSS Flex Steps -> Goal: Show linear progression -> Interaction: Click step to see details -> Method: HTML/JS. 3. Cost of Breaches: Bar Chart (Chart.js) -> Goal: Show impact of Asset Mgmt (Ponemon stats) -> Method: Chart.js. 4. Diamond Model: CSS Grid Layout -> Goal: Show relationships -> Method: CSS rotated squares/cards. 5. Scanner Comparison: Interactive Toggle Table -> Goal: Compare features -> Method: JS State switching. 6. Exam Simulator: Dynamic HTML generation handling MCQ, MSQ, and Essay input/reveals -> Goal: Self-assessment -> Method: JS State and DOM manipulation. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 350px; }
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-slate-900 text-white shadow-lg flex-none z-10">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-xl">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">CyberDefend</h1>
+                    <p class="text-xs text-slate-400">Managing Vulnerabilities Mid-Term Review</p>
+                </div>
+            </div>
+            <nav class="hidden md:flex space-x-1 bg-slate-800 p-1 rounded-lg" id="nav-container"></nav>
+            <button id="mobile-menu-btn" class="md:hidden text-slate-300 hover:text-white">
+                <i class="fa-solid fa-bars text-xl"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 container mx-auto p-4 overflow-hidden flex gap-4">
+        <aside class="w-64 bg-white rounded-xl shadow-sm border border-slate-200 hidden md:flex flex-col overflow-hidden flex-none">
+            <div class="p-4 bg-slate-100 border-b border-slate-200">
+                <h3 class="font-bold text-slate-700 text-sm uppercase tracking-wider">Review Modules</h3>
+            </div>
+            <nav class="flex-1 overflow-y-auto no-scrollbar p-2 space-y-1" id="sidebar-nav"></nav>
+            <div class="p-4 border-t border-slate-200 bg-slate-50">
+                <div class="text-xs text-slate-500 text-center">
+                    <p>Est. Time: 4 Hours</p>
+                    <p>Exam Prep Mode</p>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden relative flex flex-col">
+            <div id="content-area" class="flex-1 overflow-y-auto p-6 scroll-smooth"></div>
+        </main>
+    </div>
+
+    <div id="mobile-menu" class="fixed inset-0 bg-slate-900 bg-opacity-95 z-50 hidden flex flex-col p-6">
+        <div class="flex justify-end mb-8">
+            <button id="close-mobile-btn" class="text-white text-2xl"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <nav id="mobile-nav-items" class="flex flex-col space-y-4 text-white text-lg font-semibold text-center"></nav>
+    </div>
+
+    <script>
+        const appData = {
+            currentState: 'exam',
+            modules: [
+                { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' },
+                { id: 'threat-intel', label: '1. Threat Intel & Risk', icon: 'fa-radar' },
+                { id: 'frameworks', label: '2. Kill Chain & Frameworks', icon: 'fa-link' },
+                { id: 'assets', label: '3. Asset Management', icon: 'fa-server' },
+                { id: 'policy', label: '4. Policy & Compliance', icon: 'fa-file-contract' },
+                { id: 'scanning', label: '5. Scanning Tech', icon: 'fa-magnifying-glass-chart' },
+                { id: 'casestudies', label: 'Case Study Log', icon: 'fa-folder-open' },
+                { id: 'exam', label: 'Exam Simulator (100 Qs)', icon: 'fa-graduation-cap' }
+            ],
+            
+            threatIntel: {
+                intro: "Threat Intelligence shifts cybersecurity from reactive to proactive. Instead of waiting for an alert, we analyze adversary motives. Risk is then calculated to prioritize these threats.",
+                keyTerms: [
+                    { term: "CTI", def: "Cyber Threat Intelligence. Analysis of adversaries' motives, targets, and behaviors." },
+                    { term: "Risk", def: "Likelihood × Impact. The intersection of a Threat exploiting a Vulnerability." },
+                    { term: "IOC", def: "Indicator of Compromise. Technical artifacts (IPs, hashes) indicating a breach." },
+                    { term: "Vulnerability", def: "A weakness or flaw in a system." },
+                    { term: "Threat", def: "The external actor or event attempting to exploit a weakness." }
+                ]
+            },
+
+            frameworks: {
+                intro: "Frameworks provide structured ways to map attacks. The Kill Chain breaks down the linear steps of an attack, while the Diamond Model connects the 'Who, What, Where, and Why'.",
+                killChainSteps: [
+                    { name: "1. Reconnaissance", desc: "Planning, scouting, gathering info about the target.", defense: "Web logs analysis, data leakage detection." },
+                    { name: "2. Weaponization", desc: "Coupling an exploit with a backdoor into a payload (e.g., malicious PDF).", defense: "N/A (Happens on attacker side)." },
+                    { name: "3. Delivery", desc: "Transmitting the payload (Email, USB, Web).", defense: "Email filtering, USB blocks." },
+                    { name: "4. Exploitation", desc: "Triggering the vulnerability to execute code.", defense: "Patching, DEP/ASLR, Anti-Exploit." },
+                    { name: "5. Installation", desc: "Establishing a persistent backdoor.", defense: "HIPS, Endpoint detection." },
+                    { name: "6. C2", desc: "Command & Control. Hands-on keyboard access.", defense: "Firewall ACLs, DNS Sinkholing." },
+                    { name: "7. Actions on Objectives", desc: "Data theft, encryption, destruction.", defense: "Data Loss Prevention (DLP), Backups." }
+                ],
+                diamond: [
+                    { title: "Adversary", desc: "Who is attacking? (Group, Individual)" },
+                    { title: "Capability", desc: "What tools/malware are they using?" },
+                    { title: "Infrastructure", desc: "What physical/logical resources? (IPs, Servers)" },
+                    { title: "Victim", desc: "Who is the target? (People, Assets)" }
+                ]
+            },
+
+            assets: {
+                intro: "You cannot protect what you don't know exists. Asset Management reduces the 'Attack Surface'—the sum of all exposure points.",
+                stats: {
+                    label: "Cost Savings (Ponemon Institute)",
+                    data: [3.5, 1.74],
+                    labels: ["Slow Identification", "Fast Identification"]
+                },
+                concepts: [
+                    { title: "Attack Surface", text: "The sum of all potential exposure points. Reduced by decommissioning old servers and closing ports." },
+                    { title: "Shadow IT", text: "Devices/software used without IT approval. Creates blind spots." },
+                    { title: "External vs Internal", text: "External: Public-facing (Web servers). Internal: Behind firewall (Databases, Workstations)." }
+                ]
+            },
+
+            policy: {
+                intro: "A VM Policy is the 'rulebook'. It dictates what to scan, when to patch, and who is responsible. Without executive enforcement, it's just a suggestion.",
+                slaData: [
+                    { severity: "Critical", time: "24-48 Hours", desc: "Immediate action required. Exploit active." },
+                    { severity: "High", time: "7-14 Days", desc: "Patch in next maintenance window." },
+                    { severity: "Medium", time: "30 Days", desc: "Standard patching cycle." },
+                    { severity: "Low", time: "90 Days / As needed", desc: "Low risk exposure." }
+                ]
+            },
+
+            scanning: {
+                intro: "Scanning identifies the flaws. We must choose between Network (External) vs. Agent (Local) and Authenticated (Deep) vs. Unauthenticated (Surface).",
+                comparison: [
+                    { type: "Network-Based", pros: "Finds unmanaged devices, view from attacker perspective.", cons: "Misses offline devices, high traffic usage." },
+                    { type: "Agent-Based", pros: "Scans roaming laptops, deep local visibility, low network impact.", cons: "Requires installation, OS compatibility." },
+                    { type: "Unauthenticated", pros: "Fast, simulates external hacker.", cons: "High false positives, shallow data (banner grabbing)." },
+                    { type: "Authenticated", pros: "Accurate, sees registry/patch levels, low false positives.", cons: "Requires admin credentials (risk)." }
+                ]
+            },
+
+            caseStudies: [
+                { title: "The Blind Spot", scenario: "Hospital hit by ransomware via forgotten MRI machine.", answer: "Asset Management Failure. No inventory of connected devices. Network segmentation needed." },
+                { title: "The Ignored Alert", scenario: "Bank receives CTI about trojan, ignores it because AV was silent. Breached.", answer: "Risk Management Failure. Failed to integrate CTI. Reactive instead of proactive." },
+                { title: "Breaking the Chain", scenario: "Phishing email with malicious PDF blocked by gateway.", answer: "Success! Broken at 'Delivery' phase. Weaponized payload stopped." },
+                { title: "The Unrealistic Policy", scenario: "Startup mandates ALL patches in 24h. IT ignores policy.", answer: "Policy Failure. Unrealistic prioritization. Needs Risk Matrix driven SLAs." },
+                { title: "False Sense of Security", scenario: "Unauth scan shows 0 issues. Hacker exploits outdated software.", answer: "Scanning Failure. Unauth scans can't see internal versions. Needed Authenticated scan." },
+                { title: "Diamond Investigation", scenario: "Analysts map IP (Infra) and Malware (Cap) targeting Grid (Victim).", answer: "Attribution success. Pivoted to find Adversary (Nation State)." },
+                { title: "The Rogue Router", scenario: "Employee plugs in personal Wi-Fi router.", answer: "Attack Surface Expansion. Shadow IT. Needs NAC (Network Access Control)." },
+                { title: "The Compliance Fine", scenario: "Retailer fined for unpatched vulnerability violting regulations.", answer: "Compliance Failure. Policy not enforced. Regulations (PCI/GDPR) require proof." },
+                { title: "Agent vs. Network", scenario: "Remote workforce rarely on VPN.", answer: "Network scan fails here. Must use Agent-based scanners to report to cloud." },
+                { title: "Mapping to ATT&CK", scenario: "PowerShell used to dump creds.", answer: "Mapped to Tactic: Credential Access, Technique: OS Credential Dumping." }
+            ],
+
+            questions: [
+                // === 50 MCQs ===
+                { id: 1, type: "MCQ", q: "What is the primary purpose of CTI (Cyber Threat Intelligence)?", options: ["To install antivirus", "To shift from reactive to proactive", "To guarantee 100% security", "To write policies"], ans: 1, exp: "CTI provides foresight into adversary actions." },
+                { id: 2, type: "MCQ", q: "In a Risk Matrix, what factors are plotted?", options: ["Time and Money", "Hardware and Software", "Likelihood and Impact", "Internal and External"], ans: 2, exp: "Risk = Likelihood x Impact." },
+                { id: 3, type: "MCQ", q: "Who developed the Cyber Kill Chain?", options: ["NIST", "MITRE", "Lockheed Martin", "Microsoft"], ans: 2, exp: "Lockheed Martin introduced it in 2011." },
+                { id: 4, type: "MCQ", q: "Which is NOT a Diamond Model component?", options: ["Adversary", "Capability", "Cost", "Infrastructure"], ans: 2, exp: "Cost is not a core node. Components are Adversary, Capability, Infrastructure, Victim." },
+                { id: 5, type: "MCQ", q: "What does Asset Management involve?", options: ["Firing employees", "Inventorying all hardware/software/data", "Buying computers", "Running cables"], ans: 1, exp: "You must know what you have to protect it." },
+                { id: 6, type: "MCQ", q: "What is an organization's 'Attack Surface'?", options: ["Physical roof", "Sum of all potential exposure points", "Firewall brand", "IT Budget"], ans: 1, exp: "Every digital door or window an attacker can use." },
+                { id: 7, type: "MCQ", q: "Shadow IT refers to:", options: ["Night shift security", "Devices/Software used without IT knowledge", "Dark web", "Encrypted traffic"], ans: 1, exp: "Unapproved assets create blind spots." },
+                { id: 8, type: "MCQ", q: "An unauthenticated scan mimics:", options: ["Insider threat", "CEO laptop", "External attacker's perspective", "Agent scan"], ans: 2, exp: "It sees only what is exposed externally." },
+                { id: 9, type: "MCQ", q: "Which scanner is best for roaming laptops?", options: ["Network-based", "Agent-based", "Physical", "Unauthenticated"], ans: 1, exp: "Agents reside on the machine." },
+                { id: 10, type: "MCQ", q: "What represents 'Technique' in MITRE ATT&CK?", options: ["The Why", "The How (Specific method)", "The Who", "The When"], ans: 1, exp: "Tactics are Why, Techniques are How." },
+                { id: 11, type: "MCQ", q: "Ponemon Institute says fast breach ID saves on average:", options: ["Paperwork", "$1.76 Million", "Jobs", "Time only"], ans: 1, exp: "Avg savings of $1.76M for fast identification." },
+                { id: 12, type: "MCQ", q: "NVD is maintained by:", options: ["Lockheed", "NIST", "CIA", "FBI"], ans: 1, exp: "National Institute of Standards and Technology maintains the NVD." },
+                { id: 13, type: "MCQ", q: "Break Kill Chain at 'Delivery' by:", options: ["Patching", "Blocking Email/USB", "Forensics", "Hiring lawyers"], ans: 1, exp: "Stop the payload from reaching the target." },
+                { id: 14, type: "MCQ", q: "Which US law makes unauthorized scanning illegal?", options: ["HIPAA", "CFAA", "GDPR", "PCI-DSS"], ans: 1, exp: "Computer Fraud and Abuse Act (CFAA)." },
+                { id: 15, type: "MCQ", q: "A 'Zero-Day' vulnerability is:", options: ["A patched flaw", "A flaw unknown to the vendor", "A network outage", "A type of firewall"], ans: 1, exp: "The vendor has zero days to prepare a patch." },
+                { id: 16, type: "MCQ", q: "What does CVE stand for?", options: ["Common Vulnerabilities and Exposures", "Cyber Virtual Environment", "Critical Virus Event", "Centralized Vulnerability Engine"], ans: 0, exp: "Maintained by MITRE, it's the standard naming convention." },
+                { id: 17, type: "MCQ", q: "In the Diamond Model, what connects the Victim and Adversary?", options: ["Money", "Socio-Political Meta-Feature", "Firewall", "Router"], ans: 1, exp: "The socio-political axis explains the motive." },
+                { id: 18, type: "MCQ", q: "Which Kill Chain step happens entirely on the attacker's side?", options: ["Reconnaissance", "Weaponization", "Exploitation", "Installation"], ans: 1, exp: "Coupling exploit and payload happens in the lab." },
+                { id: 19, type: "MCQ", q: "What is an IOC?", options: ["Internet of Computers", "Indicator of Compromise", "Internal Operations Center", "Incident Override Command"], ans: 1, exp: "Technical artifacts that indicate a breach." },
+                { id: 20, type: "MCQ", q: "Which is a strategic benefit of a VM Policy?", options: ["Writing code", "Assigning accountability", "Installing RAM", "Rebooting servers"], ans: 1, exp: "Policies dictate who is responsible and when." },
+                { id: 21, type: "MCQ", q: "If CVSS score is 9.8, what is the typical SLA for remediation?", options: ["90 Days", "30 Days", "24-48 Hours", "Never"], ans: 2, exp: "Critical flaws demand immediate action." },
+                { id: 22, type: "MCQ", q: "What is the limitation of an unauthenticated scan?", options: ["Too slow", "Requires passwords", "High false positives", "Misses public IP"], ans: 2, exp: "It relies on banner grabbing, which can be inaccurate." },
+                { id: 23, type: "MCQ", q: "Why use an authenticated scan?", options: ["To hack the system", "To see deep registry and patch levels", "To avoid paperwork", "To scan external websites only"], ans: 1, exp: "Requires admin creds but provides absolute accuracy." },
+                { id: 24, type: "MCQ", q: "The 'Actions on Objectives' phase includes:", options: ["Phishing", "Data Exfiltration", "Ping sweeps", "Writing malware"], ans: 1, exp: "The final goal, such as stealing data." },
+                { id: 25, type: "MCQ", q: "A rogue Wi-Fi router plugged into the corporate network is an example of:", options: ["Zero-day", "Shadow IT", "CTI", "SLA"], ans: 1, exp: "Unapproved hardware expands the attack surface." },
+                { id: 26, type: "MCQ", q: "Which vulnerability type is most likely found by a network scanner?", options: ["Missing Windows KB patch", "Outdated Java in AppData", "Open Port 3389 (RDP)", "Browser extension flaw"], ans: 2, exp: "Network scanners excel at finding open ports." },
+                { id: 27, type: "MCQ", q: "How does CTI change Risk prioritization?", options: ["It lowers all scores", "It highlights which flaws are actively exploited", "It replaces the CVSS entirely", "It generates passwords"], ans: 1, exp: "Intelligence provides real-world context to static scores." },
+                { id: 28, type: "MCQ", q: "What is the best defense against 'Exploitation' in the Kill Chain?", options: ["Phishing training", "Patching and DEP/ASLR", "Backups", "Network segmentation"], ans: 1, exp: "Patching removes the flaw the exploit relies on." },
+                { id: 29, type: "MCQ", q: "A hospital's MRI machine causing a breach is an example of:", options: ["Strong policy", "Asset Management failure", "Diamond model success", "Agent scanning"], ans: 1, exp: "Unknown or unmanaged assets are prime targets." },
+                { id: 30, type: "MCQ", q: "In MITRE ATT&CK, 'Tactic' refers to:", options: ["The adversary's goal (The Why)", "The specific tool", "The IP address", "The victim's name"], ans: 0, exp: "Tactics equal the objective (e.g., Initial Access)." },
+                { id: 31, type: "MCQ", q: "Which scanning type requires no credentials?", options: ["Authenticated", "Agent-based", "Unauthenticated", "Deep Registry Scan"], ans: 2, exp: "Simulates a blind external attacker." },
+                { id: 32, type: "MCQ", q: "What does 'C2' stand for in the Kill Chain?", options: ["Cyber Command", "Command and Control", "Computer Coordination", "Central Communications"], ans: 1, exp: "How the attacker communicates with the compromised system." },
+                { id: 33, type: "MCQ", q: "A Vulnerability Management Policy must have backing from:", options: ["The Janitor", "Executive Leadership", "External Hackers", "Nobody"], ans: 1, exp: "Without executive enforcement, a policy is just a suggestion." },
+                { id: 34, type: "MCQ", q: "Which element of Risk is reduced by patching?", options: ["Impact", "Threat", "Likelihood", "Cost"], ans: 2, exp: "Patching makes it less likely an exploit will succeed." },
+                { id: 35, type: "MCQ", q: "Data Loss Prevention (DLP) breaks the Kill Chain at which phase?", options: ["Delivery", "Weaponization", "Actions on Objectives", "Reconnaissance"], ans: 2, exp: "DLP stops data from leaving the network." },
+                { id: 36, type: "MCQ", q: "A 'Low' severity vulnerability typically has an SLA of:", options: ["24 Hours", "7 Days", "30 Days", "90 Days or as needed"], ans: 3, exp: "Low risk allows for extended remediation times." },
+                { id: 37, type: "MCQ", q: "What connects 'Capability' to 'Infrastructure' in the Diamond Model?", options: ["Technology Meta-Feature", "Money", "Email", "Victim"], ans: 0, exp: "Technology connects the tools to the servers hosting them." },
+                { id: 38, type: "MCQ", q: "Which framework is maintained by MITRE?", options: ["Diamond Model", "Kill Chain", "ATT&CK", "CVSS"], ans: 2, exp: "Adversarial Tactics, Techniques, and Common Knowledge." },
+                { id: 39, type: "MCQ", q: "An attacker researching employee names on LinkedIn is in which phase?", options: ["Exploitation", "C2", "Reconnaissance", "Installation"], ans: 2, exp: "Gathering intel before the attack." },
+                { id: 40, type: "MCQ", q: "Which tool type consumes the most network bandwidth during operation?", options: ["Agent-based scanner", "Network-based scanner", "Antivirus", "Firewall"], ans: 1, exp: "Network scanners send thousands of packets across the wire." },
+                { id: 41, type: "MCQ", q: "Compliance frameworks (like HIPAA) are:", options: ["Optional guidelines", "Legal/Industry mandates for data protection", "Types of malware", "Network switches"], ans: 1, exp: "They carry legal weight and require strict policies." },
+                { id: 42, type: "MCQ", q: "To protect remote workers not on a VPN, use:", options: ["Network scanners", "Agent-based scanners", "Physical guards", "Unauthenticated scans"], ans: 1, exp: "Agents report back to the cloud regardless of location." },
+                { id: 43, type: "MCQ", q: "A 'false positive' in scanning means:", options: ["A real vulnerability was missed", "The scanner crashed", "A vulnerability was reported that doesn't actually exist", "The patch was successful"], ans: 2, exp: "Common in unauthenticated scans relying on banners." },
+                { id: 44, type: "MCQ", q: "What reduces the Attack Surface?", options: ["Adding more servers", "Opening all firewall ports", "Decommissioning old hardware and closing ports", "Ignoring logs"], ans: 2, exp: "Less exposure equals a smaller attack surface." },
+                { id: 45, type: "MCQ", q: "In the formula Risk = Threat x Vulnerability, what is 'Threat'?", options: ["A weak password", "A missing patch", "The actor/event attempting to exploit", "The cost of the breach"], ans: 2, exp: "Threats are external actors or events." },
+                { id: 46, type: "MCQ", q: "CVSS scores provide:", options: ["Legal advice", "A static technical severity rating", "Real-time threat intel", "Antivirus signatures"], ans: 1, exp: "CVSS looks at the technical aspects, not the current threat landscape." },
+                { id: 47, type: "MCQ", q: "Which Diamond Model node focuses on IPs and Domain Names?", options: ["Victim", "Capability", "Adversary", "Infrastructure"], ans: 3, exp: "Infrastructure includes the logical and physical resources used." },
+                { id: 48, type: "MCQ", q: "An employee connecting a personal laptop to the corporate network violates:", options: ["Kill Chain", "Asset Management / BYOD Policy", "CVSS", "MITRE"], ans: 1, exp: "Unmanaged assets introduce unknown risks." },
+                { id: 49, type: "MCQ", q: "What is the primary risk of Authenticated Scanning?", options: ["It misses everything", "It uses too much bandwidth", "It requires giving the scanner high-level admin credentials", "It is illegal"], ans: 2, exp: "If the scanner is compromised, the credentials are compromised." },
+                { id: 50, type: "MCQ", q: "The ultimate goal of Vulnerability Management is to:", options: ["Eliminate all risk entirely", "Buy more tools", "Manage risk to an acceptable level for the business", "Write long reports"], ans: 2, exp: "100% security is impossible; managing risk is the goal." },
+
+                // === 35 MSQs ===
+                { id: 51, type: "MSQ", q: "Select components of Risk Assessment (Select 2)", options: ["Likelihood", "Impact", "Weather", "Stock Price"], ans: [0, 1], exp: "Probability (Likelihood) and Magnitude (Impact)." },
+                { id: 52, type: "MSQ", q: "Select Kill Chain phases (Select 3)", options: ["Weaponization", "Negotiation", "Delivery", "Exploitation"], ans: [0, 2, 3], exp: "Negotiation is not a phase." },
+                { id: 53, type: "MSQ", q: "Which are core nodes of the Diamond Model? (Select 3)", options: ["Adversary", "Capability", "Budget", "Victim"], ans: [0, 1, 3], exp: "Adversary, Capability, Infrastructure, Victim." },
+                { id: 54, type: "MSQ", q: "Which represent 'Indicators of Compromise' (IOCs)? (Select 2)", options: ["Malicious IP Address", "Company Policy", "File Hash of Malware", "Employee ID"], ans: [0, 2], exp: "Technical evidence of a breach." },
+                { id: 55, type: "MSQ", q: "Which are examples of Shadow IT? (Select 2)", options: ["Corporate issued laptop", "Personal Dropbox for company files", "Approved VPN", "Unauthorized rogue Wi-Fi router"], ans: [1, 3], exp: "Systems used without IT approval." },
+                { id: 56, type: "MSQ", q: "Which are valid VM SLA timeframes commonly used? (Select 2)", options: ["Critical: 24-48 hours", "Low: 1 Hour", "Medium: 30 Days", "High: 3 Years"], ans: [0, 2], exp: "Critical is fast, Medium is standard." },
+                { id: 57, type: "MSQ", q: "Benefits of Agent-based scanning: (Select 2)", options: ["Scans remote/offline workers", "Requires no installation", "Deep system visibility", "Uses massive network bandwidth"], ans: [0, 2], exp: "Agents live on the OS, providing deep visibility regardless of location." },
+                { id: 58, type: "MSQ", q: "Drawbacks of Unauthenticated scanning: (Select 2)", options: ["High false positive rate", "Requires admin passwords", "Only sees surface/banner data", "Too accurate"], ans: [0, 2], exp: "Lacks deep visibility, relying on exposed banners." },
+                { id: 59, type: "MSQ", q: "Ways to reduce the Attack Surface: (Select 2)", options: ["Buying more servers", "Decommissioning legacy apps", "Closing unused firewall ports", "Ignoring logs"], ans: [1, 2], exp: "Removing exposure points reduces the surface." },
+                { id: 60, type: "MSQ", q: "Which are MITRE ATT&CK Tactics? (Select 2)", options: ["Initial Access", "Lockheed", "Privilege Escalation", "Diamond"], ans: [0, 2], exp: "Tactics represent the 'Why' or the objective." },
+                { id: 61, type: "MSQ", q: "Characteristics of CTI: (Select 2)", options: ["Proactive", "Reactive only", "Analyzes adversary motives", "Only relies on CVSS"], ans: [0, 2], exp: "Focuses on anticipating the adversary." },
+                { id: 62, type: "MSQ", q: "Defenses against 'Delivery' phase: (Select 2)", options: ["Email spam filters", "Blocking malicious USBs", "DEP/ASLR", "Restoring backups"], ans: [0, 1], exp: "Stopping the payload from reaching the user." },
+                { id: 63, type: "MSQ", q: "Defenses against 'Actions on Objectives': (Select 2)", options: ["Data Loss Prevention (DLP)", "Offline Backups", "DNS Sinkholing", "Web scraping"], ans: [0, 1], exp: "Stopping data theft or recovering from destruction." },
+                { id: 64, type: "MSQ", q: "Which systems require strict Vulnerability Management policies? (Select 2)", options: ["PCI-DSS compliant systems", "A disconnected test lab", "HIPAA regulated servers", "A broken monitor"], ans: [0, 2], exp: "Regulated environments require strict compliance." },
+                { id: 65, type: "MSQ", q: "Network-based scanners are best for finding: (Select 2)", options: ["Unmanaged devices (rogue assets)", "Open network ports", "Deep registry keys", "Local browser history"], ans: [0, 1], exp: "They see what is exposed on the wire." },
+                { id: 66, type: "MSQ", q: "Requirements for Authenticated scanning: (Select 2)", options: ["No credentials", "Admin/Root credentials", "Network access to the management port", "Physical access only"], ans: [1, 2], exp: "Must be able to log in to the OS remotely." },
+                { id: 67, type: "MSQ", q: "Key components of a good VM Policy: (Select 2)", options: ["SLA timelines", "Suggestions only", "Roles and Responsibilities", "Unlimited budgets"], ans: [0, 2], exp: "Must define 'when' and 'who'." },
+                { id: 68, type: "MSQ", q: "Which statements about the CFAA are true? (Select 2)", options: ["Makes unauthorized scanning illegal", "Allows hacking if you mean well", "Applies in the USA", "Replaces the Kill Chain"], ans: [0, 2], exp: "Computer Fraud and Abuse Act governs unauthorized access." },
+                { id: 69, type: "MSQ", q: "The NVD provides data on: (Select 2)", options: ["CVSS scores", "Attacker names", "Vulnerability descriptions", "Future stock prices"], ans: [0, 2], exp: "National Vulnerability Database stores CVSS and descriptions." },
+                { id: 70, type: "MSQ", q: "Factors increasing 'Likelihood' in a Risk Matrix: (Select 2)", options: ["No firewall present", "Publicly available exploit code", "Data is encrypted", "Server is turned off"], ans: [0, 1], exp: "Vulnerabilities with public exploits and no defense are highly likely to be hit." },
+                { id: 71, type: "MSQ", q: "Factors increasing 'Impact' in a Risk Matrix: (Select 2)", options: ["System holds PII/Credit Cards", "System is a core domain controller", "System is an empty test VM", "System is isolated"], ans: [0, 1], exp: "Impact is measured by the value of the asset." },
+                { id: 72, type: "MSQ", q: "Which describe the 'Installation' phase? (Select 2)", options: ["Establishing persistence", "Installing a backdoor", "Sending an email", "Recon"], ans: [0, 1], exp: "Ensuring the attacker survives a reboot." },
+                { id: 73, type: "MSQ", q: "Which describe the 'C2' phase? (Select 2)", options: ["Command and Control", "Hands-on keyboard access", "Social engineering", "Patching"], ans: [0, 1], exp: "Attacker remotely controlling the victim machine." },
+                { id: 74, type: "MSQ", q: "Consequences of poor Asset Management: (Select 2)", options: ["Blind spots in security", "Wasted IT spending", "Perfect compliance", "Smaller attack surface"], ans: [0, 1], exp: "You can't protect or budget for what you don't know exists." },
+                { id: 75, type: "MSQ", q: "External Attack Surface includes: (Select 2)", options: ["Public Web Servers", "Internet-facing firewalls", "Internal HR Database", "Employee home Wi-Fi"], ans: [0, 1], exp: "Assets directly accessible from the internet." },
+                { id: 76, type: "MSQ", q: "Why is executive buy-in critical for VM Policies? (Select 2)", options: ["To enforce compliance across departments", "To secure budget for tools", "To write the actual code", "To fix the servers physically"], ans: [0, 1], exp: "Executives provide authority and funding." },
+                { id: 77, type: "MSQ", q: "Which are true about 'Zero-Day' exploits? (Select 2)", options: ["Vendor has no patch available", "Highly prized by advanced attackers", "Easy to stop with basic signatures", "Always have a CVSS of 1.0"], ans: [0, 1], exp: "Unpatched and dangerous." },
+                { id: 78, type: "MSQ", q: "Methods of conducting Reconnaissance: (Select 2)", options: ["Reviewing employee LinkedIn profiles", "Scanning public IP addresses", "Deploying ransomware", "Extracting database tables"], ans: [0, 1], exp: "Gathering intel passively or actively." },
+                { id: 79, type: "MSQ", q: "Which are considered Vulnerabilities? (Select 2)", options: ["Outdated Apache server", "Default factory passwords left unchanged", "A Russian hacker group", "A phishing email"], ans: [0, 1], exp: "Weaknesses in the system itself." },
+                { id: 80, type: "MSQ", q: "Which are considered Threats? (Select 2)", options: ["Ransomware gang", "Disgruntled insider", "Missing Windows Update", "Unconfigured firewall"], ans: [0, 1], exp: "The actor exploiting the weakness." },
+                { id: 81, type: "MSQ", q: "Diamond Model uses for Incident Response: (Select 2)", options: ["Pivoting from an IP to find the Adversary", "Correlating different attacks by the same Capability", "Patching servers automatically", "Calculating ROI"], ans: [0, 1], exp: "Used for analysis, grouping, and attribution." },
+                { id: 82, type: "MSQ", q: "Which logs would help detect 'Exploitation'? (Select 2)", options: ["Intrusion Prevention System (IPS) logs", "Application crash logs", "Badge reader logs", "HVAC temp logs"], ans: [0, 1], exp: "Logs showing memory corruption or blocked attacks." },
+                { id: 83, type: "MSQ", q: "Common reasons patches are delayed: (Select 2)", options: ["Fear of breaking legacy applications", "Waiting for a maintenance window", "It is illegal to patch", "Hackers ask you not to"], ans: [0, 1], exp: "Operational stability often delays security." },
+                { id: 84, type: "MSQ", q: "Features of MITRE ATT&CK: (Select 2)", options: ["Matrix of Tactics and Techniques", "Based on real-world observations", "Replaces the need for a firewall", "Only covers Windows 95"], ans: [0, 1], exp: "A living knowledge base of adversary behaviors." },
+                { id: 85, type: "MSQ", q: "A 'Critical' vulnerability usually involves: (Select 2)", options: ["Remote Code Execution (RCE)", "No authentication required", "Requires physical access", "Only affects the attacker"], ans: [0, 1], exp: "Highest risk: remote, unauthenticated, full control." },
+
+                // === 15 Short Essay Questions ===
+                { id: 86, type: "Essay", q: "Explain the difference between reactive security and Cyber Threat Intelligence (CTI).", exp: "Reactive security waits for an alert (e.g., AV blocking a file) to respond. CTI is proactive; it analyzes adversary motives, targets, and TTPs to anticipate and defend against attacks before they occur." },
+                { id: 87, type: "Essay", q: "Define 'Risk' in the context of vulnerability management using the standard formula.", exp: "Risk is defined as the product of Likelihood and Impact (Risk = Likelihood x Impact). It represents the intersection of a Threat actor successfully exploiting a Vulnerability and the resulting damage to the business." },
+                { id: 88, type: "Essay", q: "Describe the 'Weaponization' phase of the Cyber Kill Chain and where it occurs.", exp: "Weaponization is coupling an exploit with a backdoor into a deliverable payload (like a malicious PDF). It occurs entirely on the adversary's infrastructure, meaning defenders cannot detect it while it is happening." },
+                { id: 89, type: "Essay", q: "How is the Diamond Model used to pivot during an investigation?", exp: "Analysts use the Diamond Model to link knowns to unknowns. If they discover a malicious IP (Infrastructure), they can pivot to see what Malware (Capability) uses it, and ultimately attribute it to a specific hacker group (Adversary)." },
+                { id: 90, type: "Essay", q: "What is an organization's 'Attack Surface' and how can it be reduced?", exp: "The Attack Surface is the sum of all potential exposure points (digital doors/windows). It is reduced by decommissioning legacy servers, closing unnecessary firewall ports, and eliminating Shadow IT." },
+                { id: 91, type: "Essay", q: "Why does the Ponemon Institute highlight fast breach identification as a cost-saving measure?", exp: "The longer an attacker is in a network, the more data they steal and damage they cause. Fast identification (aided by good asset management) contains the breach early, saving an average of $1.76M." },
+                { id: 92, type: "Essay", q: "What is 'Shadow IT' and why is it a nightmare for defenders?", exp: "Shadow IT refers to devices or software used by employees without IT approval. Defenders cannot protect what they don't know exists, creating massive, unmonitored blind spots in the network." },
+                { id: 93, type: "Essay", q: "Explain the purpose of an SLA in a Vulnerability Management Policy.", exp: "A Service Level Agreement (SLA) dictates the required timeframe to remediate a vulnerability based on its severity (e.g., Critical = 24 hours). It enforces accountability and prioritization." },
+                { id: 94, type: "Essay", q: "Compare the primary advantage and disadvantage of Agent-based scanning.", exp: "Advantage: Deep, accurate system visibility and the ability to scan roaming/offline laptops. Disadvantage: Requires software to be installed on every endpoint, consuming local resources and requiring OS compatibility." },
+                { id: 95, type: "Essay", q: "Why do unauthenticated network scans often result in 'False Positives'?", exp: "They rely on surface-level information like banner grabbing. An outdated banner might say 'Apache 2.2', triggering an alert, even if the admin backported security patches without updating the banner text." },
+                { id: 96, type: "Essay", q: "Discuss the legal implications of scanning networks you do not own.", exp: "Scanning systems without explicit written authorization is illegal in most jurisdictions, violating laws like the CFAA in the US. It is considered unauthorized access and can lead to criminal prosecution." },
+                { id: 97, type: "Essay", q: "How does the MITRE ATT&CK framework differ from the Cyber Kill Chain?", exp: "The Kill Chain is a high-level, linear phase model of an attack. MITRE ATT&CK is a granular, matrix-based knowledge base detailing the specific Tactics (Why) and Techniques (How) used in the real world." },
+                { id: 98, type: "Essay", q: "Explain the relationship between MITRE's CVE list and NIST's NVD.", exp: "MITRE maintains the CVE list, providing a standardized dictionary/naming convention for vulnerabilities. NIST maintains the NVD, which adds analysis, CVSS scores, and patch information to those CVEs." },
+                { id: 99, type: "Essay", q: "How do Compliance Frameworks (e.g., HIPAA) interact with Vulnerability Management?", exp: "Compliance frameworks mandate legal or industry standards for data protection. A robust VM policy ensures that an organization meets these regulatory requirements by systematically identifying and remediating vulnerabilities, thereby avoiding legal penalties, fines, and loss of customer trust." },
+                { id: 100, type: "Essay", q: "How do CVSS scores and CTI combine to prioritize patching?", exp: "The CVSS provides a static base score indicating a vulnerability's technical severity. CTI (Cyber Threat Intelligence) adds real-time context by indicating if that vulnerability is actively being exploited in the wild. Together, they allow security teams to prioritize a 'High' severity flaw currently under attack over a 'Critical' flaw that attackers are ignoring." }
+            ]
+        };
+
+        function init() {
+            renderNav();
+            renderContent(appData.currentState);
+            
+            document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+                document.getElementById('mobile-menu').classList.remove('hidden');
+            });
+            document.getElementById('close-mobile-btn').addEventListener('click', () => {
+                document.getElementById('mobile-menu').classList.add('hidden');
+            });
+        }
+
+        function renderNav() {
+            const navContainer = document.getElementById('nav-container');
+            const sidebarNav = document.getElementById('sidebar-nav');
+            const mobileNav = document.getElementById('mobile-nav-items');
+            
+            navContainer.innerHTML = '';
+            sidebarNav.innerHTML = '';
+            mobileNav.innerHTML = '';
+
+            appData.modules.forEach(mod => {
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 hover:bg-slate-100 transition-colors ${mod.id === appData.currentState ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-600'}`;
+                btn.innerHTML = `<i class="fa-solid ${mod.icon} w-5"></i><span>${mod.label}</span>`;
+                btn.onclick = () => switchModule(mod.id);
+                sidebarNav.appendChild(btn);
+
+                const mobBtn = document.createElement('button');
+                mobBtn.className = "hover:text-blue-300 py-2";
+                mobBtn.innerText = mod.label;
+                mobBtn.onclick = () => { switchModule(mod.id); document.getElementById('mobile-menu').classList.add('hidden'); };
+                mobileNav.appendChild(mobBtn);
+            });
+        }
+
+        function switchModule(id) {
+            appData.currentState = id;
+            renderNav();
+            renderContent(id);
+        }
+
+        function renderContent(id) {
+            const container = document.getElementById('content-area');
+            container.innerHTML = ''; 
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = "fade-in max-w-5xl mx-auto w-full";
+
+            switch(id) {
+                case 'dashboard': contentDiv.innerHTML = renderDashboard(); break;
+                case 'threat-intel': contentDiv.innerHTML = renderThreatIntel(); setTimeout(initRiskChart, 100); break;
+                case 'frameworks': contentDiv.innerHTML = renderFrameworks(); break;
+                case 'assets': contentDiv.innerHTML = renderAssets(); setTimeout(initAssetChart, 100); break;
+                case 'policy': contentDiv.innerHTML = renderPolicy(); break;
+                case 'scanning': contentDiv.innerHTML = renderScanning(); break;
+                case 'casestudies': contentDiv.innerHTML = renderCaseStudies(); break;
+                case 'exam': contentDiv.innerHTML = renderExam(); break;
+            }
+            container.appendChild(contentDiv);
+        }
+
+        function renderDashboard() {
+            return `
+                <div class="space-y-6">
+                    <div class="bg-blue-600 text-white rounded-xl p-8 shadow-md">
+                        <h2 class="text-3xl font-bold mb-2">Welcome, Detective.</h2>
+                        <p class="text-blue-100 text-lg">Your mid-term review for <strong>Managing Vulnerabilities</strong> is ready. This dashboard synthesizes 3 hours of lecture material into actionable intelligence.</p>
+                        <button onclick="switchModule('exam')" class="mt-6 bg-white text-blue-700 px-6 py-2 rounded-lg font-semibold hover:bg-blue-50 transition">Start Exam Simulator <i class="fa-solid fa-arrow-right ml-2"></i></button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-emerald-500 text-2xl mb-2"><i class="fa-solid fa-book-open"></i></div>
+                            <h3 class="font-bold text-lg">5 Core Modules</h3>
+                            <p class="text-sm text-slate-500 mt-1">From Threat Intel to Scanning Technologies. Full coverage.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-amber-500 text-2xl mb-2"><i class="fa-solid fa-magnifying-glass"></i></div>
+                            <h3 class="font-bold text-lg">10 Case Studies</h3>
+                            <p class="text-sm text-slate-500 mt-1">Real-world scenarios decoded. Test your analytical skills.</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <div class="text-purple-500 text-2xl mb-2"><i class="fa-solid fa-pen-to-square"></i></div>
+                            <h3 class="font-bold text-lg">100-Question Exam</h3>
+                            <p class="text-sm text-slate-500 mt-1">50 MCQs, 35 MSQs, and 15 Essays derived from course material.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderThreatIntel() {
+            return `
+                <div class="space-y-8">
+                    <div class="border-l-4 border-blue-500 pl-4">
+                        <h2 class="text-2xl font-bold text-slate-800">1. Threat Intelligence & Risk Management</h2>
+                        <p class="text-slate-600 mt-2 text-lg">${appData.threatIntel.intro}</p>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold text-slate-700 mb-4 text-center">Interactive Risk Matrix</h3>
+                            <div class="chart-container"><canvas id="riskChart"></canvas></div>
+                            <p class="text-xs text-center text-slate-400 mt-2">Risk = Likelihood (Y) × Impact (X)</p>
+                        </div>
+                        <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                            <h3 class="font-bold text-slate-800 mb-4">Core Concepts Dictionary</h3>
+                            <div class="space-y-4">
+                                ${appData.threatIntel.keyTerms.map(t => `
+                                    <div class="bg-white p-3 rounded shadow-sm">
+                                        <span class="font-bold text-blue-600 block">${t.term}</span>
+                                        <span class="text-slate-600 text-sm">${t.def}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFrameworks() {
+            return `
+                <div class="space-y-8">
+                     <div class="border-l-4 border-purple-500 pl-4">
+                        <h2 class="text-2xl font-bold text-slate-800">2. Attack Frameworks</h2>
+                        <p class="text-slate-600 mt-2 text-lg">${appData.frameworks.intro}</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="font-bold text-slate-700 mb-4">The Cyber Kill Chain (Lockheed Martin)</h3>
+                        <p class="text-sm text-slate-500 mb-4">Click a phase to reveal defense strategies.</p>
+                        <div class="flex flex-wrap gap-2 justify-center mb-6">
+                            ${appData.frameworks.killChainSteps.map((step, idx) => `
+                                <button onclick="showKillChainDetail(${idx})" class="px-3 py-2 bg-slate-100 hover:bg-blue-100 hover:text-blue-700 text-slate-600 text-xs font-bold uppercase rounded border border-slate-200 transition-all flex items-center">
+                                    <span class="mr-2 rounded-full bg-slate-300 w-5 h-5 flex items-center justify-center text-[10px]">${idx + 1}</span>
+                                    ${step.name.split('.')[1]}
+                                    <i class="fa-solid fa-chevron-right ml-2 text-slate-300"></i>
+                                </button>
+                            `).join('')}
+                        </div>
+                        <div id="kc-detail" class="bg-blue-50 border border-blue-100 p-4 rounded-lg text-center">
+                            <h4 class="font-bold text-blue-800" id="kc-title">Select a Phase</h4>
+                            <p class="text-sm text-blue-600 mt-1" id="kc-desc">Click the buttons above to investigate each step.</p>
+                            <div class="mt-3 inline-block bg-white px-3 py-1 rounded text-xs font-bold text-emerald-600 border border-emerald-100 hidden" id="kc-def-box">
+                                <i class="fa-solid fa-shield-virus mr-1"></i> Defense: <span id="kc-def"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-800 p-8 rounded-xl text-white shadow-lg">
+                        <h3 class="text-center font-bold text-xl mb-6">The Diamond Model of Intrusion Analysis</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                            ${appData.frameworks.diamond.map(node => `
+                                <div class="bg-slate-700 p-4 rounded-lg border border-slate-600 hover:border-blue-400 transition cursor-help relative group">
+                                    <h4 class="font-bold text-blue-300 mb-1">${node.title}</h4>
+                                    <p class="text-xs text-slate-300">${node.desc}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAssets() {
+             return `
+                <div class="space-y-8">
+                    <div class="border-l-4 border-emerald-500 pl-4">
+                        <h2 class="text-2xl font-bold text-slate-800">3. Asset Management</h2>
+                        <p class="text-slate-600 mt-2 text-lg">${appData.assets.intro}</p>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                             <h3 class="font-bold text-slate-700 mb-2">The Cost of Visibility</h3>
+                             <p class="text-xs text-slate-500 mb-4">Average Cost of Data Breach (Millions USD) - Ponemon</p>
+                             <div class="chart-container"><canvas id="assetChart"></canvas></div>
+                         </div>
+                         <div class="space-y-4">
+                            ${appData.assets.concepts.map(c => `
+                                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                    <div class="flex items-start">
+                                        <div class="bg-emerald-100 text-emerald-600 p-2 rounded-lg mr-4"><i class="fa-solid fa-check"></i></div>
+                                        <div>
+                                            <h4 class="font-bold text-slate-800">${c.title}</h4>
+                                            <p class="text-sm text-slate-600 mt-1">${c.text}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                         </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPolicy() {
+            return `
+                <div class="space-y-8">
+                    <div class="border-l-4 border-amber-500 pl-4">
+                        <h2 class="text-2xl font-bold text-slate-800">4. Policy & Compliance</h2>
+                        <p class="text-slate-600 mt-2 text-lg">${appData.policy.intro}</p>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-50 p-4 border-b border-slate-200">
+                            <h3 class="font-bold text-slate-700">Service Level Agreements (SLA) Matrix</h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-slate-500 uppercase bg-slate-50">
+                                    <tr><th class="px-6 py-3">Severity</th><th class="px-6 py-3">Remediation Timeframe</th><th class="px-6 py-3">Context</th></tr>
+                                </thead>
+                                <tbody>
+                                    ${appData.policy.slaData.map(row => `
+                                        <tr class="bg-white border-b">
+                                            <td class="px-6 py-4 font-bold ${row.severity === 'Critical' ? 'text-red-600' : 'text-slate-800'}">${row.severity}</td>
+                                            <td class="px-6 py-4">${row.time}</td>
+                                            <td class="px-6 py-4 text-slate-500">${row.desc}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderScanning() {
+             return `
+                <div class="space-y-8">
+                    <div class="border-l-4 border-red-500 pl-4">
+                        <h2 class="text-2xl font-bold text-slate-800">5. Scanning Technologies</h2>
+                        <p class="text-slate-600 mt-2 text-lg">${appData.scanning.intro}</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${appData.scanning.comparison.map(item => `
+                            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col h-full">
+                                <h3 class="font-bold text-lg text-slate-800 mb-3 border-b pb-2">${item.type}</h3>
+                                <div class="space-y-2 flex-1">
+                                    <div class="flex items-start"><i class="fa-solid fa-thumbs-up text-emerald-500 mt-1 mr-2"></i><p class="text-sm text-slate-600">${item.pros}</p></div>
+                                    <div class="flex items-start"><i class="fa-solid fa-thumbs-down text-red-400 mt-1 mr-2"></i><p class="text-sm text-slate-600">${item.cons}</p></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCaseStudies() {
+            return `
+                <div class="space-y-6">
+                    <div class="border-l-4 border-indigo-500 pl-4 mb-6">
+                        <h2 class="text-2xl font-bold text-slate-800">Case Study Log</h2>
+                        <p class="text-slate-600">Review the scenarios. Click "Decrypt Answer" to check your analysis.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        ${appData.caseStudies.map((cs, idx) => `
+                            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                                <div class="p-5 bg-slate-50 border-b border-slate-100">
+                                    <div class="text-xs font-bold text-indigo-500 uppercase tracking-wide mb-1">Case #${idx + 1}</div>
+                                    <h3 class="font-bold text-slate-800">${cs.title}</h3>
+                                </div>
+                                <div class="p-5 flex-1">
+                                    <p class="text-slate-600 text-sm italic mb-4">"${cs.scenario}"</p>
+                                    <div id="cs-ans-${idx}" class="hidden p-3 bg-indigo-50 rounded border border-indigo-100 text-sm text-indigo-800"><strong>Analysis:</strong> ${cs.answer}</div>
+                                </div>
+                                <div class="p-4 bg-white border-t border-slate-100">
+                                    <button onclick="document.getElementById('cs-ans-${idx}').classList.toggle('hidden')" class="w-full py-2 border border-slate-300 rounded text-slate-600 hover:bg-slate-50 hover:text-indigo-600 text-sm font-semibold transition">
+                                        <i class="fa-solid fa-eye mr-2"></i> Decrypt Answer
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderExam() {
+            return `
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <div class="text-center mb-8 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                         <div class="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-2xl mx-auto mb-4">
+                            <i class="fa-solid fa-graduation-cap"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-800">Comprehensive Mid-Term Simulator</h2>
+                        <p class="text-slate-600 mt-2">100 Questions Loaded: 50 MCQs, 35 MSQs, and 15 Short Essays</p>
+                        <div class="flex justify-center gap-4 mt-4 text-sm font-bold">
+                            <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded">50 MCQ</span>
+                            <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded">35 MSQ</span>
+                            <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded">15 Essay</span>
+                        </div>
+                    </div>
+
+                    <div id="quiz-container" class="space-y-8">
+                        ${appData.questions.map((q, idx) => `
+                            <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm question-card" id="q-card-${idx}">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded">
+                                        Q${idx + 1} • ${q.type === 'MSQ' ? 'Multiple Select' : q.type === 'MCQ' ? 'Multiple Choice' : 'Short Essay'}
+                                    </span>
+                                </div>
+                                <h3 class="font-bold text-lg text-slate-800 mb-4">${q.q}</h3>
+                                
+                                ${q.type === 'MCQ' || q.type === 'MSQ' ? `
+                                    <div class="space-y-2">
+                                        ${q.options.map((opt, optIdx) => `
+                                            <button onclick="checkAnswer(${idx}, ${optIdx}, ${q.type === 'MSQ'})" 
+                                                class="w-full text-left p-3 rounded border border-slate-200 hover:bg-slate-50 transition text-sm relative group option-btn-${idx}" data-idx="${optIdx}">
+                                                <span class="mr-2 font-bold text-slate-400 group-hover:text-slate-600">${String.fromCharCode(65 + optIdx)})</span>
+                                                ${opt}
+                                                <span class="absolute right-3 top-3 result-icon hidden"></span>
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                    <div id="feedback-${idx}" class="hidden mt-4 p-3 rounded bg-slate-50 border border-slate-200 text-sm">
+                                        <p class="font-bold text-slate-700">Explanation:</p>
+                                        <p class="text-slate-600">${q.exp}</p>
+                                    </div>
+                                ` : `
+                                    <div class="space-y-3">
+                                        <textarea class="w-full p-3 border border-slate-300 rounded focus:ring-2 focus:ring-purple-500 focus:outline-none text-sm text-slate-700" rows="3" placeholder="Draft your analysis here..."></textarea>
+                                        <button onclick="document.getElementById('feedback-${idx}').classList.remove('hidden'); this.classList.add('hidden');" class="bg-purple-100 text-purple-700 px-4 py-2 rounded text-sm font-bold hover:bg-purple-200 transition">
+                                            <i class="fa-solid fa-key mr-1"></i> Reveal Expected Answer
+                                        </button>
+                                        <div id="feedback-${idx}" class="hidden mt-4 p-4 rounded bg-emerald-50 border border-emerald-200 text-sm">
+                                            <p class="font-bold text-emerald-800 mb-1"><i class="fa-solid fa-check-double mr-1"></i> Instructor Rubric:</p>
+                                            <p class="text-emerald-700">${q.exp}</p>
+                                        </div>
+                                    </div>
+                                `}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function showKillChainDetail(idx) {
+            const step = appData.frameworks.killChainSteps[idx];
+            document.getElementById('kc-title').innerText = step.name;
+            document.getElementById('kc-desc').innerText = step.desc;
+            const defBox = document.getElementById('kc-def-box');
+            defBox.classList.remove('hidden');
+            document.getElementById('kc-def').innerText = step.defense;
+        }
+
+        function checkAnswer(qIdx, optIdx, isMulti) {
+            const q = appData.questions[qIdx];
+            const feedback = document.getElementById(`feedback-${qIdx}`);
+            const buttons = document.querySelectorAll(`.option-btn-${qIdx}`);
+            
+            if(!isMulti) {
+                buttons.forEach((btn, i) => {
+                    const icon = btn.querySelector('.result-icon');
+                    btn.disabled = true;
+                    icon.classList.remove('hidden');
+                    
+                    if (i === q.ans) {
+                        btn.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-800');
+                        icon.innerHTML = '<i class="fa-solid fa-check text-emerald-600"></i>';
+                    } else if (i === optIdx) {
+                        btn.classList.add('bg-red-50', 'border-red-200', 'text-red-800');
+                        icon.innerHTML = '<i class="fa-solid fa-xmark text-red-600"></i>';
+                    }
+                });
+                feedback.classList.remove('hidden');
+            } else {
+                // MSQ: Show all correct automatically on first click for study purposes
+                buttons.forEach((btn, i) => {
+                    const icon = btn.querySelector('.result-icon');
+                    btn.disabled = true;
+                    icon.classList.remove('hidden');
+                    if (q.ans.includes(i)) {
+                        btn.classList.add('bg-emerald-50', 'border-emerald-200', 'text-emerald-800');
+                        icon.innerHTML = '<i class="fa-solid fa-check text-emerald-600"></i>';
+                    } else if (i === optIdx && !q.ans.includes(i)) {
+                        btn.classList.add('bg-red-50', 'border-red-200', 'text-red-800');
+                         icon.innerHTML = '<i class="fa-solid fa-xmark text-red-600"></i>';
+                    }
+                });
+                feedback.classList.remove('hidden');
+            }
+        }
+
+        function initRiskChart() {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Risk Scenarios',
+                        data: [
+                            { x: 9, y: 9, label: 'Critical: Ransomware' },
+                            { x: 2, y: 8, label: 'Low Risk: Script Kiddie' },
+                            { x: 8, y: 2, label: 'Medium: APT Dormant' },
+                            { x: 5, y: 5, label: 'Medium: Unpatched Server' }
+                        ],
+                        backgroundColor: function(context) {
+                            const val = context.raw;
+                            if (!val) return '#ccc';
+                            const riskScore = val.x * val.y;
+                            if (riskScore > 50) return '#ef4444';
+                            if (riskScore > 20) return '#eab308';
+                            return '#22c55e';
+                        },
+                        pointRadius: 10,
+                        pointHoverRadius: 12
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { type: 'linear', position: 'bottom', title: { display: true, text: 'Business Impact (1-10)' }, min: 0, max: 10 },
+                        y: { type: 'linear', title: { display: true, text: 'Likelihood (1-10)' }, min: 0, max: 10 }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.raw.label + ` (Risk: ${context.raw.x * context.raw.y})`;
+                                }
+                            }
+                        },
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function initAssetChart() {
+            const ctx = document.getElementById('assetChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: appData.assets.stats.labels,
+                    datasets: [{
+                        label: 'Cost in Millions (USD)',
+                        data: appData.assets.stats.data,
+                        backgroundColor: ['#ef4444', '#22c55e'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Millions ($)' } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
