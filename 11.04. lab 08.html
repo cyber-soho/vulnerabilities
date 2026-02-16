@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 08: Vulnerability Management Lifecycle</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chosen Palette: Warm Neutrals & Corporate Security -->
+    <!-- 
+        Background: Stone-50 (Warm off-white)
+        Text: Slate-800 (Dark Grey)
+        Accents: Red-600 (Critical), Amber-500 (Warning), Emerald-600 (Success/Safe), Blue-600 (Action)
+    -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fafaf9; /* Tailwind stone-50 */
+            color: #1e293b; /* Tailwind slate-800 */
+        }
+
+        /* Chart Container Styling per Requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Scrollbar for inner elements */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #f1f1f4; 
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        .phase-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .phase-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .active-tab {
+            border-bottom: 2px solid #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+        }
+    </style>
+
+    <!-- Application Structure Plan: 
+         1. Hero/Disclaimer: Sets the serious tone and academic requirements.
+         2. Lab Overview: Visualizes time and learning objectives using a dashboard layout.
+         3. The "Mission Control" (Main Interaction Area): A tabbed or stepped interface representing the 3 Parts of the lab.
+            - Part 1: Install & Prep (Checklist interaction)
+            - Part 2: Scan & Patch (Simulation with Charts)
+            - Part 3: Verify & Report (Comparison Data & Report Guide)
+         4. Tools Repository: Filterable list of tools.
+         This structure transforms the linear text into a task-based workflow, aiding retention.
+    -->
+</head>
+<body class="bg-stone-50 text-slate-800 antialiased">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-2">🛡️</span>
+                    <h1 class="font-bold text-xl tracking-tight text-slate-900">CyberSec Lab 08: Vulnerability Management</h1>
+                </div>
+                <div class="hidden md:flex space-x-8 text-sm font-medium">
+                    <a href="#overview" class="text-slate-500 hover:text-blue-600 transition">Overview</a>
+                    <a href="#workflow" class="text-slate-500 hover:text-blue-600 transition">Lab Workflow</a>
+                    <a href="#tools" class="text-slate-500 hover:text-blue-600 transition">Tools</a>
+                    <a href="#reporting" class="text-slate-500 hover:text-blue-600 transition">Reporting</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+
+        <!-- Section 1: Introduction & Disclaimers -->
+        <!-- Visualization & Content Choices: 
+             Goal: Inform -> Text Block + Alert Box.
+             Justification: Critical ethical warnings must be prominent before any interaction.
+        -->
+        <section id="overview" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <h2 class="text-2xl font-bold mb-4 text-slate-900">Lab Overview</h2>
+                    <p class="text-slate-600 leading-relaxed mb-4">
+                        Welcome to the Vulnerability Management Lifecycle lab. This interactive dashboard guides you through the process of installing a scanner, identifying risks in a target system (like Metasploitable), applying patches, and verifying remediation.
+                    </p>
+                    <div class="bg-amber-50 border-l-4 border-amber-500 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <span class="text-amber-500 text-xl">⚠️</span>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-bold text-amber-800">Academic Integrity & Legal Notice</h3>
+                                <p class="text-sm text-amber-700 mt-1">
+                                    Tools provided are for <strong>educational use only</strong> within authorized, isolated environments. Unauthorized scanning is illegal. Students must use their own data and screenshots.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Learning Objectives Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-white p-5 rounded-lg border border-stone-200 shadow-sm">
+                        <div class="text-blue-600 text-2xl mb-2">🔭</div>
+                        <h3 class="font-semibold text-slate-900">Assess</h3>
+                        <p class="text-sm text-slate-500">Install OpenVAS/GVM and scan targets to identify CVEs.</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg border border-stone-200 shadow-sm">
+                        <div class="text-emerald-600 text-2xl mb-2">🩹</div>
+                        <h3 class="font-semibold text-slate-900">Remediate</h3>
+                        <p class="text-sm text-slate-500">Apply patches and configuration hardening to fix vulnerabilities.</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg border border-stone-200 shadow-sm">
+                        <div class="text-indigo-600 text-2xl mb-2">✅</div>
+                        <h3 class="font-semibold text-slate-900">Verify</h3>
+                        <p class="text-sm text-slate-500">Re-scan to confirm risk reduction and document findings.</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-lg border border-stone-200 shadow-sm">
+                        <div class="text-purple-600 text-2xl mb-2">📝</div>
+                        <h3 class="font-semibold text-slate-900">Document</h3>
+                        <p class="text-sm text-slate-500">Create a professional 3-page technical report.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Allocation Chart -->
+            <!-- Visualization & Content Choices:
+                 Goal: Inform -> Donut Chart (Chart.js).
+                 Interaction: Hover for details.
+                 Justification: Quickly conveys the effort required for each phase (1-2-1 Ponderation).
+            -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200 flex flex-col">
+                <h3 class="text-lg font-bold mb-2 text-slate-900">Time Allocation</h3>
+                <p class="text-xs text-slate-500 mb-4">Total Duration: ~4 Hours</p>
+                <div class="flex-grow flex items-center justify-center">
+                    <div class="chart-container">
+                        <canvas id="timeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Interactive Workflow (The Core App) -->
+        <!-- Application Structure Plan: 
+             A "Mission Control" interface. 
+             Users switch between "phases". Each phase has specific interactivity:
+             Phase 1: Checklist.
+             Phase 2: Data Viz Simulation (Bar Chart).
+             Phase 3: Interactive Logic (Click to patch -> Update Chart).
+        -->
+        <section id="workflow" class="scroll-mt-24">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-slate-900">Lab Mission Control</h2>
+                <p class="text-slate-600 mt-2">Follow the phases below to complete the laboratory exercise.</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg border border-stone-200 overflow-hidden">
+                <!-- Tabs -->
+                <div class="flex border-b border-stone-200 bg-stone-50 overflow-x-auto">
+                    <button class="px-6 py-4 text-sm font-medium text-slate-500 hover:text-slate-700 focus:outline-none transition whitespace-nowrap active-tab" onclick="switchTab('phase1', this)">
+                        Phase 1: Setup & Install (60m)
+                    </button>
+                    <button class="px-6 py-4 text-sm font-medium text-slate-500 hover:text-slate-700 focus:outline-none transition whitespace-nowrap" onclick="switchTab('phase2', this)">
+                        Phase 2: Assess & Scan
+                    </button>
+                    <button class="px-6 py-4 text-sm font-medium text-slate-500 hover:text-slate-700 focus:outline-none transition whitespace-nowrap" onclick="switchTab('phase3', this)">
+                        Phase 3: Remediate & Verify
+                    </button>
+                </div>
+
+                <!-- Tab Content: Phase 1 -->
+                <div id="phase1" class="p-6 tab-content block">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-900 mb-4">1.1 Environment Preparation</h3>
+                            <p class="text-sm text-slate-600 mb-4">Before installing tools, ensure your lab is isolated.</p>
+                            
+                            <!-- Interactive Checklist -->
+                            <div class="space-y-3">
+                                <label class="flex items-start space-x-3 p-3 bg-stone-50 rounded-lg hover:bg-stone-100 cursor-pointer border border-transparent hover:border-stone-200 transition">
+                                    <input type="checkbox" class="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                    <div>
+                                        <span class="font-medium text-slate-800">Create Isolated Network</span>
+                                        <p class="text-xs text-slate-500 mt-1">Set virtualization to "Host-Only" or "Internal Network".</p>
+                                    </div>
+                                </label>
+                                <label class="flex items-start space-x-3 p-3 bg-stone-50 rounded-lg hover:bg-stone-100 cursor-pointer border border-transparent hover:border-stone-200 transition">
+                                    <input type="checkbox" class="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                    <div>
+                                        <span class="font-medium text-slate-800">Deploy Vulnerable Target</span>
+                                        <p class="text-xs text-slate-500 mt-1">Import Metasploitable 2/3 or DVWA. Verify ping.</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="mt-8">
+                                <h3 class="text-lg font-bold text-slate-900 mb-4">1.2 Scanner Installation (OpenVAS)</h3>
+                                <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-green-400 overflow-x-auto">
+                                    <p class="opacity-50 text-xs text-slate-400 mb-2"># Kali Linux Setup</p>
+                                    <p class="mb-1">sudo apt update && sudo apt upgrade -y</p>
+                                    <p class="mb-1">sudo apt install openvas -y</p>
+                                    <p class="mb-1">sudo gvm-setup <span class="text-slate-500"># Takes ~20 mins</span></p>
+                                    <p class="mb-1">sudo gvm-start</p>
+                                    <p class="mb-1">sudo gvm-feed update</p>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-2">Access Web UI at <code class="bg-stone-100 px-1 rounded">https://localhost:9392</code></p>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                            <h3 class="text-lg font-bold text-blue-900 mb-4">Configuration Specs</h3>
+                            <ul class="space-y-4">
+                                <li class="flex items-start">
+                                    <span class="bg-blue-200 text-blue-800 text-xs font-bold px-2 py-1 rounded mt-0.5 mr-2">TARGET</span>
+                                    <span class="text-sm text-blue-800">Name: "Metasploitable-Lab08" <br> Port List: All IANA TCP/UDP <br> Alive Test: ICMP Ping</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="bg-blue-200 text-blue-800 text-xs font-bold px-2 py-1 rounded mt-0.5 mr-2">PROFILE</span>
+                                    <span class="text-sm text-blue-800">Select "Full and fast" scan config.</span>
+                                </li>
+                            </ul>
+                            <div class="mt-6 text-center">
+                                <div class="text-4xl mb-2">📸</div>
+                                <p class="text-sm font-semibold text-blue-900">Screenshot Requirement</p>
+                                <p class="text-xs text-blue-700">Capture Target Config & Task Creation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Phase 2 -->
+                <div id="phase2" class="p-6 tab-content hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-1 space-y-4">
+                            <h3 class="text-lg font-bold text-slate-900">2.1 Run Baseline Scan</h3>
+                            <p class="text-sm text-slate-600">Simulate the vulnerability scanning process. In the real lab, this takes 15-25 minutes.</p>
+                            
+                            <button id="runScanBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-md transition flex items-center justify-center space-x-2">
+                                <span>🚀 Start Scan Simulation</span>
+                            </button>
+
+                            <div id="scanResultsText" class="hidden bg-stone-50 p-4 rounded-lg border border-stone-200 animate-fade-in">
+                                <h4 class="font-bold text-slate-800 mb-2">Top Findings Detected:</h4>
+                                <ul class="text-sm space-y-2">
+                                    <li class="flex justify-between items-center text-red-600 font-medium">
+                                        <span>vsftpd 2.3.4 Backdoor</span>
+                                        <span class="bg-red-100 px-2 py-0.5 rounded text-xs">Crit</span>
+                                    </li>
+                                    <li class="flex justify-between items-center text-red-600 font-medium">
+                                        <span>Bind Shell</span>
+                                        <span class="bg-red-100 px-2 py-0.5 rounded text-xs">Crit</span>
+                                    </li>
+                                    <li class="flex justify-between items-center text-orange-600">
+                                        <span>Weak SSH Ciphers</span>
+                                        <span class="bg-orange-100 px-2 py-0.5 rounded text-xs">High</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Visualization & Content Choices:
+                             Goal: Inform -> Bar Chart (Chart.js).
+                             Interaction: Populates on button click.
+                             Justification: Visualizes the CVSS distribution concepts (Critical vs High vs Med).
+                        -->
+                        <div class="lg:col-span-2">
+                            <h3 class="text-lg font-bold text-slate-900 mb-2">Vulnerability Severity Distribution (CVSS)</h3>
+                            <div class="bg-white p-4 rounded-lg border border-stone-100 shadow-inner">
+                                <div class="chart-container">
+                                    <canvas id="scanChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="mt-4 grid grid-cols-4 gap-2 text-center text-xs text-slate-500">
+                                <div><span class="block font-bold text-red-600">Critical</span>9.0 - 10.0</div>
+                                <div><span class="block font-bold text-orange-500">High</span>7.0 - 8.9</div>
+                                <div><span class="block font-bold text-yellow-500">Medium</span>4.0 - 6.9</div>
+                                <div><span class="block font-bold text-green-600">Low</span>0.1 - 3.9</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Phase 3 -->
+                <div id="phase3" class="p-6 tab-content hidden">
+                    <div class="space-y-8">
+                        <!-- Remediation Strategy -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900 mb-4">2.2 Remediation Strategy</h3>
+                                <p class="text-sm text-slate-600 mb-4">You cannot fix everything at once. Prioritize based on risk. Click the actions below to simulate patching.</p>
+                                
+                                <div class="space-y-3">
+                                    <button id="patchCritBtn" class="w-full text-left p-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 transition flex items-center justify-between group">
+                                        <div>
+                                            <span class="font-bold text-red-800">1. Patch Critical RCEs</span>
+                                            <p class="text-xs text-red-600 mt-1">Update vsftpd, Samba, etc.</p>
+                                        </div>
+                                        <span class="opacity-0 group-hover:opacity-100 text-red-600 transition">Apply 🔧</span>
+                                    </button>
+                                    
+                                    <button id="patchHighBtn" class="w-full text-left p-3 rounded-lg border border-orange-200 bg-orange-50 hover:bg-orange-100 transition flex items-center justify-between group">
+                                        <div>
+                                            <span class="font-bold text-orange-800">2. Harden Configurations</span>
+                                            <p class="text-xs text-orange-600 mt-1">Disable Telnet, fix SSH config.</p>
+                                        </div>
+                                        <span class="opacity-0 group-hover:opacity-100 text-orange-600 transition">Apply 🔧</span>
+                                    </button>
+                                </div>
+
+                                <div class="mt-6 bg-slate-100 p-4 rounded text-sm font-mono text-slate-700">
+                                    <p class="text-xs text-slate-500 mb-2 border-b border-slate-200 pb-1">Sample Patch Commands</p>
+                                    <p>sudo apt update && sudo apt upgrade -y</p>
+                                    <p>sudo apt install --only-upgrade vsftpd</p>
+                                    <p>sudo systemctl restart vsftpd</p>
+                                </div>
+                            </div>
+
+                            <!-- Visualization & Content Choices:
+                                 Goal: Compare -> Grouped Bar Chart.
+                                 Interaction: Updates dynamically when "Patch" buttons are clicked.
+                                 Justification: Shows the direct impact of remediation on risk posture.
+                            -->
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900 mb-2">2.3 Remediation Verification</h3>
+                                <p class="text-xs text-slate-500 mb-4">Comparison of Initial Scan vs Post-Patch Scan</p>
+                                <div class="bg-white p-4 rounded-lg border border-stone-100 shadow-inner">
+                                    <div class="chart-container">
+                                        <canvas id="verifyChart"></canvas>
+                                    </div>
+                                </div>
+                                <div id="successMsg" class="hidden mt-4 p-3 bg-green-100 text-green-800 text-sm rounded-lg text-center font-medium">
+                                    ✅ Great job! Critical vulnerabilities reduced significantly.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Tools Repository -->
+        <section id="tools">
+            <h2 class="text-2xl font-bold text-slate-900 mb-6">Tooling & Alternatives</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Tool Cards -->
+                <div class="bg-white p-5 rounded-lg border border-stone-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-bold text-slate-800">OpenVAS (GVM)</h4>
+                        <span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">Primary</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">Open-source vulnerability scanner. Used for Part 1 & 2 of this lab.</p>
+                    <a href="https://www.greenbone.net" target="_blank" class="text-xs text-blue-600 hover:underline mt-3 block">Official Site &rarr;</a>
+                </div>
+
+                <div class="bg-white p-5 rounded-lg border border-stone-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-bold text-slate-800">Nessus Essentials</h4>
+                        <span class="bg-stone-100 text-stone-600 text-xs px-2 py-1 rounded">Alt</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">Industry standard. Free version supports up to 16 IPs. Comprehensive checks.</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-lg border border-stone-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-bold text-slate-800">Metasploitable</h4>
+                        <span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">Target</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">Intentionally vulnerable Linux VM. The "victim" system for this lab.</p>
+                </div>
+
+                <div class="bg-white p-5 rounded-lg border border-stone-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-bold text-slate-800">Nmap / Nikto</h4>
+                        <span class="bg-stone-100 text-stone-600 text-xs px-2 py-1 rounded">Manual</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">Used for manual verification of specific ports or web vulnerabilities.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Reporting Requirements -->
+        <section id="reporting" class="bg-slate-900 text-white rounded-xl p-8 shadow-lg">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold">Final Report Deliverable</h2>
+                    <p class="text-slate-400 mt-1">Submission Deadline: TBD by Instructor</p>
+                </div>
+                <button onclick="toggleReportDetails()" class="mt-4 md:mt-0 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm transition">
+                    Toggle Structure Guide
+                </button>
+            </div>
+
+            <div id="reportDetails" class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                <!-- Page 1 -->
+                <div class="bg-slate-800 p-5 rounded-lg border border-slate-700">
+                    <h4 class="font-bold text-blue-400 mb-3 border-b border-slate-700 pb-2">Page 1: Exec Summary</h4>
+                    <ul class="space-y-2 text-slate-300 list-disc list-inside">
+                        <li>Overview of assessment</li>
+                        <li>Total vulns identified (Initial)</li>
+                        <li>Remediation actions taken</li>
+                        <li>Methodology (Tools used)</li>
+                    </ul>
+                </div>
+
+                <!-- Page 2 -->
+                <div class="bg-slate-800 p-5 rounded-lg border border-slate-700">
+                    <h4 class="font-bold text-blue-400 mb-3 border-b border-slate-700 pb-2">Page 2: Findings & Actions</h4>
+                    <ul class="space-y-2 text-slate-300 list-disc list-inside">
+                        <li>Summary table (Top 5 vulns)</li>
+                        <li>Screenshot: Initial Dashboard</li>
+                        <li>List of patches applied</li>
+                        <li>Screenshot: Pkg versions (Before/After)</li>
+                    </ul>
+                </div>
+
+                <!-- Page 3 -->
+                <div class="bg-slate-800 p-5 rounded-lg border border-slate-700">
+                    <h4 class="font-bold text-blue-400 mb-3 border-b border-slate-700 pb-2">Page 3: Verification</h4>
+                    <ul class="space-y-2 text-slate-300 list-disc list-inside">
+                        <li>Comparison Table (Before vs After)</li>
+                        <li>Screenshot: Post-patch scan</li>
+                        <li>Remaining risks analysis</li>
+                        <li>Lessons Learned & Challenges</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-stone-200 mt-12 py-8">
+        <div class="max-w-7xl mx-auto px-4 text-center text-slate-500 text-sm">
+            <p>&copy; Cybersecurity Fundamentals | Educational Purpose Only</p>
+        </div>
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        // --- 1. Tab Switching Logic ---
+        function switchTab(tabId, btnElement) {
+            // Hide all contents
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('block');
+            });
+            // Show selected
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById(tabId).classList.add('block');
+
+            // Reset buttons
+            const buttons = btnElement.parentElement.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.classList.remove('active-tab', 'text-blue-600', 'border-blue-600');
+                btn.classList.add('text-slate-500', 'border-transparent');
+            });
+            // Activate clicked button
+            btnElement.classList.remove('text-slate-500', 'border-transparent');
+            btnElement.classList.add('active-tab', 'text-blue-600', 'border-blue-600');
+        }
+
+        // --- 2. Report Toggle Logic ---
+        function toggleReportDetails() {
+            const el = document.getElementById('reportDetails');
+            el.classList.toggle('hidden');
+        }
+
+        // --- 3. Chart.js Configurations ---
+        
+        // A. Time Allocation Donut Chart
+        const timeCtx = document.getElementById('timeChart').getContext('2d');
+        const timeChart = new Chart(timeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Part 1: Setup (60m)', 'Part 2: Patching (120m)', 'Part 3: Docs (60m)'],
+                datasets: [{
+                    data: [60, 120, 60],
+                    backgroundColor: ['#94a3b8', '#3b82f6', '#8b5cf6'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // B. Phase 2: Vulnerability Distribution Chart (Initially Empty/Low)
+        const scanCtx = document.getElementById('scanChart').getContext('2d');
+        let scanChartInstance = new Chart(scanCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Critical', 'High', 'Medium', 'Low'],
+                datasets: [{
+                    label: 'Vulnerabilities Detected',
+                    data: [0, 0, 0, 0], // Start empty
+                    backgroundColor: ['#dc2626', '#f97316', '#eab308', '#22c55e'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Horizontal bar for better label reading
+                scales: {
+                    x: { beginAtZero: true, max: 20 }
+                }
+            }
+        });
+
+        // C. Phase 3: Verification Comparison Chart
+        const verifyCtx = document.getElementById('verifyChart').getContext('2d');
+        let verifyChartInstance = new Chart(verifyCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Critical', 'High', 'Medium'],
+                datasets: [
+                    {
+                        label: 'Before Patching',
+                        data: [8, 12, 15], // Static baseline
+                        backgroundColor: '#cbd5e1'
+                    },
+                    {
+                        label: 'After Patching',
+                        data: [8, 12, 15], // Initially same as before
+                        backgroundColor: '#2563eb'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // --- 4. Interactive Simulation Logic ---
+
+        // Variables to track state
+        let scanRun = false;
+        let criticalsPatched = false;
+        let highPatched = false;
+
+        // Interaction: Run Scan
+        document.getElementById('runScanBtn').addEventListener('click', function() {
+            // Update UI to show results
+            this.innerHTML = "<span>✅ Scan Complete</span>";
+            this.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            this.classList.add('bg-green-600', 'cursor-default');
+            document.getElementById('scanResultsText').classList.remove('hidden');
+            
+            // Update Chart with "Simulated" Data (Metasploitable typical profile)
+            scanChartInstance.data.datasets[0].data = [8, 12, 15, 6];
+            scanChartInstance.update();
+            scanRun = true;
+        });
+
+        // Interaction: Apply Patches
+        function updateVerificationChart() {
+            // Base values
+            let crit = 8;
+            let high = 12;
+            let med = 15;
+
+            // Logic: Patching reduces counts
+            if (criticalsPatched) crit = 1; // Assuming 1 remains (no patch available)
+            if (highPatched) high = 4;      // Significant reduction
+
+            // Update "After" dataset
+            verifyChartInstance.data.datasets[1].data = [crit, high, med];
+            verifyChartInstance.update();
+
+            // Check success
+            if (criticalsPatched && highPatched) {
+                document.getElementById('successMsg').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('patchCritBtn').addEventListener('click', function() {
+            criticalsPatched = true;
+            this.classList.add('bg-green-50', 'border-green-200');
+            this.querySelector('span.transition').textContent = 'Applied ✅';
+            updateVerificationChart();
+        });
+
+        document.getElementById('patchHighBtn').addEventListener('click', function() {
+            highPatched = true;
+            this.classList.add('bg-green-50', 'border-green-200');
+            this.querySelector('span.transition').textContent = 'Applied ✅';
+            updateVerificationChart();
+        });
+
+    </script>
+    
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. All icons are Unicode. -->
+    <!-- Application Structure Plan: Dashboard style. Top navigation anchors. 3 Main functional tabs for the lab phases. Interactive charts using Chart.js. -->
+    <!-- Visualization & Content Choices:
+         - Donut Chart for Time Allocation (Informational).
+         - Horizontal Bar for Severity (Educational/Informational).
+         - Grouped Bar for Remediation (Comparison).
+         - Interactive lists/buttons for engagement.
+    -->
+</body>
+</html>
+
+
+
+
+
+

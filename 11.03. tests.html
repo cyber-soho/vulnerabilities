@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vulnerability Assessments Study Companion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+        /* Hide scrollbar for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <!-- App Container -->
+    <div class="w-full max-w-3xl bg-white rounded-xl shadow-xl overflow-hidden min-h-[600px] flex flex-col">
+        
+        <!-- Header -->
+        <header class="bg-slate-900 text-white p-6 text-center">
+            <h1 class="text-2xl font-bold text-amber-500">Vulnerability Assessments</h1>
+            <p class="text-slate-400 text-sm mt-1">Study Companion: Profiles, Sensitivity & Segments</p>
+        </header>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-slate-200">
+            <button onclick="switchTab('flashcards')" id="tab-flashcards" class="flex-1 py-4 text-center font-bold text-amber-600 border-b-2 border-amber-500 bg-amber-50 transition-colors">
+                Flashcards (25)
+            </button>
+            <button onclick="switchTab('quiz')" id="tab-quiz" class="flex-1 py-4 text-center font-bold text-slate-500 hover:bg-slate-50 transition-colors">
+                Quiz (10)
+            </button>
+        </div>
+
+        <!-- Content Area -->
+        <main class="flex-1 p-6 relative">
+
+            <!-- FLASHCARDS SECTION -->
+            <div id="view-flashcards" class="h-full flex flex-col justify-center items-center space-y-6 fade-in">
+                
+                <!-- Progress -->
+                <div class="text-slate-400 text-sm font-medium tracking-wide">
+                    CARD <span id="fc-current">1</span> OF <span id="fc-total">25</span>
+                </div>
+
+                <!-- Card Container -->
+                <div class="group w-full max-w-xl h-80 cursor-pointer perspective-1000" onclick="flipCard()">
+                    <div id="flashcard-inner" class="relative w-full h-full transition-transform duration-500 transform-style-3d shadow-lg rounded-xl">
+                        
+                        <!-- Front -->
+                        <div class="absolute w-full h-full bg-white border-2 border-slate-200 rounded-xl flex flex-col justify-center items-center p-8 text-center backface-hidden">
+                            <span class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-4">Term / Concept</span>
+                            <h2 id="fc-front" class="text-2xl font-bold text-slate-800">
+                                <!-- JS Populated -->
+                            </h2>
+                            <p class="text-xs text-slate-400 mt-8">(Click to flip)</p>
+                        </div>
+
+                        <!-- Back -->
+                        <div class="absolute w-full h-full bg-slate-800 text-white rounded-xl flex flex-col justify-center items-center p-8 text-center backface-hidden rotate-y-180">
+                            <span class="text-xs font-bold text-amber-400 uppercase tracking-widest mb-4">Definition / Answer</span>
+                            <p id="fc-back" class="text-lg leading-relaxed">
+                                <!-- JS Populated -->
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex space-x-4 mt-4">
+                    <button onclick="prevCard()" class="px-6 py-2 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium transition">
+                        ← Previous
+                    </button>
+                    <button onclick="nextCard()" class="px-6 py-2 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-medium shadow-md transition">
+                        Next →
+                    </button>
+                </div>
+            </div>
+
+            <!-- QUIZ SECTION -->
+            <div id="view-quiz" class="hidden h-full flex flex-col fade-in max-w-2xl mx-auto">
+                
+                <!-- Quiz Progress & Score -->
+                <div class="flex justify-between items-center mb-6 text-sm">
+                    <span class="text-slate-500 font-bold">Question <span id="qz-current">1</span> of 10</span>
+                    <span class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-bold">Score: <span id="qz-score">0</span></span>
+                </div>
+
+                <!-- Question Card -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-6 flex-grow">
+                    <h3 id="qz-question" class="text-xl font-semibold text-slate-800 mb-6 leading-relaxed">
+                        <!-- JS Populated -->
+                    </h3>
+
+                    <!-- Options -->
+                    <div id="qz-options" class="space-y-3">
+                        <!-- JS Populated Buttons -->
+                    </div>
+
+                    <!-- Feedback Area (Hidden initially) -->
+                    <div id="qz-feedback" class="hidden mt-6 p-4 rounded-lg bg-slate-50 border border-slate-200">
+                        <div id="qz-feedback-title" class="font-bold text-lg mb-2"></div>
+                        <p id="qz-rationale" class="text-slate-600 text-sm"></p>
+                    </div>
+
+                    <!-- Hint Area (Hidden initially) -->
+                    <div id="qz-hint-box" class="hidden mt-4 p-3 bg-amber-50 border-l-4 border-amber-400 text-amber-800 text-sm italic">
+                        <span class="font-bold not-italic">Hint:</span> <span id="qz-hint-text"></span>
+                    </div>
+                </div>
+
+                <!-- Quiz Controls -->
+                <div class="flex justify-between items-center mt-auto pt-4 border-t border-slate-100">
+                    <button onclick="toggleHint()" class="text-amber-600 text-sm font-medium hover:underline flex items-center">
+                        <span class="mr-1">💡</span> Need a Hint?
+                    </button>
+                    <button id="qz-next-btn" onclick="nextQuestion()" class="px-6 py-2 rounded-lg bg-slate-800 text-white font-medium hover:bg-slate-700 transition disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Next Question →
+                    </button>
+                </div>
+
+                <!-- Results Screen (Hidden initially) -->
+                <div id="qz-results" class="hidden absolute inset-0 bg-white z-20 flex flex-col justify-center items-center text-center p-8">
+                    <div class="text-6xl mb-4">🎉</div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-2">Quiz Complete!</h2>
+                    <p class="text-slate-500 mb-8">You demonstrated solid knowledge of vulnerability assessments.</p>
+                    <div class="text-5xl font-bold text-amber-500 mb-8">
+                        <span id="final-score">0</span> / 10
+                    </div>
+                    <button onclick="resetQuiz()" class="px-8 py-3 rounded-full bg-slate-800 text-white font-bold hover:bg-slate-700 shadow-lg transition transform hover:-translate-y-1">
+                        Restart Quiz
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Data & Logic -->
+    <script>
+        // --- DATA ---
+        
+        const flashcards = [
+            { front: "Definition of a Scan Profile", back: "A saved configuration template that tells a scanner what, where, and how to look for vulnerabilities." },
+            { front: "Six Building Blocks of a Scan Profile", back: "Target Scope, Port Range, Vulnerability Checks, Credentials, Speed & Throttling, and Compliance Templates." },
+            { front: "The Golden Rule of Target Scope", back: "Always verify your target list against written authorization to avoid criminal liability." },
+            { front: "Port Strategy: Top 100", back: "Scans common services like HTTP, SSH, and RDP; best for quick discovery scans." },
+            { front: "Port Strategy: Full 65535", back: "Scans every TCP port; best for penetration tests and high-security audits." },
+            { front: "Credentialed Scan Findings", back: "Typically detects 5–50× more vulnerabilities than non-credentialed scans by reading internal configs and registries." },
+            { front: "Non-Credentialed Scan Perspective", back: "Simulates a stranger observing from outside; views only what is externally visible/exposed." },
+            { front: "Plugin Configuration Best Practice", back: "Disable irrelevant families (e.g., no Linux checks on Windows) to reduce noise and scan time." },
+            { front: "Purpose of 'Safe Checks'", back: "Avoids intrusive tests that could crash services; should be enabled for production systems." },
+            { front: "Throttling Level for Fragile Systems", back: "Low (~50 packets/sec, 2 concurrent hosts); used for POS systems and legacy devices." },
+            { front: "Definition of Scan Sensitivity", back: "The detection threshold that determines how much evidence a scanner requires before flagging a finding." },
+            { front: "Consequence of High Scan Sensitivity", back: "Catches more edge cases (fewer false negatives) but increases false positives and network impact." },
+            { front: "Consequence of Low Scan Sensitivity", back: "Faster scans with fewer false positives, but higher risk of missing real threats (false negatives)." },
+            { front: "The Fragility Override Rule", back: "If device fragility is high (≥ 7/10), cap sensitivity at LOW regardless of the risk score to prevent crashes." },
+            { front: "Distributed Scanning Architecture", back: "Placing scanner sensors inside each network segment to bypass firewalls and ACLs that block external probes." },
+            { front: "DMZ Scan Profile Requirements", back: "High sensitivity, web app plugins enabled, and scanned from both internal and external perspectives." },
+            { front: "OT / SCADA Scan Profile Requirements", back: "Low sensitivity, safe checks only, and passive scanning preferred to avoid disrupting industrial equipment." },
+            { front: "Internal Scan Perspective", back: "Simulates an attacker who has breached the perimeter or a malicious insider." },
+            { front: "External Scan Perspective", back: "Simulates an attacker probing from the internet; required for PCI DSS compliance." },
+            { front: "Four Factors of Risk Scoring", back: "Data Sensitivity (Value), Exposure Level (Likelihood), Device Fragility (Impact of scan), and Regulatory Requirements (Legal obligation)." },
+            { front: "CVE", back: "Common Vulnerabilities and Exposures; a list of records for publicly known cybersecurity vulnerabilities." },
+            { front: "CVSS", back: "Common Vulnerability Scoring System; a standard for assessing the severity of computer system vulnerabilities." },
+            { front: "DMZ (Network)", back: "Demilitarized Zone; a public-facing network segment that exposes services to an untrusted network (internet)." },
+            { front: "PCI DSS", back: "Payment Card Industry Data Security Standard; a regulatory framework requiring specific scan types." },
+            { front: "Sensitivity Sweet Spot", back: "The balance point that catches genuine dangers without paralyzing operations or flooding reports with noise." }
+        ];
+
+        const quizQuestions = [
+            {
+                question: "A junior analyst realizes a subnet belonging to the company was omitted from the authorized target list but decides to scan it anyway to ensure full coverage. What is the primary implication of this action?",
+                options: [
+                    { text: "The scan results will be invalid because the subnet was not properly profiled in the tool.", correct: false, rationale: "While the profile might not be optimized, the technical validity of the results is secondary to the legal authorization issue." },
+                    { text: "The analyst risks potential criminal liability for unauthorized scanning under laws like the CFAA.", correct: true, rationale: "Scanning outside of the specifically authorized scope is legally considered unauthorized access, regardless of intent or ownership." },
+                    { text: "The scan will likely fail because the distributed sensors are not configured for that specific subnet.", correct: false, rationale: "Technical connectivity issues are possible, but they are not the primary or most severe implication of scanning without authorization." },
+                    { text: "The analyst will simply need to add the subnet to the report retroactively.", correct: false, rationale: "Retroactive reporting does not negate the fact that the initial action was performed without the necessary written permission." }
+                ],
+                hint: "Consider the legal 'Golden Rule' of target definitions and the consequences of exceeding written authority."
+            },
+            {
+                question: "You are configuring a scan for a critical internet-facing web server to ensure no obscure services are exposed. Which port scanning strategy is most appropriate?",
+                options: [
+                    { text: "Top 100 Ports", correct: false, rationale: "This limited range focuses only on the most common services and would likely miss obscure or non-standard ports used by attackers." },
+                    { text: "Top 1000 Ports", correct: false, rationale: "While efficient for internal assets, this default strategy leaves over 64,000 ports unchecked, which is risky for exposed assets." },
+                    { text: "Targeted Service Ports", correct: false, rationale: "Targeting only known services assumes you already know everything running on the machine, which defeats the purpose of discovery." },
+                    { text: "Full 65,535 Ports", correct: true, rationale: "High-risk, internet-facing assets require an exhaustive check of every possible entry point to prevent external breaches." }
+                ],
+                hint: "Think about the risk level of an asset exposed to the entire internet and the trade-off between speed and thoroughness."
+            },
+            {
+                question: "Why is a credentialed scan generally preferred over a non-credentialed scan for corporate workstations?",
+                options: [
+                    { text: "It simulates an external attacker probing the network firewall.", correct: false, rationale: "Simulating an external attacker is the function of a non-credentialed or external perspective scan, not a credentialed one." },
+                    { text: "It allows the scanner to read internal configurations, registry keys, and patch levels.", correct: true, rationale: "Logging in allows the scanner to see the internal state of the machine, identifying missing patches and software that isn't visible from the outside." },
+                    { text: "It significantly reduces the time required to complete the scan.", correct: false, rationale: "Credentialed scans are often slower because they perform deeper analysis and gather significantly more data points." },
+                    { text: "It avoids the need to configure specific plugin families.", correct: false, rationale: "Plugin selection is still necessary to optimize the scan, regardless of whether credentials are used." }
+                ],
+                hint: "Recall the analogy of a doctor with access to medical history versus a stranger observing from across the street."
+            },
+            {
+                question: "You are scanning a segment populated entirely by Linux servers. To optimize scan time and reduce noise, what configuration change should you make?",
+                options: [
+                    { text: "Increase the throttling level to High.", correct: false, rationale: "Increasing throttling affects speed and network impact but does not address the relevance of the checks being performed." },
+                    { text: "Disable the Windows plugin families.", correct: true, rationale: "Running checks for an operating system that is not present wastes time and resources; disabling them streamlines the process." },
+                    { text: "Switch to a non-credentialed scan profile.", correct: false, rationale: "Removing credentials would reduce the quality and depth of the findings, which is a poor trade-off for optimization." },
+                    { text: "Set the port range to Top 100.", correct: false, rationale: "Reducing the port range limits the scope of discovery rather than optimizing the vulnerability checks themselves." }
+                ],
+                hint: "Think about the relevance of testing for vulnerabilities specific to an operating system that isn't there."
+            },
+            {
+                question: "When scanning a network segment containing legacy Point-of-Sale (POS) systems, which throttling configuration is essential to prevent service disruptions?",
+                options: [
+                    { text: "High aggressiveness with 15+ concurrent hosts.", correct: false, rationale: "This level of traffic is designed for robust environments and would likely overwhelm and crash fragile legacy systems." },
+                    { text: "Medium aggressiveness with 200 packets per second.", correct: false, rationale: "Standard corporate settings may still be too intense for older, resource-constrained hardware like POS systems." },
+                    { text: "Low aggressiveness with ~50 packets per second.", correct: true, rationale: "Fragile systems require a gentle touch with minimal concurrent connections and packet speed to avoid causing a denial of service." },
+                    { text: "Unlimited speed during off-peak hours.", correct: false, rationale: "Even during off-peak hours, unthrottled scans can crash fragile devices, potentially requiring manual reboots." }
+                ],
+                hint: "Consider the processing power and stability of older, specialized hardware compared to modern servers."
+            },
+            {
+                question: "You decide to set the scan sensitivity to 'High' (Paranoid Mode) for a staging environment. What is the primary negative trade-off you should expect?",
+                options: [
+                    { text: "A significant increase in false positives.", correct: true, rationale: "High sensitivity lowers the evidence threshold, causing the scanner to flag benign anomalies as potential vulnerabilities." },
+                    { text: "A higher rate of false negatives.", correct: false, rationale: "High sensitivity actually reduces false negatives by reporting even low-confidence findings." },
+                    { text: "The scan will skip over 'safe checks'.", correct: false, rationale: "Sensitivity determines the evidence threshold for reporting, while 'safe checks' controls whether the scanner attempts to exploit vulnerabilities." },
+                    { text: "The scan will fail to detect web application vulnerabilities.", correct: false, rationale: "Web app detection is controlled by plugin selection (CGI scanning), not primarily by the general sensitivity threshold." }
+                ],
+                hint: "Think about the 'Metal Detector' analogy: if you turn the sensitivity all the way up, what harmless items start setting it off?"
+            },
+            {
+                question: "A specific medical device has a calculated Risk Score of 92 (Critical), but its Device Fragility rating is 8/10. What is the recommended scan sensitivity?",
+                options: [
+                    { text: "High, because the risk score is Critical.", correct: false, rationale: "While the risk is high, high sensitivity scans are intrusive and likely to disrupt or crash a device with high fragility." },
+                    { text: "Medium-High, to balance risk and impact.", correct: false, rationale: "Any setting above Low poses a significant risk of service interruption for a device rated 8/10 in fragility." },
+                    { text: "Low (Safe Checks Only), due to the Fragility Override rule.", correct: true, rationale: "The fragility override rule dictates that system stability takes precedence; you cannot secure a system if you crash it during the assessment." },
+                    { text: "Zero, do not scan the device at all.", correct: false, rationale: "The device still needs to be assessed, but it must be done using the safest, least intrusive configuration available." }
+                ],
+                hint: "Review the 'Fragility Override' condition: does the risk score matter if the scanning process breaks the machine?"
+            },
+            {
+                question: "Why is 'Distributed Scanning' with sensors placed inside each network segment necessary for accurate assessments?",
+                options: [
+                    { text: "It allows the central console to process data faster.", correct: false, rationale: "Distributed scanning is about reach and visibility, not the processing speed of the central console." },
+                    { text: "It bypasses firewalls and ACLs that would block a central scanner.", correct: true, rationale: "A single central scanner would be blocked by internal firewalls; placing sensors inside the segment allows local, unobstructed access to targets." },
+                    { text: "It is required to perform external perspective scans.", correct: false, rationale: "External perspective scans are launched from the internet, not from internal distributed sensors." },
+                    { text: "It reduces the cost of the vulnerability management program.", correct: false, rationale: "Distributed architectures usually increase complexity and potentially cost, rather than reducing it." }
+                ],
+                hint: "What happens when a scanner sits on one side of a firewall and tries to probe a machine on the other side?"
+            },
+            {
+                question: "To fully assess a DMZ web server, which scanning perspective(s) should be utilized?",
+                options: [
+                    { text: "Internal credentialed scan only.", correct: false, rationale: "This misses the vulnerabilities exposed to the public internet, such as firewall misconfigurations." },
+                    { text: "External non-credentialed scan only.", correct: false, rationale: "This sees what an attacker sees but misses internal configuration issues like missing patches or local privilege escalation risks." },
+                    { text: "Both internal (sensor-based) and external (cloud-based) scans.", correct: true, rationale: "You need the external view to see public exposure and the internal view to identify deep configuration flaws and missing patches." },
+                    { text: "Passive scanning from the OT network.", correct: false, rationale: "The OT network is a separate, sensitive environment and does not provide the correct vantage point for assessing a DMZ web server." }
+                ],
+                hint: "Think about the two different types of attackers: one trying to break in from the internet, and one who has already breached the perimeter."
+            },
+            {
+                question: "In the Risk Scoring Formula, which factor represents the legal obligation to perform a scan?",
+                options: [
+                    { text: "Data Sensitivity", correct: false, rationale: "This refers to the value of the assets being protected, not the external requirement to scan them." },
+                    { text: "Regulatory Requirements", correct: true, rationale: "This factor explicitly accounts for compliance frameworks (like PCI DSS or HIPAA) that mandate vulnerability assessments." },
+                    { text: "Exposure Level", correct: false, rationale: "This relates to the likelihood of an attack based on accessibility, not the legal necessity of the scan." },
+                    { text: "Device Fragility", correct: false, rationale: "This dictates *how* carefully you must scan, not the legal *why* behind the scan." }
+                ],
+                hint: "Look for the factor that deals with laws, standards, and compliance mandates."
+            }
+        ];
+
+        // --- FLASHCARD LOGIC ---
+        let currentCardIndex = 0;
+        let isFlipped = false;
+
+        function loadCard(index) {
+            const card = flashcards[index];
+            const frontEl = document.getElementById('fc-front');
+            const backEl = document.getElementById('fc-back');
+            const inner = document.getElementById('flashcard-inner');
+
+            // Reset flip
+            isFlipped = false;
+            inner.classList.remove('rotate-y-180');
+
+            // Delay content update slightly to allow flip reset if moving fast
+            setTimeout(() => {
+                frontEl.innerText = card.front;
+                backEl.innerText = card.back;
+                document.getElementById('fc-current').innerText = index + 1;
+            }, 150);
+        }
+
+        function flipCard() {
+            const inner = document.getElementById('flashcard-inner');
+            if (isFlipped) {
+                inner.classList.remove('rotate-y-180');
+            } else {
+                inner.classList.add('rotate-y-180');
+            }
+            isFlipped = !isFlipped;
+        }
+
+        function nextCard() {
+            if (currentCardIndex < flashcards.length - 1) {
+                currentCardIndex++;
+                loadCard(currentCardIndex);
+            } else {
+                currentCardIndex = 0; // Loop
+                loadCard(currentCardIndex);
+            }
+        }
+
+        function prevCard() {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                loadCard(currentCardIndex);
+            } else {
+                currentCardIndex = flashcards.length - 1; // Loop
+                loadCard(currentCardIndex);
+            }
+        }
+
+        // --- QUIZ LOGIC ---
+        let currentQuizIndex = 0;
+        let score = 0;
+        let quizCompleted = false;
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function loadQuestion(index) {
+            const q = quizQuestions[index];
+            document.getElementById('qz-current').innerText = index + 1;
+            document.getElementById('qz-question').innerText = q.question;
+            document.getElementById('qz-hint-text').innerText = q.hint;
+            
+            // Hide feedback & hint
+            document.getElementById('qz-feedback').classList.add('hidden');
+            document.getElementById('qz-hint-box').classList.add('hidden');
+            document.getElementById('qz-next-btn').disabled = true;
+
+            const optionsContainer = document.getElementById('qz-options');
+            optionsContainer.innerHTML = '';
+
+            // Clone and shuffle options for display
+            let displayOptions = [...q.options];
+            shuffleArray(displayOptions);
+
+            displayOptions.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center";
+                btn.onclick = () => checkAnswer(opt, btn);
+                
+                // Add a circle icon
+                const icon = document.createElement('div');
+                icon.className = "w-5 h-5 rounded-full border-2 border-slate-300 mr-4 flex-shrink-0";
+                
+                const text = document.createElement('span');
+                text.innerText = opt.text;
+                
+                btn.appendChild(icon);
+                btn.appendChild(text);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedOption, btnElement) {
+            // Disable all buttons
+            const buttons = document.getElementById('qz-options').querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true);
+
+            const feedbackEl = document.getElementById('qz-feedback');
+            const titleEl = document.getElementById('qz-feedback-title');
+            const ratEl = document.getElementById('qz-rationale');
+
+            feedbackEl.classList.remove('hidden');
+            ratEl.innerText = selectedOption.rationale;
+
+            if (selectedOption.correct) {
+                score++;
+                document.getElementById('qz-score').innerText = score;
+                titleEl.innerText = "Correct! ✅";
+                titleEl.className = "font-bold text-lg mb-2 text-green-600";
+                btnElement.classList.remove('border-slate-200', 'hover:bg-slate-50');
+                btnElement.classList.add('bg-green-50', 'border-green-500', 'text-green-800');
+                btnElement.querySelector('div').classList.add('bg-green-500', 'border-green-500');
+            } else {
+                titleEl.innerText = "Incorrect ❌";
+                titleEl.className = "font-bold text-lg mb-2 text-red-600";
+                btnElement.classList.remove('border-slate-200', 'hover:bg-slate-50');
+                btnElement.classList.add('bg-red-50', 'border-red-500', 'text-red-800');
+                btnElement.querySelector('div').classList.add('bg-red-500', 'border-red-500');
+            }
+
+            // Enable Next Button
+            document.getElementById('qz-next-btn').disabled = false;
+        }
+
+        function nextQuestion() {
+            if (currentQuizIndex < quizQuestions.length - 1) {
+                currentQuizIndex++;
+                loadQuestion(currentQuizIndex);
+            } else {
+                showResults();
+            }
+        }
+
+        function toggleHint() {
+            const box = document.getElementById('qz-hint-box');
+            box.classList.toggle('hidden');
+        }
+
+        function showResults() {
+            document.getElementById('qz-results').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+        }
+
+        function resetQuiz() {
+            currentQuizIndex = 0;
+            score = 0;
+            document.getElementById('qz-score').innerText = 0;
+            document.getElementById('qz-results').classList.add('hidden');
+            loadQuestion(0);
+        }
+
+        // --- TAB LOGIC ---
+        function switchTab(tab) {
+            const btnFlash = document.getElementById('tab-flashcards');
+            const btnQuiz = document.getElementById('tab-quiz');
+            const viewFlash = document.getElementById('view-flashcards');
+            const viewQuiz = document.getElementById('view-quiz');
+
+            if (tab === 'flashcards') {
+                viewFlash.classList.remove('hidden');
+                viewQuiz.classList.add('hidden');
+                
+                btnFlash.classList.add('text-amber-600', 'border-amber-500', 'bg-amber-50');
+                btnFlash.classList.remove('text-slate-500', 'hover:bg-slate-50', 'border-transparent');
+                
+                btnQuiz.classList.remove('text-amber-600', 'border-amber-500', 'bg-amber-50');
+                btnQuiz.classList.add('text-slate-500', 'hover:bg-slate-50', 'border-transparent', 'border-b-2'); // maintain height with transparent border
+            } else {
+                viewFlash.classList.add('hidden');
+                viewQuiz.classList.remove('hidden');
+
+                btnQuiz.classList.add('text-amber-600', 'border-amber-500', 'bg-amber-50');
+                btnQuiz.classList.remove('text-slate-500', 'hover:bg-slate-50', 'border-transparent');
+
+                btnFlash.classList.remove('text-amber-600', 'border-amber-500', 'bg-amber-50');
+                btnFlash.classList.add('text-slate-500', 'hover:bg-slate-50', 'border-transparent', 'border-b-2');
+            }
+        }
+
+        // Initialize
+        loadCard(0);
+        loadQuestion(0);
+
+    </script>
+</body>
+</html>
+
+
+
