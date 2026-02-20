@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVSS Study Tool</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Custom Flip Animation */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+        
+        /* Smooth transitions */
+        .card-inner {
+            transition: transform 0.6s;
+        }
+        .flipped {
+            transform: rotateY(180deg);
+        }
+
+        /* Scrollbar styling for quiz rationale */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+
+    <!-- Main Container -->
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-900 mb-2">CVSS & Vulnerability Scoring</h1>
+            <p class="text-gray-600">Interactive Study Companion</p>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="flex justify-center mb-8 bg-white rounded-lg shadow-sm p-1 inline-flex mx-auto w-full md:w-auto">
+            <button onclick="switchTab('flashcards')" id="tab-flashcards" class="flex-1 md:flex-none px-8 py-3 rounded-md text-sm font-medium transition-colors bg-blue-600 text-white shadow-sm">
+                <i class="fas fa-layer-group mr-2"></i>Flashcards
+            </button>
+            <button onclick="switchTab('quiz')" id="tab-quiz" class="flex-1 md:flex-none px-8 py-3 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                <i class="fas fa-question-circle mr-2"></i>Quiz
+            </button>
+        </div>
+
+        <!-- Flashcards Section -->
+        <div id="content-flashcards" class="block">
+            <div class="max-w-2xl mx-auto">
+                <!-- Progress Bar -->
+                <div class="mb-4 flex justify-between items-center text-sm text-gray-500">
+                    <span id="fc-progress-text">Card 1 of 25</span>
+                    <div class="w-1/2 bg-gray-200 rounded-full h-2">
+                        <div id="fc-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 4%"></div>
+                    </div>
+                </div>
+
+                <!-- Flashcard Container -->
+                <div class="perspective-1000 h-80 cursor-pointer group" onclick="flipCard()">
+                    <div id="flashcard-inner" class="card-inner relative w-full h-full text-center transform-style-3d shadow-xl rounded-xl">
+                        
+                        <!-- Front -->
+                        <div class="absolute w-full h-full backface-hidden bg-white border border-gray-200 rounded-xl flex flex-col items-center justify-center p-8">
+                            <span class="text-xs font-bold text-blue-500 uppercase tracking-wider mb-4">Term / Question</span>
+                            <h2 id="fc-front" class="text-2xl font-bold text-gray-800">CVSS</h2>
+                            <p class="text-gray-400 text-xs mt-8">(Click to flip)</p>
+                        </div>
+
+                        <!-- Back -->
+                        <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-blue-50 border border-blue-100 rounded-xl flex flex-col items-center justify-center p-8">
+                            <span class="text-xs font-bold text-blue-500 uppercase tracking-wider mb-4">Definition / Answer</span>
+                            <p id="fc-back" class="text-lg text-gray-700 leading-relaxed">Common Vulnerability Scoring System; a standardized framework for rating the severity of security vulnerabilities.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Controls -->
+                <div class="flex justify-between items-center mt-8">
+                    <button onclick="prevCard()" class="px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-sm flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i> Previous
+                    </button>
+                    <button onclick="shuffleCards()" class="p-2 text-gray-400 hover:text-blue-600 transition" title="Shuffle Cards">
+                        <i class="fas fa-random"></i>
+                    </button>
+                    <button onclick="nextCard()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm flex items-center">
+                        Next <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Section -->
+        <div id="content-quiz" class="hidden">
+            <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="p-6 md:p-8">
+                    <div class="flex justify-between items-center mb-6 border-b pb-4">
+                        <h2 class="text-xl font-bold text-gray-800">Knowledge Check</h2>
+                        <span id="quiz-score" class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-full">Score: 0 / 10</span>
+                    </div>
+
+                    <!-- Questions Container -->
+                    <div id="quiz-container" class="space-y-12">
+                        <!-- Questions will be injected here via JS -->
+                    </div>
+                    
+                    <!-- Reset Button -->
+                    <div class="mt-12 text-center border-t pt-8">
+                        <button onclick="resetQuiz()" class="px-6 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition">
+                            <i class="fas fa-redo-alt mr-2"></i> Reset Quiz
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Data & Logic -->
+    <script>
+        // --- DATA: Flashcards ---
+        const flashcardsData = [
+            { front: "CVSS", back: "Common Vulnerability Scoring System; a standardized framework for rating the severity of security vulnerabilities." },
+            { front: "CVSS Score Range", back: "0.0 to 10.0" },
+            { front: "Critical Severity Range", back: "9.0 - 10.0" },
+            { front: "High Severity Range", back: "7.0 - 8.9" },
+            { front: "Medium Severity Range", back: "4.0 - 6.9" },
+            { front: "Low Severity Range", back: "0.1 - 3.9" },
+            { front: "Base Metrics", back: "Metrics representing the intrinsic, fundamental characteristics of a vulnerability that do not change over time." },
+            { front: "Temporal Metrics", back: "Metrics representing factors that change over time, such as the availability of exploit code or patches." },
+            { front: "Environmental Metrics", back: "Metrics that customize the score based on a specific organization's environment and security requirements." },
+            { front: "Attack Vector (AV)", back: "A Base Metric describing how an attacker can reach the vulnerability (e.g., Network, Local, Physical)." },
+            { front: "Attack Complexity (AC)", back: "A Base Metric describing the difficulty of exploiting the vulnerability (Low vs. High)." },
+            { front: "Privileges Required (PR)", back: "A Base Metric describing the level of access an attacker needs before they can exploit the vulnerability (None, Low, High)." },
+            { front: "User Interaction (UI)", back: "A Base Metric indicating if a user must take action (like clicking a link) for the exploit to succeed." },
+            { front: "Scope (S)", back: "A Base Metric indicating if a vulnerability in one component can impact resources beyond its security boundary (Unchanged vs. Changed)." },
+            { front: "CIA Impact Metrics", back: "Confidentiality, Integrity, and Availability; the three security properties measured for impact." },
+            { front: "Exploit Code Maturity (E)", back: "A Temporal Metric measuring the likelihood of the vulnerability being attacked based on the state of exploit techniques." },
+            { front: "Remediation Level (RL)", back: "A Temporal Metric describing the status of a fix (e.g., Official Fix, Workaround, Unavailable)." },
+            { front: "Report Confidence (RC)", back: "A Temporal Metric measuring the degree of certainty that the vulnerability exists and is technically reproducible." },
+            { front: "Security Requirements (CR, IR, AR)", back: "Environmental Metrics that allow an organization to define the importance of Confidentiality, Integrity, and Availability for a specific asset." },
+            { front: "CVSS Vector String", back: "A text string that compresses all the metric values into a compact format for communication (e.g., CVSS:3.1/AV:N...)." },
+            { front: "Log4Shell (CVE-2021-44228) Score", back: "10.0 (Critical)" },
+            { front: "Heartbleed (CVE-2014-0160) Score", back: "7.5 (High)" },
+            { front: "FIRST", back: "Forum of Incident Response and Security Teams; the organization that develops and maintains the CVSS standard." },
+            { front: "Primary Purpose of Environmental Metrics", back: "To adjust the Base and Temporal scores to reflect the specific context and risk profile of an organization's environment." },
+            { front: "NVD", back: "National Vulnerability Database; a U.S. government repository that provides comprehensive CVSS scoring for published vulnerabilities." }
+        ];
+
+        // --- DATA: Quiz Questions ---
+        const quizData = [
+            {
+                id: 1,
+                question: "What is the primary purpose of the Common Vulnerability Scoring System (CVSS)?",
+                options: [
+                    { text: "To standardize vulnerability severity and help organizations prioritize remediation.", correct: true, rationale: "The text describes CVSS as a 'universal language' that provides a standardized framework for rating severity, allowing organizations to prioritize which vulnerabilities to fix first." },
+                    { text: "To automatically patch vulnerabilities found in a system.", correct: false, rationale: "CVSS is a scoring framework for assessing severity; it does not perform the actual patching or remediation of vulnerabilities." },
+                    { text: "To identify the specific hacker responsible for an attack.", correct: false, rationale: "CVSS focuses on the technical characteristics and severity of a vulnerability, not on attribution or identifying the threat actor." },
+                    { text: "To replace the need for firewalls and intrusion detection systems.", correct: false, rationale: "CVSS is a metric for scoring vulnerabilities, not a defensive security control like a firewall or IDS." }
+                ]
+            },
+            {
+                id: 2,
+                question: "Which CVSS score range corresponds to a 'Critical' severity rating?",
+                options: [
+                    { text: "9.0 - 10.0", correct: true, rationale: "The text explicitly defines the Critical severity range as 9.0 to 10.0, representing catastrophic potential that requires immediate attention." },
+                    { text: "7.0 - 8.9", correct: false, rationale: "This range corresponds to 'High' severity, which indicates a serious impact but is one step below Critical." },
+                    { text: "4.0 - 6.9", correct: false, rationale: "This range corresponds to 'Medium' severity, identifying vulnerabilities with moderate impact." },
+                    { text: "0.1 - 3.9", correct: false, rationale: "This range corresponds to 'Low' severity, indicating minor impact." }
+                ]
+            },
+            {
+                id: 3,
+                question: "Which Base Metric describes the level of access an attacker needs before they can exploit a vulnerability?",
+                options: [
+                    { text: "Attack Vector (AV)", correct: false, rationale: "Attack Vector describes *how* an attacker reaches the vulnerability (e.g., Network vs. Physical), not the permissions they possess." },
+                    { text: "Privileges Required (PR)", correct: true, rationale: "Privileges Required measures the level of access needed prior to exploitation, ranging from None (worst case) to High (best case)." },
+                    { text: "User Interaction (UI)", correct: false, rationale: "User Interaction measures whether a victim must participate in the exploit (like clicking a link), not the attacker's permission level." },
+                    { text: "Scope (S)", correct: false, rationale: "Scope determines if the vulnerability impacts resources beyond the vulnerable component's security boundary." }
+                ]
+            },
+            {
+                id: 4,
+                question: "What distinguishes 'Temporal Metrics' from 'Base Metrics'?",
+                options: [
+                    { text: "Temporal Metrics change over time, while Base Metrics are constant.", correct: true, rationale: "Base Metrics represent intrinsic characteristics fixed at discovery, whereas Temporal Metrics reflect changing factors like exploit availability or patch release." },
+                    { text: "Temporal Metrics are only used for internal networks.", correct: false, rationale: "Temporal Metrics apply generally to the state of the vulnerability in the wild, not specifically to internal networks." },
+                    { text: "Base Metrics are optional, while Temporal Metrics are mandatory.", correct: false, rationale: "Base Metrics are fundamental and required to generate a score, whereas Temporal and Environmental metrics are optional refinements." },
+                    { text: "Temporal Metrics measure the impact on the CIA triad.", correct: false, rationale: "Impact on the CIA triad (Confidentiality, Integrity, Availability) is measured by the Base Metrics, not Temporal Metrics." }
+                ]
+            },
+            {
+                id: 5,
+                question: "In the context of Base Metrics, what does 'Scope: Changed' (C) signify?",
+                options: [
+                    { text: "The vulnerability is limited only to the vulnerable component.", correct: false, rationale: "This describes 'Scope: Unchanged' (U), where the impact is contained within the component." },
+                    { text: "The vulnerability can impact resources beyond its own security boundary.", correct: true, rationale: "Scope Changed means the exploited vulnerability can affect other components, such as a VM escape affecting the host system." },
+                    { text: "The vulnerability has been patched by the vendor.", correct: false, rationale: "Patch status is measured by the 'Remediation Level' Temporal Metric, not the Scope Base Metric." },
+                    { text: "The attacker requires physical access to the device.", correct: false, rationale: "Physical access requirements are defined by the 'Attack Vector' metric, specifically 'Physical' (P)." }
+                ]
+            },
+            {
+                id: 6,
+                question: "Which Temporal Metric would be adjusted if a working exploit for a vulnerability is published on the internet?",
+                options: [
+                    { text: "Exploit Code Maturity (E)", correct: true, rationale: "Exploit Code Maturity measures the likelihood of the vulnerability being attacked based on the current state of exploit techniques (e.g., Proof-of-Concept vs. Functional)." },
+                    { text: "Remediation Level (RL)", correct: false, rationale: "Remediation Level measures the availability of a fix or patch, not the availability of attack code." },
+                    { text: "Report Confidence (RC)", correct: false, rationale: "Report Confidence measures the degree of certainty that the vulnerability exists, not whether exploit code is available." },
+                    { text: "Attack Complexity (AC)", correct: false, rationale: "Attack Complexity is a Base Metric describing the difficulty of the exploit itself, not the availability of the code." }
+                ]
+            },
+            {
+                id: 7,
+                question: "Why are Environmental Metrics considered crucial for accurate risk assessment?",
+                options: [
+                    { text: "They adjust the score based on the specific organization's environment and security requirements.", correct: true, rationale: "Environmental Metrics allow organizations to customize the severity based on factors like network placement, asset importance, and compensating controls." },
+                    { text: "They determine the intrinsic qualities of the vulnerability code.", correct: false, rationale: "Intrinsic qualities are defined by the Base Metrics, which remain constant regardless of the environment." },
+                    { text: "They provide a way to report the vulnerability to the government.", correct: false, rationale: "Reporting to databases like NVD is a separate process; Environmental Metrics are for internal risk calculation." },
+                    { text: "They measure how long a vulnerability has existed.", correct: false, rationale: "The duration of a vulnerability's existence is not a specific CVSS metric." }
+                ]
+            },
+            {
+                id: 8,
+                question: "If an organization wants to define that 'Confidentiality' is the most critical aspect of a specific asset, which Environmental Metric should they use?",
+                options: [
+                    { text: "Modified Attack Vector (MAV)", correct: false, rationale: "MAV adjusts the Attack Vector based on environmental deployment (e.g., air-gapped), not the importance of data confidentiality." },
+                    { text: "Integrity Requirement (IR)", correct: false, rationale: "IR is used to define the importance of data Integrity, not Confidentiality." },
+                    { text: "Confidentiality Requirement (CR)", correct: true, rationale: "The Confidentiality Requirement (CR) metric allows an organization to increase the score if confidentiality is mission-critical for that specific asset." },
+                    { text: "Remediation Level (RL)", correct: false, rationale: "RL is a Temporal Metric related to patch status, not the organization's requirement for confidentiality." }
+                ]
+            },
+            {
+                id: 9,
+                question: "In the 'Log4Shell' example, why did the vulnerability receive a perfect 10.0 score?",
+                options: [
+                    { text: "It required physical access to the server but allowed for complete data theft.", correct: false, rationale: "A Physical attack vector would significantly lower the score; Log4Shell was dangerous because it was remotely exploitable." },
+                    { text: "It required an administrator to mistakenly run a malicious script.", correct: false, rationale: "Log4Shell required 'None' privileges and 'None' user interaction, meaning no admin action was needed." },
+                    { text: "It only affected the Availability of the system, causing crashes.", correct: false, rationale: "Log4Shell compromised Confidentiality and Integrity as well, not just Availability." },
+                    { text: "It was exploitable remotely via the network, required no privileges, and had total impact on Confidentiality, Integrity, and Availability.", correct: true, rationale: "A score of 10.0 reflects the worst-case scenario in all categories: Network vector, Low complexity, None privileges, and High impact across the board." }
+                ]
+            },
+            {
+                id: 10,
+                question: "Which of the following is NOT one of the three metric groups that make up CVSS?",
+                options: [
+                    { text: "Financial Metrics", correct: true, rationale: "Financial Metrics are not a part of CVSS. The three groups are Base, Temporal, and Environmental." },
+                    { text: "Base Metrics", correct: false, rationale: "Base Metrics are a core component of CVSS, describing intrinsic characteristics." },
+                    { text: "Temporal Metrics", correct: false, rationale: "Temporal Metrics are a core component of CVSS, describing time-dependent factors." },
+                    { text: "Environmental Metrics", correct: false, rationale: "Environmental Metrics are a core component of CVSS, describing organization-specific factors." }
+                ]
+            }
+        ];
+
+        // --- STATE & LOGIC ---
+        let currentCardIndex = 0;
+        let isFlipped = false;
+        let activeTab = 'flashcards';
+
+        // 1. Tab Switching
+        function switchTab(tabId) {
+            activeTab = tabId;
+            const contentFlashcards = document.getElementById('content-flashcards');
+            const contentQuiz = document.getElementById('content-quiz');
+            const tabFlashcards = document.getElementById('tab-flashcards');
+            const tabQuiz = document.getElementById('tab-quiz');
+
+            if (tabId === 'flashcards') {
+                contentFlashcards.classList.remove('hidden');
+                contentQuiz.classList.add('hidden');
+                
+                tabFlashcards.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+                tabFlashcards.classList.remove('text-gray-500');
+                
+                tabQuiz.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                tabQuiz.classList.add('text-gray-500');
+            } else {
+                contentFlashcards.classList.add('hidden');
+                contentQuiz.classList.remove('hidden');
+                
+                tabQuiz.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+                tabQuiz.classList.remove('text-gray-500');
+                
+                tabFlashcards.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                tabFlashcards.classList.add('text-gray-500');
+            }
+        }
+
+        // 2. Flashcard Logic
+        function renderCard() {
+            const card = flashcardsData[currentCardIndex];
+            const frontEl = document.getElementById('fc-front');
+            const backEl = document.getElementById('fc-back');
+            const progressText = document.getElementById('fc-progress-text');
+            const progressBar = document.getElementById('fc-progress-bar');
+            const cardInner = document.getElementById('flashcard-inner');
+
+            // Reset flip state visually first if needed (instant)
+            if (isFlipped) {
+                cardInner.classList.remove('flipped');
+                isFlipped = false;
+                // Delay content update slightly so it doesn't change while flipping back
+                setTimeout(() => {
+                    updateContent(card, frontEl, backEl);
+                }, 200);
+            } else {
+                updateContent(card, frontEl, backEl);
+            }
+
+            // Update Progress
+            progressText.innerText = `Card ${currentCardIndex + 1} of ${flashcardsData.length}`;
+            const percentage = ((currentCardIndex + 1) / flashcardsData.length) * 100;
+            progressBar.style.width = `${percentage}%`;
+        }
+
+        function updateContent(card, frontEl, backEl) {
+            frontEl.innerText = card.front;
+            backEl.innerText = card.back;
+        }
+
+        function flipCard() {
+            const cardInner = document.getElementById('flashcard-inner');
+            isFlipped = !isFlipped;
+            if (isFlipped) {
+                cardInner.classList.add('flipped');
+            } else {
+                cardInner.classList.remove('flipped');
+            }
+        }
+
+        function nextCard() {
+            if (currentCardIndex < flashcardsData.length - 1) {
+                currentCardIndex++;
+                renderCard();
+            } else {
+                // Loop back to start? or just stop. Let's loop for flow.
+                currentCardIndex = 0;
+                renderCard();
+            }
+        }
+
+        function prevCard() {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                renderCard();
+            } else {
+                currentCardIndex = flashcardsData.length - 1;
+                renderCard();
+            }
+        }
+
+        function shuffleCards() {
+            // Fisher-Yates shuffle
+            for (let i = flashcardsData.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [flashcardsData[i], flashcardsData[j]] = [flashcardsData[j], flashcardsData[i]];
+            }
+            currentCardIndex = 0;
+            renderCard();
+        }
+
+        // 3. Quiz Logic
+        function initQuiz() {
+            const container = document.getElementById('quiz-container');
+            container.innerHTML = '';
+            
+            quizData.forEach((q, index) => {
+                // Create Question Block
+                const qBlock = document.createElement('div');
+                qBlock.className = 'border-b last:border-0 pb-8 last:pb-0';
+                
+                // Question Text
+                const qTitle = document.createElement('h3');
+                qTitle.className = 'text-lg font-semibold text-gray-800 mb-4';
+                qTitle.innerText = `${index + 1}. ${q.question}`;
+                qBlock.appendChild(qTitle);
+
+                // Options Container
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'space-y-3';
+
+                q.options.forEach((opt, optIndex) => {
+                    const btn = document.createElement('button');
+                    btn.className = `w-full text-left p-4 rounded-lg border transition-all duration-200 hover:bg-gray-50 option-btn-${index}`;
+                    btn.innerHTML = `<div class="flex items-start">
+                                        <div class="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full border border-gray-300 mr-3 flex items-center justify-center option-indicator"></div>
+                                        <span>${opt.text}</span>
+                                     </div>`;
+                    
+                    btn.onclick = () => handleAnswer(index, optIndex, opt.correct, opt.rationale);
+                    optionsDiv.appendChild(btn);
+                });
+
+                qBlock.appendChild(optionsDiv);
+
+                // Rationale Box (Hidden initially)
+                const rationaleDiv = document.createElement('div');
+                rationaleDiv.id = `rationale-${index}`;
+                rationaleDiv.className = 'hidden mt-4 p-4 rounded-lg text-sm bg-gray-50 border-l-4';
+                qBlock.appendChild(rationaleDiv);
+
+                container.appendChild(qBlock);
+            });
+        }
+
+        let correctCount = 0;
+        let answeredQuestions = new Set();
+
+        function handleAnswer(qIndex, optIndex, isCorrect, rationale) {
+            if (answeredQuestions.has(qIndex)) return; // Prevent changing answer
+            answeredQuestions.add(qIndex);
+
+            const buttons = document.querySelectorAll(`.option-btn-${qIndex}`);
+            const rationaleDiv = document.getElementById(`rationale-${qIndex}`);
+
+            // Update Buttons visually
+            buttons.forEach((btn, idx) => {
+                const indicator = btn.querySelector('.option-indicator');
+                if (idx === optIndex) {
+                    if (isCorrect) {
+                        btn.classList.add('bg-green-50', 'border-green-500', 'text-green-800');
+                        btn.classList.remove('hover:bg-gray-50');
+                        indicator.classList.add('bg-green-500', 'border-green-500');
+                        indicator.innerHTML = '<i class="fas fa-check text-white text-xs"></i>';
+                    } else {
+                        btn.classList.add('bg-red-50', 'border-red-500', 'text-red-800');
+                        btn.classList.remove('hover:bg-gray-50');
+                        indicator.classList.add('bg-red-500', 'border-red-500');
+                        indicator.innerHTML = '<i class="fas fa-times text-white text-xs"></i>';
+                    }
+                } else {
+                    btn.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            });
+
+            // If incorrect, highlight the correct one too
+            if (!isCorrect) {
+                const q = quizData[qIndex];
+                const correctOptIndex = q.options.findIndex(o => o.correct);
+                const correctBtn = buttons[correctOptIndex];
+                const correctInd = correctBtn.querySelector('.option-indicator');
+                correctBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                correctBtn.classList.add('bg-green-50', 'border-green-500', 'text-green-800');
+                correctInd.classList.add('bg-green-500', 'border-green-500');
+                correctInd.innerHTML = '<i class="fas fa-check text-white text-xs"></i>';
+            }
+
+            // Show Rationale
+            rationaleDiv.classList.remove('hidden');
+            rationaleDiv.classList.add(isCorrect ? 'bg-green-50' : 'bg-blue-50', isCorrect ? 'border-green-500' : 'border-blue-500', isCorrect ? 'text-green-800' : 'text-blue-800');
+            rationaleDiv.innerHTML = `<strong>${isCorrect ? 'Correct!' : 'Rationale:'}</strong> ${rationale}`;
+
+            // Update Score
+            if (isCorrect) correctCount++;
+            document.getElementById('quiz-score').innerText = `Score: ${correctCount} / ${quizData.length}`;
+        }
+
+        function resetQuiz() {
+            correctCount = 0;
+            answeredQuestions.clear();
+            document.getElementById('quiz-score').innerText = `Score: 0 / ${quizData.length}`;
+            initQuiz();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCard();
+            initQuiz();
+        });
+
+    </script>
+</body>
+</html>
+
+
