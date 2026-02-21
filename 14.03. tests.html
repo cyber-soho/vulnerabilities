@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OWASP Top 10 Study Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom styles for 3D flip effect */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+        .flashcard-inner {
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+        }
+        /* Smooth fade for quiz transitions */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col items-center py-8 px-4">
+
+    <div class="max-w-4xl w-full">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-900 mb-2">OWASP Top 10 & Vulnerability Management</h1>
+            <p class="text-slate-500">Master the concepts with flashcards and test your knowledge with a quiz.</p>
+        </header>
+
+        <!-- Tabs -->
+        <div class="flex justify-center mb-8 bg-slate-200 p-1 rounded-xl max-w-sm mx-auto shadow-inner">
+            <button id="tab-flashcards" onclick="switchTab('flashcards')" class="flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all duration-200 bg-white text-blue-700 shadow-sm">
+                <i data-lucide="layers" class="inline-block w-4 h-4 mr-2 mb-0.5"></i>Flashcards
+            </button>
+            <button id="tab-quiz" onclick="switchTab('quiz')" class="flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-all duration-200 text-slate-600 hover:text-blue-700">
+                <i data-lucide="check-square" class="inline-block w-4 h-4 mr-2 mb-0.5"></i>Quiz
+            </button>
+        </div>
+
+        <!-- Flashcards View -->
+        <div id="view-flashcards" class="block w-full max-w-2xl mx-auto">
+            <div class="flex justify-between items-center mb-4 px-2">
+                <span id="fc-counter" class="text-sm font-semibold text-slate-500 bg-slate-200 px-3 py-1 rounded-full">1 / 25</span>
+                <button onclick="shuffleFlashcards()" class="text-sm text-blue-600 hover:text-blue-800 flex items-center transition-colors">
+                    <i data-lucide="shuffle" class="w-4 h-4 mr-1"></i> Shuffle
+                </button>
+            </div>
+
+            <!-- Card Container -->
+            <div class="perspective-1000 w-full h-80 sm:h-96 cursor-pointer mb-6" onclick="flipCard()">
+                <div id="flashcard-inner" class="flashcard-inner relative w-full h-full transform-style-3d shadow-xl rounded-2xl">
+                    <!-- Front -->
+                    <div class="absolute w-full h-full backface-hidden bg-white border-2 border-blue-100 rounded-2xl flex flex-col justify-center items-center p-8 text-center">
+                        <span class="absolute top-4 right-4 text-xs font-bold text-slate-300 uppercase tracking-widest">Front</span>
+                        <h2 id="fc-front-text" class="text-2xl sm:text-3xl font-bold text-slate-800">Concept Name</h2>
+                        <p class="text-slate-400 mt-4 text-sm flex items-center"><i data-lucide="mouse-pointer-click" class="w-4 h-4 mr-1"></i> Click to flip</p>
+                    </div>
+                    <!-- Back -->
+                    <div class="absolute w-full h-full backface-hidden bg-blue-600 border-2 border-blue-700 rounded-2xl flex flex-col justify-center items-center p-8 text-center rotate-y-180">
+                        <span class="absolute top-4 right-4 text-xs font-bold text-blue-300 uppercase tracking-widest">Back</span>
+                        <p id="fc-back-text" class="text-lg sm:text-xl font-medium text-white leading-relaxed">Definition or answer goes here.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Controls -->
+            <div class="flex justify-between items-center space-x-4">
+                <button onclick="prevCard()" class="flex-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold py-3 px-6 rounded-xl shadow-sm transition-all flex justify-center items-center">
+                    <i data-lucide="arrow-left" class="w-5 h-5 mr-2"></i> Previous
+                </button>
+                <button onclick="nextCard()" class="flex-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold py-3 px-6 rounded-xl shadow-sm transition-all flex justify-center items-center">
+                    Next <i data-lucide="arrow-right" class="w-5 h-5 ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Quiz View -->
+        <div id="view-quiz" class="hidden w-full max-w-3xl mx-auto">
+            <!-- Quiz Progress / Header -->
+            <div id="quiz-header" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-800">Knowledge Check</h2>
+                    <span id="quiz-counter" class="text-sm font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full">Question 1 of 10</span>
+                </div>
+                <!-- Progress bar -->
+                <div class="w-full bg-slate-100 rounded-full h-2">
+                    <div id="quiz-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 10%"></div>
+                </div>
+            </div>
+
+            <!-- Quiz Question Container -->
+            <div id="quiz-content" class="fade-in">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8 mb-6">
+                    <h3 id="quiz-question" class="text-lg md:text-xl font-semibold text-slate-800 mb-6 leading-relaxed">Question text?</h3>
+                    
+                    <button id="hint-btn" onclick="toggleHint()" class="mb-6 text-sm text-amber-600 hover:text-amber-700 flex items-center transition-colors bg-amber-50 px-3 py-1.5 rounded-lg font-medium">
+                        <i data-lucide="lightbulb" class="w-4 h-4 mr-1.5"></i> Show Hint
+                    </button>
+                    <div id="hint-text" class="hidden mb-6 p-4 bg-amber-50 border border-amber-100 rounded-xl text-sm text-amber-800 italic">
+                        Hint goes here.
+                    </div>
+
+                    <div id="quiz-options" class="space-y-3">
+                        <!-- Options injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Action & Feedback -->
+                <div id="quiz-feedback" class="hidden rounded-2xl p-6 mb-6 border">
+                    <div class="flex items-start">
+                        <div id="feedback-icon" class="mr-3 mt-1"></div>
+                        <div>
+                            <h4 id="feedback-title" class="font-bold text-lg mb-1">Result</h4>
+                            <p id="feedback-rationale" class="text-sm opacity-90 leading-relaxed">Rationale text.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button id="quiz-action-btn" onclick="handleQuizAction()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Submit Answer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quiz Results Container -->
+            <div id="quiz-results" class="hidden text-center bg-white rounded-2xl shadow-sm border border-slate-200 p-10 fade-in">
+                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i data-lucide="award" class="w-10 h-10 text-blue-600"></i>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-800 mb-2">Quiz Completed!</h2>
+                <p class="text-slate-500 mb-6">Here's how you did on the OWASP Top 10 concepts.</p>
+                
+                <div class="text-6xl font-black text-blue-600 mb-2" id="final-score">8/10</div>
+                <p class="text-lg font-medium text-slate-700 mb-8" id="final-message">Great job!</p>
+
+                <button onclick="restartQuiz()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-colors">
+                    Retake Quiz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Data Definitions ---
+
+        const rawFlashcards = [
+            { front: "OWASP Mission", back: "To improve the security of software worldwide as a global, non-profit, community-driven foundation." },
+            { front: "A01: Broken Access Control", back: "A vulnerability occurring when users can perform actions or access data beyond their intended permissions (e.g., viewing another user's profile)." },
+            { front: "Insecure Direct Object Reference (IDOR)", back: "A specific type of access control failure where an attacker modifies a database key or ID in a URL to access unauthorized data." },
+            { front: "Primary Fix for Access Control Failures", back: "Verify ownership and permissions server-side on every single request, and enforce a 'deny by default' policy." },
+            { front: "A02: Cryptographic Failures", back: "Failures involving inadequate protection of sensitive data, such as storing passwords in plain text or transmitting data over HTTP." },
+            { front: "Secure Password Storage Method", back: "Using a slow, salted hashing algorithm like bcrypt, Argon2, or scrypt." },
+            { front: "A03: Injection", back: "A vulnerability where an attacker sends hostile data to an interpreter (like SQL or OS shell) to execute unintended commands." },
+            { front: "Prevention of SQL Injection", back: "Using parameterized queries (prepared statements) to ensure user input is treated strictly as data, never as executable code." },
+            { front: "A04: Insecure Design", back: "A category focusing on risks related to design and architectural flaws, requiring threat modeling and secure design patterns before code is written." },
+            { front: "A05: Security Misconfiguration", back: "Vulnerabilities arising from insecure default settings, open cloud storage, exposed error messages, or unnecessary features enabled." },
+            { front: "A06: Vulnerable and Outdated Components", back: "The risk of using libraries or dependencies that have known, unpatched security flaws (CVEs)." },
+            { front: "Transitive Dependency", back: "A dependency of a dependency; a library that is included indirectly because a library you chose relies on it." },
+            { front: "A07: Identification and Authentication Failures", back: "Weaknesses in confirming user identity, such as permitting weak passwords, lacking Multi-Factor Authentication (MFA), or poor session management." },
+            { front: "A08: Software and Data Integrity Failures", back: "Failures involving trusting code or data from unverified sources, such as insecure deserialization or compromised CI/CD pipelines." },
+            { front: "A09: Security Logging and Monitoring Failures", back: "The lack of sufficient logging or monitoring, which prevents the detection of active breaches and increases attacker dwell time." },
+            { front: "A10: Server-Side Request Forgery (SSRF)", back: "An attack where the server is tricked into making HTTP requests to internal resources (like cloud metadata or internal APIs) on behalf of the attacker." },
+            { front: "Software Bill of Materials (SBOM)", back: "A comprehensive inventory of all software components and dependencies in an application, used to quickly identify risks when new CVEs are published." },
+            { front: "CVE (Common Vulnerabilities and Exposures)", back: "A unique identifier (e.g., CVE-2021-44228) assigned to a publicly known security vulnerability." },
+            { front: "CVSS (Common Vulnerability Scoring System)", back: "A standardized scoring system (0.0 to 10.0) used to rate the severity of a vulnerability." },
+            { front: "Critical CVSS Score Range", back: "9.0 – 10.0" },
+            { front: "Version Pinning", back: "The practice of specifying an exact version number (e.g., `requests==2.28.1`) in lock files to prevent automatic updates to potentially compromised versions." },
+            { front: "Supply Chain Attack", back: "An attack vector where malicious code is injected into a legitimate software update or dependency, compromising all downstream users." },
+            { front: "Dwell Time", back: "The average time between an attacker's entry into a system and their detection." },
+            { front: "Shift Left Principle", back: "The practice of addressing security early in the design and development phases, rather than waiting for testing or deployment." },
+            { front: "Defense in Depth", back: "Layering multiple security controls so that if one fails, others are in place to stop the attack." }
+        ];
+
+        const rawQuizData = [
+            {
+                question: "A logged-in user changes the URL in their browser from '/account?id=105' to '/account?id=106' and successfully views another user's private profile. Which specific vulnerability has occurred?",
+                options: [
+                    { text: "Insecure Direct Object Reference (IDOR)", rationale: "This describes the classic IDOR pattern, where the application uses a predictable identifier to access a record without verifying ownership.", isCorrect: true },
+                    { text: "Cross-Site Scripting (XSS)", rationale: "XSS involves injecting malicious scripts into a webpage, not unauthorized access to database records via URL manipulation.", isCorrect: false },
+                    { text: "SQL Injection (SQLi)", rationale: "While SQLi can lead to data theft, this scenario describes a failure in access control logic rather than injecting code into a query.", isCorrect: false },
+                    { text: "Security Misconfiguration", rationale: "This is a logic flaw in the application code regarding authorization, not a default setting or server configuration issue.", isCorrect: false }
+                ],
+                hint: "The user is manipulating a reference to a database object (the ID) directly in the URL."
+            },
+            {
+                question: "A developer is reviewing legacy code and finds a database query constructed like this: `query = \"SELECT * FROM users WHERE name = '\" + userInput + \"'\"`. What is the most effective fix for this security flaw?",
+                options: [
+                    { text: "Replace the string concatenation with a parameterized query.", rationale: "Parameterized queries separate the code from the data, ensuring the database engine never interprets the input as executable commands.", isCorrect: true },
+                    { text: "Use a blacklist to remove characters like single quotes from the input.", rationale: "Blacklisting is fragile and easily bypassed by determined attackers finding alternative encodings.", isCorrect: false },
+                    { text: "Encrypt the database connection using HTTPS.", rationale: "HTTPS protects data in transit but does nothing to prevent the database from executing malicious SQL commands.", isCorrect: false },
+                    { text: "Switch to a NoSQL database which is immune to injection.", rationale: "NoSQL databases have their own injection vulnerabilities; changing tech doesn't automatically fix untrusted input.", isCorrect: false }
+                ],
+                hint: "The goal is to ensure the database treats the user's input strictly as data, never as code."
+            },
+            {
+                question: "An audit reveals that a database stores user passwords using the MD5 algorithm. Why is this considered a 'Cryptographic Failure' (A02)?",
+                options: [
+                    { text: "MD5 is a fast, unsalted algorithm, making it vulnerable to brute-force and rainbow table attacks.", rationale: "Secure password storage requires a slow work factor and unique salts (like bcrypt) to prevent rapid guessing.", isCorrect: true },
+                    { text: "MD5 is an encryption algorithm, and passwords should only be hashed.", rationale: "MD5 is actually a hashing algorithm, but it is cryptographically broken and too fast for password security.", isCorrect: false },
+                    { text: "The database should store passwords in plain text for easier recovery.", rationale: "Storing passwords in plain text is the worst possible practice; hashing is required, but MD5 is the wrong algorithm.", isCorrect: false },
+                    { text: "MD5 hashes are too long and consume excessive database storage.", rationale: "Storage space is not the concern; the issue is that MD5 is computationally cheap to reverse via brute force.", isCorrect: false }
+                ],
+                hint: "Think about how quickly a modern computer can guess millions of passwords if the checking process is fast."
+            },
+            {
+                question: "Your application uses 'Library A', which depends on 'Library B', which depends on 'Library C'. A critical vulnerability is discovered in 'Library C'. Who is responsible for the risk to your application?",
+                options: [
+                    { text: "You are responsible, as it is a transitive dependency within your application's supply chain.", rationale: "You inherit the security posture of every component in your stack, regardless of how deep in the dependency tree it resides.", isCorrect: true },
+                    { text: "The maintainers of Library A, since they chose to use Library B.", rationale: "While Library A's maintainers should update, ultimate responsibility for your app's security lies with you.", isCorrect: false },
+                    { text: "The maintainers of Library C, but only if they have a paid support contract.", rationale: "Open source maintainers provide code 'as is'; the responsibility to assess and mitigate risk falls on the user.", isCorrect: false },
+                    { text: "No one, because transitive dependencies are not considered part of the attack surface.", rationale: "Attackers frequently target transitive dependencies specifically because they are often overlooked.", isCorrect: false }
+                ],
+                hint: "Consider the 'ingredients list' concept—if a sub-ingredient is spoiled, is the final dish safe to serve?"
+            },
+            {
+                question: "A vulnerability scan reports a flaw with a CVSS score of 9.8. According to standard response SLAs, what is the appropriate action?",
+                options: [
+                    { text: "Immediate emergency patching or mitigation.", rationale: "A score of 9.0–10.0 is 'Critical', implying the flaw is easily exploitable remotely with high impact, requiring immediate response.", isCorrect: true },
+                    { text: "Patching during the next scheduled monthly maintenance window.", rationale: "Monthly patching is acceptable for Medium or Low risks, but a Critical flaw leaves the organization exposed to imminent compromise.", isCorrect: false },
+                    { text: "Monitoring the logs for 30 days to see if it is exploited.", rationale: "Monitoring is passive; a Critical vulnerability requires active remediation before exploitation occurs.", isCorrect: false },
+                    { text: "Ignoring it if the attack vector is 'Network'.", rationale: "A 'Network' attack vector actually increases the risk, as it means the vulnerability can be exploited remotely.", isCorrect: false }
+                ],
+                hint: "This score is near the maximum of 10.0, indicating a 'Critical' fire-alarm level event."
+            },
+            {
+                question: "A new critical vulnerability (CVE) is announced in a popular logging library. What is the primary purpose of having an SBOM (Software Bill of Materials) in this scenario?",
+                options: [
+                    { text: "To instantly identify if your application contains the vulnerable component.", rationale: "An SBOM acts as a searchable inventory, allowing you to know in minutes if you are affected by a new CVE.", isCorrect: true },
+                    { text: "To automatically patch the code without developer intervention.", rationale: "An SBOM is a documentation/inventory tool; it does not perform actions like patching code itself.", isCorrect: false },
+                    { text: "To encrypt the library files to prevent exploitation.", rationale: "SBOMs are for visibility and management, not for applying encryption or active protection mechanisms.", isCorrect: false },
+                    { text: "To generate a blacklist of IP addresses attacking the library.", rationale: "Blocking IPs is a firewall function; the SBOM focuses on managing the internal composition of the software.", isCorrect: false }
+                ],
+                hint: "You need to know if the 'bad ingredient' is in your pantry before you can decide what to cook."
+            },
+            {
+                question: "Attackers are using a list of username/password pairs stolen from a compromised gaming forum to try and log into your corporate banking app. Which control best mitigates this 'Credential Stuffing' attack?",
+                options: [
+                    { text: "Enforcing Multi-Factor Authentication (MFA).", rationale: "Even if the attacker has the correct password (stolen elsewhere), they cannot provide the second factor (like a phone code), blocking the login.", isCorrect: true },
+                    { text: "Encrypting the database connection with TLS.", rationale: "TLS protects the password in transit but does not stop an attacker who already provides a valid password.", isCorrect: false },
+                    { text: "Hiding the login page on a secret URL.", rationale: "Security through obscurity is not effective; attackers use scanners to find endpoints regardless of where they are hidden.", isCorrect: false },
+                    { text: "Using a complex password policy (e.g., requiring special characters).", rationale: "Policy affects setting new passwords, but credential stuffing uses existing passwords reused from other sites.", isCorrect: false }
+                ],
+                hint: "If the attacker has the key (password), what mechanisms require a second, different type of key?"
+            },
+            {
+                question: "An attacker tricks a web server into sending a request to `http://169.254.169.254/latest/meta-data/` to retrieve cloud instance keys. Which vulnerability is being exploited?",
+                options: [
+                    { text: "Server-Side Request Forgery (SSRF)", rationale: "In SSRF, the server is manipulated into fetching internal or cloud-metadata resources that should be inaccessible externally.", isCorrect: true },
+                    { text: "Broken Access Control (BAC)", rationale: "While involving access, the specific mechanism of the server making an outbound request on behalf of the attacker defines SSRF.", isCorrect: false },
+                    { text: "Stored Cross-Site Scripting (XSS)", rationale: "This attack targets the server's backend infrastructure, not the browser of another user.", isCorrect: false },
+                    { text: "Insecure Deserialization", rationale: "This involves processing serialized data objects, whereas the scenario describes manipulating a URL fetch request.", isCorrect: false }
+                ],
+                hint: "The server is being forged into making a request to an internal IP address."
+            },
+            {
+                question: "A user triggers an error on a login page, and the application displays a full stack trace including the server version (Apache 2.4.49) and file paths. This is an example of which OWASP category?",
+                options: [
+                    { text: "Security Misconfiguration (A05)", rationale: "Verbose error messages are a classic misconfiguration; production systems should show generic errors to avoid leaking intel.", isCorrect: true },
+                    { text: "Injection (A03)", rationale: "Injection involves sending hostile data to an interpreter; this scenario is about the system revealing too much info in its response.", isCorrect: false },
+                    { text: "Vulnerable and Outdated Components (A06)", rationale: "While the server version might be outdated, the immediate issue is the exposure of that info via error handling.", isCorrect: false },
+                    { text: "Identification and Authentication Failures (A07)", rationale: "This category covers login logic failures, not the information leakage occurring when an error is triggered.", isCorrect: false }
+                ],
+                hint: "The system isn't broken, but it's 'talkative' in a way that helps attackers plan their next move."
+            },
+            {
+                question: "Why is it considered a security risk to define dependencies using open ranges like `requests>=2.0` instead of pinning them like `requests==2.28.1`?",
+                options: [
+                    { text: "It allows automatic updates to future versions that may contain new vulnerabilities or malicious code.", rationale: "Pinning ensures you only run tested code. Open ranges accept future updates, which might be 'poisoned' via supply chain attacks.", isCorrect: true },
+                    { text: "It prevents the application from ever receiving security updates.", rationale: "Actually, open ranges allow updates. The risk is that they allow unverified updates automatically.", isCorrect: false },
+                    { text: "It causes the CI/CD pipeline to fail because scanning tools cannot read symbols like '>='.", rationale: "Scanning tools can read these symbols; the issue is the operational and security risk of unpredictable code changes.", isCorrect: false },
+                    { text: "It violates the GPL license agreement of most open source libraries.", rationale: "Versioning syntax has no relation to software licensing terms.", isCorrect: false }
+                ],
+                hint: "If you don't lock the door (pin the version), anything that arrives later can walk right in."
+            }
+        ];
+
+        // --- App State ---
+        let flashcards = [...rawFlashcards];
+        let quizData = [...rawQuizData];
+        
+        // Flashcard State
+        let fcIndex = 0;
+        let isFlipped = false;
+
+        // Quiz State
+        let qIndex = 0;
+        let score = 0;
+        let selectedOptionIndex = null;
+        let quizState = 'answering'; // 'answering' or 'feedback'
+
+        // --- Tab Logic ---
+        function switchTab(tabId) {
+            const btnFlashcards = document.getElementById('tab-flashcards');
+            const btnQuiz = document.getElementById('tab-quiz');
+            const viewFlashcards = document.getElementById('view-flashcards');
+            const viewQuiz = document.getElementById('view-quiz');
+
+            if (tabId === 'flashcards') {
+                viewFlashcards.classList.remove('hidden');
+                viewQuiz.classList.add('hidden');
+                
+                // Styling active
+                btnFlashcards.classList.replace('text-slate-600', 'text-blue-700');
+                btnFlashcards.classList.replace('hover:text-blue-700', 'bg-white');
+                btnFlashcards.classList.add('bg-white', 'shadow-sm');
+                
+                btnQuiz.classList.replace('text-blue-700', 'text-slate-600');
+                btnQuiz.classList.replace('bg-white', 'hover:text-blue-700');
+                btnQuiz.classList.remove('shadow-sm');
+                
+            } else {
+                viewFlashcards.classList.add('hidden');
+                viewQuiz.classList.remove('hidden');
+                
+                // Styling active
+                btnQuiz.classList.replace('text-slate-600', 'text-blue-700');
+                btnQuiz.classList.replace('hover:text-blue-700', 'bg-white');
+                btnQuiz.classList.add('bg-white', 'shadow-sm');
+                
+                btnFlashcards.classList.replace('text-blue-700', 'text-slate-600');
+                btnFlashcards.classList.replace('bg-white', 'hover:text-blue-700');
+                btnFlashcards.classList.remove('shadow-sm');
+            }
+        }
+
+        // --- Flashcard Logic ---
+        function renderFlashcard() {
+            const inner = document.getElementById('flashcard-inner');
+            const front = document.getElementById('fc-front-text');
+            const back = document.getElementById('fc-back-text');
+            const counter = document.getElementById('fc-counter');
+
+            // Reset flip state without animation if moving to new card
+            if (isFlipped) {
+                inner.style.transition = 'none';
+                inner.classList.remove('rotate-y-180');
+                isFlipped = false;
+                // Force reflow
+                void inner.offsetWidth; 
+                inner.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1)';
+            }
+
+            front.textContent = flashcards[fcIndex].front;
+            back.textContent = flashcards[fcIndex].back;
+            counter.textContent = `${fcIndex + 1} / ${flashcards.length}`;
+        }
+
+        function flipCard() {
+            const inner = document.getElementById('flashcard-inner');
+            if (isFlipped) {
+                inner.classList.remove('rotate-y-180');
+            } else {
+                inner.classList.add('rotate-y-180');
+            }
+            isFlipped = !isFlipped;
+        }
+
+        function nextCard() {
+            fcIndex = (fcIndex + 1) % flashcards.length;
+            renderFlashcard();
+        }
+
+        function prevCard() {
+            fcIndex = (fcIndex - 1 + flashcards.length) % flashcards.length;
+            renderFlashcard();
+        }
+
+        function shuffleFlashcards() {
+            for (let i = flashcards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
+            }
+            fcIndex = 0;
+            renderFlashcard();
+        }
+
+        // --- Quiz Logic ---
+        function renderQuiz() {
+            const qData = quizData[qIndex];
+            document.getElementById('quiz-counter').textContent = `Question ${qIndex + 1} of ${quizData.length}`;
+            document.getElementById('quiz-progress-bar').style.width = `${((qIndex) / quizData.length) * 100}%`;
+            
+            document.getElementById('quiz-question').textContent = qData.question;
+            
+            // Reset hint
+            document.getElementById('hint-text').classList.add('hidden');
+            document.getElementById('hint-text').textContent = qData.hint;
+            document.getElementById('hint-btn').classList.remove('hidden');
+
+            // Render options
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            
+            // Note: Normally we'd shuffle options here, but to keep the rationale mapping perfect and simple, we'll display as-is. 
+            // The JSON already has plausible distractors.
+            
+            qData.options.forEach((opt, idx) => {
+                const optDiv = document.createElement('div');
+                optDiv.className = `border-2 border-slate-200 rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors flex items-center group`;
+                optDiv.onclick = () => selectOption(idx);
+                optDiv.id = `option-${idx}`;
+                
+                const radioCircle = document.createElement('div');
+                radioCircle.className = `w-5 h-5 rounded-full border-2 border-slate-300 mr-4 flex-shrink-0 group-hover:border-blue-400`;
+                radioCircle.id = `radio-${idx}`;
+
+                const textSpan = document.createElement('span');
+                textSpan.className = "text-slate-700 font-medium";
+                textSpan.textContent = opt.text;
+
+                optDiv.appendChild(radioCircle);
+                optDiv.appendChild(textSpan);
+                optionsContainer.appendChild(optDiv);
+            });
+
+            // Reset state
+            selectedOptionIndex = null;
+            quizState = 'answering';
+            const actionBtn = document.getElementById('quiz-action-btn');
+            actionBtn.textContent = 'Submit Answer';
+            actionBtn.disabled = true;
+            
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            
+            // Animate in
+            const content = document.getElementById('quiz-content');
+            content.classList.remove('fade-in');
+            void content.offsetWidth;
+            content.classList.add('fade-in');
+        }
+
+        function toggleHint() {
+            document.getElementById('hint-text').classList.toggle('hidden');
+            document.getElementById('hint-btn').classList.add('hidden');
+        }
+
+        function selectOption(idx) {
+            if (quizState !== 'answering') return;
+            
+            selectedOptionIndex = idx;
+            const qData = quizData[qIndex];
+            
+            // Visual reset
+            qData.options.forEach((_, i) => {
+                const div = document.getElementById(`option-${i}`);
+                const rad = document.getElementById(`radio-${i}`);
+                div.className = `border-2 border-slate-200 rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors flex items-center group`;
+                rad.className = `w-5 h-5 rounded-full border-2 border-slate-300 mr-4 flex-shrink-0 group-hover:border-blue-400`;
+                rad.innerHTML = '';
+            });
+
+            // Highlight selected
+            const selectedDiv = document.getElementById(`option-${idx}`);
+            const selectedRad = document.getElementById(`radio-${idx}`);
+            
+            selectedDiv.classList.replace('border-slate-200', 'border-blue-600');
+            selectedDiv.classList.replace('hover:border-blue-300', 'border-blue-600');
+            selectedDiv.classList.add('bg-blue-50');
+            
+            selectedRad.classList.replace('border-slate-300', 'border-blue-600');
+            selectedRad.classList.add('bg-blue-600', 'flex', 'items-center', 'justify-center');
+            selectedRad.innerHTML = '<div class="w-2 h-2 bg-white rounded-full"></div>';
+
+            document.getElementById('quiz-action-btn').disabled = false;
+        }
+
+        function handleQuizAction() {
+            if (quizState === 'answering') {
+                submitAnswer();
+            } else {
+                nextQuestion();
+            }
+        }
+
+        function submitAnswer() {
+            const qData = quizData[qIndex];
+            const selectedOpt = qData.options[selectedOptionIndex];
+            const isCorrect = selectedOpt.isCorrect;
+
+            if (isCorrect) score++;
+
+            // Style options to show correct/incorrect
+            qData.options.forEach((opt, i) => {
+                const div = document.getElementById(`option-${i}`);
+                div.onclick = null; // Disable clicks
+                div.classList.remove('cursor-pointer', 'hover:border-blue-300', 'hover:bg-blue-50');
+                
+                if (opt.isCorrect) {
+                    div.classList.add('border-green-500', 'bg-green-50');
+                    div.classList.remove('border-slate-200', 'border-blue-600', 'bg-blue-50');
+                } else if (i === selectedOptionIndex && !isCorrect) {
+                    div.classList.add('border-red-500', 'bg-red-50');
+                    div.classList.remove('border-slate-200', 'border-blue-600', 'bg-blue-50');
+                } else {
+                    div.classList.add('opacity-50');
+                }
+            });
+
+            // Show feedback
+            const feedbackBox = document.getElementById('quiz-feedback');
+            const fbTitle = document.getElementById('feedback-title');
+            const fbRationale = document.getElementById('feedback-rationale');
+            const fbIcon = document.getElementById('feedback-icon');
+
+            feedbackBox.classList.remove('hidden', 'bg-green-50', 'border-green-200', 'text-green-800', 'bg-red-50', 'border-red-200', 'text-red-800');
+            
+            if (isCorrect) {
+                feedbackBox.classList.add('bg-green-50', 'border-green-200', 'text-green-900');
+                fbTitle.textContent = "Correct!";
+                fbIcon.innerHTML = `<i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>`;
+            } else {
+                feedbackBox.classList.add('bg-red-50', 'border-red-200', 'text-red-900');
+                fbTitle.textContent = "Incorrect";
+                fbIcon.innerHTML = `<i data-lucide="x-circle" class="w-6 h-6 text-red-600"></i>`;
+            }
+            fbRationale.textContent = selectedOpt.rationale;
+            lucide.createIcons(); // Re-render icons dynamically injected
+
+            quizState = 'feedback';
+            
+            const actionBtn = document.getElementById('quiz-action-btn');
+            actionBtn.textContent = qIndex === quizData.length - 1 ? 'Finish Quiz' : 'Next Question';
+        }
+
+        function nextQuestion() {
+            if (qIndex < quizData.length - 1) {
+                qIndex++;
+                renderQuiz();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('quiz-header').classList.add('hidden');
+            document.getElementById('quiz-content').classList.add('hidden');
+            
+            const results = document.getElementById('quiz-results');
+            results.classList.remove('hidden');
+            
+            document.getElementById('final-score').textContent = `${score}/${quizData.length}`;
+            
+            const percentage = score / quizData.length;
+            let msg = "";
+            if (percentage >= 0.9) msg = "Excellent! You have a solid grasp of the OWASP Top 10.";
+            else if (percentage >= 0.7) msg = "Great job! A quick review of the flashcards will get you to 100%.";
+            else msg = "Good effort! Keep studying the flashcards to master these concepts.";
+            
+            document.getElementById('final-message').textContent = msg;
+        }
+
+        function restartQuiz() {
+            qIndex = 0;
+            score = 0;
+            
+            document.getElementById('quiz-results').classList.add('hidden');
+            document.getElementById('quiz-header').classList.remove('hidden');
+            document.getElementById('quiz-content').classList.remove('hidden');
+            
+            renderQuiz();
+        }
+
+        // --- Init ---
+        window.onload = () => {
+            lucide.createIcons();
+            renderFlashcard();
+            renderQuiz();
+            // Ensure Flashcards tab is active by default
+            switchTab('flashcards');
+        };
+
+    </script>
+</body>
+</html>

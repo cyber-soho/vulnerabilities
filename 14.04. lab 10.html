@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 10: Web Vulnerability Assessment Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        stone: {
+                            50: '#fafaf9',
+                            100: '#f5f5f4',
+                            200: '#e7e5e4',
+                            800: '#292524',
+                            900: '#1c1917',
+                        },
+                        accent: {
+                            light: '#fdba74', // Orange 300
+                            DEFAULT: '#f97316', // Orange 500
+                            dark: '#c2410c', // Orange 700
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+                        mono: ['Consolas', 'Monaco', 'Courier New', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Chart Container Styling Rules */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Tailwind max-w-xl approx */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        /* Custom Scrollbar for cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d6d3d1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a29e; 
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .code-block {
+            background-color: #292524;
+            color: #d6d3d1;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: 'Consolas', monospace;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #44403c;
+            color: #fff;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .copy-btn:hover {
+            background-color: #57534e;
+        }
+    </style>
+
+    <!-- Chosen Palette: Warm Neutrals (Stone) with Orange Accents (representing ZAP/Alerts) -->
+    <!-- Application Structure Plan: 
+         Designed as an "Interactive Lab Companion" or Dashboard.
+         - Top Bar: Lab Metadata & Progress.
+         - Sidebar (Desktop) / Top Nav (Mobile): Thematic navigation based on the lab workflow (Briefing -> Setup -> Operations -> Analysis).
+         - Main Content Area: Dynamic tabs showing content relevant to the current phase.
+         - Key Interactions: Checklists for setup verification, Copy-paste tools for payloads, Interactive Chart for risk analysis, and Cards for tool comparison.
+         - Why: The linear lab manual is transformed into a task-based workflow to keep students focused on the current step while maintaining context of the overall mission.
+    -->
+    <!-- Visualization & Content Choices:
+         - Findings Summary -> Goal: Analysis -> Method: Bar Chart (Chart.js) -> Interaction: Hover for details -> Justifies risk distribution visually.
+         - Payloads -> Goal: Inform/Action -> Method: Styled Code Blocks -> Interaction: Copy to Clipboard -> Facilitates the "Hands-on" manual verification steps.
+         - Process -> Goal: Inform -> Method: Step-by-step Tabs -> Interaction: Click to navigate -> Breaks down complex ZAP procedures into digestible chunks.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+</head>
+<body class="bg-stone-100 text-stone-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Legal Disclaimer Modal -->
+    <div id="disclaimer-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-stone-900 bg-opacity-90 backdrop-blur-sm px-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full p-8 border-t-4 border-red-600">
+            <h2 class="text-2xl font-bold text-red-700 mb-4">⚠️ LEGAL DISCLAIMER & ETHICAL NOTICE</h2>
+            <div class="space-y-4 text-stone-700 mb-6 overflow-y-auto max-h-[60vh]">
+                <p class="font-bold">READ BEFORE PROCEEDING</p>
+                <p>This laboratory exercise is designed strictly for **educational purposes** within a controlled academic environment.</p>
+                <p>Students must perform ALL activities **exclusively** on systems and targets they own, or on which they have received **explicit, written authorization** — in this case, the isolated lab environment provided by your instructor.</p>
+                <p class="bg-red-50 p-4 border-l-4 border-red-500 italic">Performing vulnerability scans, active probing, or any form of security testing against systems without explicit permission is **illegal** in most jurisdictions.</p>
+                <p>The instructor and the institution bear no responsibility for any misuse of the tools or techniques presented.</p>
+            </div>
+            <button onclick="acceptDisclaimer()" class="w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-3 px-6 rounded transition duration-200">
+                I Understand & Accept Responsibility
+            </button>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="flex-grow flex flex-col md:flex-row max-w-7xl mx-auto w-full shadow-xl bg-white hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="w-full md:w-64 bg-stone-800 text-stone-200 flex flex-col shrink-0">
+            <div class="p-6 border-b border-stone-700">
+                <h1 class="text-xl font-bold text-white tracking-wider">LAB 10 <span class="text-accent">ZAP</span></h1>
+                <p class="text-xs text-stone-400 mt-1">Web Vulnerability Assessment</p>
+                <div class="mt-4 bg-stone-700 rounded-full h-2 w-full">
+                    <div id="progress-bar" class="bg-accent h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <p class="text-xs text-right mt-1 text-stone-400"><span id="progress-text">0</span>% Complete</p>
+            </div>
+
+            <nav class="flex-1 overflow-y-auto py-4">
+                <button onclick="switchTab('briefing')" class="nav-btn w-full text-left px-6 py-3 hover:bg-stone-700 border-l-4 border-transparent transition-all active-nav" data-target="briefing">
+                    1. Mission Briefing
+                </button>
+                <button onclick="switchTab('preparation')" class="nav-btn w-full text-left px-6 py-3 hover:bg-stone-700 border-l-4 border-transparent transition-all" data-target="preparation">
+                    2. Preparation & Setup
+                </button>
+                <button onclick="switchTab('scanning')" class="nav-btn w-full text-left px-6 py-3 hover:bg-stone-700 border-l-4 border-transparent transition-all" data-target="scanning">
+                    3. ZAP Operations
+                </button>
+                <button onclick="switchTab('verification')" class="nav-btn w-full text-left px-6 py-3 hover:bg-stone-700 border-l-4 border-transparent transition-all" data-target="verification">
+                    4. Manual Verification
+                </button>
+                <button onclick="switchTab('analysis')" class="nav-btn w-full text-left px-6 py-3 hover:bg-stone-700 border-l-4 border-transparent transition-all" data-target="analysis">
+                    5. Analysis & Report
+                </button>
+            </nav>
+
+            <div class="p-4 border-t border-stone-700 text-xs text-stone-500">
+                <p>Est. Duration: 3 Hours</p>
+                <p>Lab Number: 10</p>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 bg-stone-50 overflow-y-auto h-screen relative">
+            
+            <!-- SECTION 1: BRIEFING -->
+            <div id="briefing" class="tab-content active p-8">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-800 mb-2">Mission Briefing</h2>
+                    <p class="text-stone-600">Introduction & Context for Web Vulnerability Scanning.</p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200">
+                        <h3 class="text-xl font-semibold mb-4 text-accent-dark">Context</h3>
+                        <p class="mb-4 text-stone-700 leading-relaxed">
+                            Web applications are top attack surfaces. According to <strong class="text-stone-900">OWASP</strong>, vulnerabilities like XSS and SQL Injection affect millions of apps.
+                        </p>
+                        <p class="mb-4 text-stone-700 leading-relaxed">
+                            In this lab, you will use <strong class="text-stone-900">OWASP ZAP (Zed Attack Proxy)</strong> to conduct a structured vulnerability assessment against <strong>DVWA</strong> (Damn Vulnerable Web Application).
+                        </p>
+                        <div class="bg-stone-100 p-4 rounded border-l-4 border-stone-800">
+                            <h4 class="font-bold mb-2">Learning Objectives</h4>
+                            <ul class="list-disc ml-5 space-y-1 text-sm">
+                                <li>Configure ZAP for active & passive scanning.</li>
+                                <li>Identify XSS, SQLi, and misconfigurations.</li>
+                                <li>Interpret scan results & reference CVE/CWE.</li>
+                                <li>Produce a professional report.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200">
+                        <h3 class="text-xl font-semibold mb-4 text-stone-800">Tool Intelligence: OWASP ZAP</h3>
+                        <p class="text-sm text-stone-600 mb-4">ZAP sits as a "Man-in-the-Middle" proxy between your browser and the web server.</p>
+                        
+                        <!-- CSS Diagram for Proxy Concept -->
+                        <div class="flex items-center justify-between bg-stone-50 p-6 rounded-lg border border-stone-200 text-center">
+                            <div class="flex flex-col items-center">
+                                <div class="text-4xl mb-2">🖥️</div>
+                                <span class="font-bold text-sm">Browser</span>
+                                <span class="text-xs text-stone-500">Firefox</span>
+                            </div>
+                            <div class="flex-1 border-b-2 border-dashed border-accent mx-2 relative">
+                                <span class="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs bg-stone-50 px-1 text-accent-dark font-mono">Traffic</span>
+                            </div>
+                            <div class="flex flex-col items-center p-2 bg-stone-800 text-white rounded shadow-lg z-10">
+                                <div class="text-2xl mb-1">⚡</div>
+                                <span class="font-bold text-xs">ZAP Proxy</span>
+                                <span class="text-[10px] text-stone-300">Port 8080</span>
+                            </div>
+                            <div class="flex-1 border-b-2 border-dashed border-accent mx-2 relative">
+                                <span class="absolute -top-3 left-1/2 transform -translate-x-1/2 text-xs bg-stone-50 px-1 text-accent-dark font-mono">Traffic</span>
+                            </div>
+                            <div class="flex flex-col items-center">
+                                <div class="text-4xl mb-2">🌐</div>
+                                <span class="font-bold text-sm">Target</span>
+                                <span class="text-xs text-stone-500">DVWA</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <button onclick="switchTab('preparation')" class="w-full py-3 bg-accent hover:bg-accent-dark text-white rounded font-bold shadow transition">
+                                Start Preparation Phase &rarr;
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: PREPARATION -->
+            <div id="preparation" class="tab-content p-8">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-800 mb-2">Phase 1: Preparation</h2>
+                    <p class="text-stone-600">Ensure your environment is correctly configured before scanning.</p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Environment Check -->
+                    <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                        <div class="bg-stone-100 px-6 py-4 border-b border-stone-200 flex justify-between items-center">
+                            <h3 class="font-bold text-stone-800">1.1 Environment Verification</h3>
+                            <span class="text-xs uppercase font-bold text-stone-500 tracking-wide">Interactive Checklist</span>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <label class="flex items-start space-x-3 cursor-pointer group">
+                                <input type="checkbox" class="task-checkbox h-5 w-5 mt-1 text-accent rounded border-stone-300 focus:ring-accent" onchange="updateProgress()">
+                                <div>
+                                    <span class="font-bold text-stone-800 group-hover:text-accent transition">Confirm Virtualization Platform</span>
+                                    <p class="text-sm text-stone-600">Ensure Kali Linux VM and Target VM are powered on and reachable.</p>
+                                </div>
+                            </label>
+                            <label class="flex items-start space-x-3 cursor-pointer group">
+                                <input type="checkbox" class="task-checkbox h-5 w-5 mt-1 text-accent rounded border-stone-300 focus:ring-accent" onchange="updateProgress()">
+                                <div>
+                                    <span class="font-bold text-stone-800 group-hover:text-accent transition">Access DVWA</span>
+                                    <p class="text-sm text-stone-600">Navigate to <code>http://192.168.56.101/dvwa</code> (or instructor IP). Login: <strong>admin / password</strong>.</p>
+                                </div>
+                            </label>
+                            <label class="flex items-start space-x-3 cursor-pointer group">
+                                <input type="checkbox" class="task-checkbox h-5 w-5 mt-1 text-accent rounded border-stone-300 focus:ring-accent" onchange="updateProgress()">
+                                <div>
+                                    <span class="font-bold text-stone-800 group-hover:text-accent transition">Set Security Level to LOW</span>
+                                    <p class="text-sm text-stone-600">Go to "DVWA Security" and set level to Low. Capture screenshot (Fig 1).</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- ZAP Config -->
+                    <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                        <div class="bg-stone-100 px-6 py-4 border-b border-stone-200">
+                            <h3 class="font-bold text-stone-800">1.2 ZAP & Browser Configuration</h3>
+                        </div>
+                        <div class="p-6 grid lg:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <div class="step relative pl-8 pb-4 border-l-2 border-stone-200">
+                                    <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-stone-400"></div>
+                                    <h4 class="font-bold text-sm uppercase text-stone-500 mb-1">Step 4</h4>
+                                    <p class="font-semibold">Launch OWASP ZAP</p>
+                                    <p class="text-sm text-stone-600 mt-1">Command: <code>zaproxy</code>. Choose "No, I do not want to persist this session."</p>
+                                </div>
+                                <div class="step relative pl-8 pb-4 border-l-2 border-stone-200">
+                                    <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-stone-400"></div>
+                                    <h4 class="font-bold text-sm uppercase text-stone-500 mb-1">Step 5</h4>
+                                    <p class="font-semibold">Configure Browser Proxy (Firefox)</p>
+                                    <div class="bg-stone-50 p-3 rounded text-sm font-mono mt-2 border border-stone-200">
+                                        Settings > Network Settings > Manual Proxy<br>
+                                        HTTP Proxy: 127.0.0.1<br>
+                                        Port: 8080<br>
+                                        [x] Also use for HTTPS
+                                    </div>
+                                </div>
+                                <div class="step relative pl-8 border-l-2 border-transparent">
+                                    <div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-stone-400"></div>
+                                    <h4 class="font-bold text-sm uppercase text-stone-500 mb-1">Step 6</h4>
+                                    <p class="font-semibold">Install ZAP SSL Certificate</p>
+                                    <p class="text-sm text-stone-600 mt-1">Navigate to <code>http://zap/</code>. Download cert. Import to browser Trusted Authorities.</p>
+                                </div>
+                            </div>
+                            <div class="bg-stone-800 text-stone-300 p-6 rounded-lg flex flex-col justify-center items-center text-center">
+                                <div class="text-3xl mb-3">📸</div>
+                                <h4 class="font-bold text-white mb-2">Screenshot Checkpoint</h4>
+                                <p class="text-sm mb-4">Capture the ZAP main interface with the proxy configured.</p>
+                                <span class="px-3 py-1 bg-stone-700 rounded text-xs font-mono text-accent-light">Figure 2 — ZAP Proxy Configuration</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: ZAP OPERATIONS -->
+            <div id="scanning" class="tab-content p-8">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-800 mb-2">Phase 2: Active Operations</h2>
+                    <p class="text-stone-600">Execute the scanning methodology: Observe, Map, Attack.</p>
+                </div>
+
+                <!-- Tabs for Scanning sub-steps -->
+                <div class="mb-6 border-b border-stone-200 flex space-x-6">
+                    <button class="sub-tab-btn pb-2 border-b-2 border-accent text-accent font-bold" onclick="switchSubTab('passive', this)">2.1 Passive Scan</button>
+                    <button class="sub-tab-btn pb-2 border-b-2 border-transparent text-stone-500 hover:text-stone-700" onclick="switchSubTab('spider', this)">2.2 Spidering</button>
+                    <button class="sub-tab-btn pb-2 border-b-2 border-transparent text-stone-500 hover:text-stone-700" onclick="switchSubTab('active-scan', this)">2.3 Active Scan</button>
+                </div>
+
+                <!-- Sub-tab: Passive -->
+                <div id="passive" class="sub-tab-content block animate-fade">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 mb-6">
+                        <div class="flex items-start space-x-4">
+                            <div class="p-3 bg-blue-100 text-blue-700 rounded-full">👀</div>
+                            <div>
+                                <h3 class="text-xl font-bold text-stone-800">Observing Without Touching</h3>
+                                <p class="text-stone-600 mt-2">Passive scanning monitors traffic without sending new requests. It's like reading a postcard someone else sent.</p>
+                            </div>
+                        </div>
+                        <div class="mt-6 bg-stone-50 p-4 rounded border border-stone-200">
+                            <h4 class="font-bold text-stone-800 mb-3">Action Required:</h4>
+                            <ol class="list-decimal ml-5 space-y-2 text-stone-700">
+                                <li>Browse DVWA manually through the proxied browser.</li>
+                                <li>Visit: Home, SQL Injection, XSS (Reflected), File Upload.</li>
+                                <li>Watch the <strong>Sites Tree</strong> populate in ZAP.</li>
+                                <li>Check the <strong>Alerts</strong> tab for flags (missing headers, cookie flags).</li>
+                            </ol>
+                        </div>
+                        <div class="mt-4 text-xs text-right text-stone-400">Ref: Screenshot Figure 3</div>
+                    </div>
+                </div>
+
+                <!-- Sub-tab: Spider -->
+                <div id="spider" class="sub-tab-content hidden animate-fade">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 mb-6">
+                        <div class="flex items-start space-x-4">
+                            <div class="p-3 bg-purple-100 text-purple-700 rounded-full">🕷️</div>
+                            <div>
+                                <h3 class="text-xl font-bold text-stone-800">The Spider (Crawler)</h3>
+                                <p class="text-stone-600 mt-2">Automatically discovers all pages and endpoints. It "clicks every link".</p>
+                            </div>
+                        </div>
+                        <div class="mt-6 grid md:grid-cols-2 gap-6">
+                            <div class="p-4 border border-stone-200 rounded hover:border-accent transition cursor-default">
+                                <h4 class="font-bold mb-2">Configuration</h4>
+                                <ul class="text-sm space-y-2 text-stone-600">
+                                    <li>Right-click DVWA in Sites tree</li>
+                                    <li>Attack > <strong>Spider</strong></li>
+                                    <li>Leave defaults, Start Scan</li>
+                                </ul>
+                            </div>
+                            <div class="p-4 border border-stone-200 rounded">
+                                <h4 class="font-bold mb-2">Outcome</h4>
+                                <p class="text-sm text-stone-600">Wait 1-2 minutes. Capture the Spider tab results for <strong>Figure 4</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sub-tab: Active Scan -->
+                <div id="active-scan" class="sub-tab-content hidden animate-fade">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 mb-6 border-l-4 border-l-red-500">
+                        <div class="flex items-start space-x-4">
+                            <div class="p-3 bg-red-100 text-red-700 rounded-full">⚔️</div>
+                            <div>
+                                <h3 class="text-xl font-bold text-stone-800">Active Scan (The Attack)</h3>
+                                <p class="text-stone-600 mt-2">ZAP sends crafted payloads to provoke errors. <span class="font-bold text-red-600">Loud and detectable.</span></p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 space-y-4">
+                            <div class="bg-stone-900 text-stone-100 p-4 rounded font-mono text-sm">
+                                <p class="text-stone-400">// Vulnerability Types Tested:</p>
+                                <ul class="list-disc ml-5 mt-2 space-y-1">
+                                    <li>SQL Injection (SQLi)</li>
+                                    <li>Cross-Site Scripting (XSS)</li>
+                                    <li>Path Traversal</li>
+                                    <li>Command Injection</li>
+                                </ul>
+                            </div>
+
+                            <div class="flex justify-between items-center bg-stone-100 p-4 rounded border border-stone-200">
+                                <div>
+                                    <span class="font-bold text-stone-800">Execution:</span>
+                                    <span class="text-stone-600 ml-2">Right-click DVWA > Attack > Active Scan (Enable Recurse).</span>
+                                </div>
+                                <div class="text-xs font-bold text-accent px-2 py-1 bg-white border border-accent rounded">
+                                    Duration: 10-20 mins
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: MANUAL VERIFICATION -->
+            <div id="verification" class="tab-content p-8">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-800 mb-2">Phase 3: Manual Verification</h2>
+                    <p class="text-stone-600">Never trust a scanner blindly. Verify findings manually.</p>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-8">
+                    
+                    <!-- SQLi Card -->
+                    <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                        <div class="bg-orange-50 px-6 py-4 border-b border-orange-100">
+                            <h3 class="font-bold text-orange-900">Step 11: SQL Injection (SQLi)</h3>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <p class="text-sm text-stone-600">Navigate to <strong>SQL Injection</strong> module. Attempt to bypass authentication or dump data.</p>
+                            
+                            <div>
+                                <label class="text-xs font-bold text-stone-500 uppercase">Payload 1: Authentication Bypass</label>
+                                <div class="code-block mt-1">
+                                    1' OR '1'='1
+                                    <button class="copy-btn" onclick="copyToClipboard(this, `1' OR '1'='1`)">Copy</button>
+                                </div>
+                                <p class="text-xs text-stone-500 mt-1">Expected: Returns ALL user records.</p>
+                            </div>
+
+                            <div>
+                                <label class="text-xs font-bold text-stone-500 uppercase">Payload 2: Data Dump</label>
+                                <div class="code-block mt-1">
+                                    1' UNION SELECT user, password FROM users-- -
+                                    <button class="copy-btn" onclick="copyToClipboard(this, `1' UNION SELECT user, password FROM users-- -`)">Copy</button>
+                                </div>
+                                <p class="text-xs text-stone-500 mt-1">Expected: Dumps usernames and password hashes.</p>
+                            </div>
+                            
+                            <div class="mt-4 pt-4 border-t border-stone-100 text-center">
+                                <span class="text-xs bg-stone-200 px-2 py-1 rounded text-stone-600">Snapshot: Figure 5</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- XSS Card -->
+                    <div class="bg-white rounded-lg shadow-sm border border-stone-200 overflow-hidden">
+                        <div class="bg-blue-50 px-6 py-4 border-b border-blue-100">
+                            <h3 class="font-bold text-blue-900">Step 12: Reflected XSS</h3>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <p class="text-sm text-stone-600">Navigate to <strong>XSS (Reflected)</strong> module. Attempt to execute JavaScript.</p>
+                            
+                            <div>
+                                <label class="text-xs font-bold text-stone-500 uppercase">Payload: Alert Box</label>
+                                <div class="code-block mt-1">
+                                    &lt;script&gt;alert('XSS-TEST')&lt;/script&gt;
+                                    <button class="copy-btn" onclick="copyToClipboard(this, `<script>alert('XSS-TEST')<\/script>`)">Copy</button>
+                                </div>
+                                <p class="text-xs text-stone-500 mt-1">Expected: Browser popup displaying "XSS-TEST".</p>
+                            </div>
+
+                            <div class="bg-blue-50 p-3 rounded text-sm text-blue-800 border border-blue-100 mt-4">
+                                <strong>Impact:</strong> Attackers can steal session cookies, redirect users, or perform actions on their behalf.
+                            </div>
+
+                            <div class="mt-4 pt-4 border-t border-stone-100 text-center">
+                                <span class="text-xs bg-stone-200 px-2 py-1 rounded text-stone-600">Snapshot: Figure 6</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- SECTION 5: ANALYSIS & REPORT -->
+            <div id="analysis" class="tab-content p-8">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-stone-800 mb-2">Phase 4: Analysis & Reporting</h2>
+                    <p class="text-stone-600">Synthesize findings and generate the deliverable.</p>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Findings Visualization -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200">
+                        <h3 class="font-bold text-stone-800 mb-4">Findings Classification Example</h3>
+                        <!-- Chart Container: Wrapped, Max Width, Centered, Controlled Height -->
+                        <div class="chart-container">
+                            <canvas id="riskChart"></canvas>
+                        </div>
+                        <p class="text-xs text-center text-stone-500 mt-2">Example distribution based on lab data</p>
+                    </div>
+
+                    <!-- Findings Table -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200 overflow-x-auto">
+                        <h3 class="font-bold text-stone-800 mb-4">Findings Table Structure</h3>
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-stone-100 text-stone-700 uppercase">
+                                <tr>
+                                    <th class="px-4 py-3 rounded-l">Risk</th>
+                                    <th class="px-4 py-3">Vulnerability</th>
+                                    <th class="px-4 py-3 rounded-r">CWE</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-100">
+                                <tr class="hover:bg-stone-50">
+                                    <td class="px-4 py-3 font-bold text-red-600">High</td>
+                                    <td class="px-4 py-3">SQL Injection</td>
+                                    <td class="px-4 py-3 font-mono text-xs">CWE-89</td>
+                                </tr>
+                                <tr class="hover:bg-stone-50">
+                                    <td class="px-4 py-3 font-bold text-red-600">High</td>
+                                    <td class="px-4 py-3">Reflected XSS</td>
+                                    <td class="px-4 py-3 font-mono text-xs">CWE-79</td>
+                                </tr>
+                                <tr class="hover:bg-stone-50">
+                                    <td class="px-4 py-3 font-bold text-orange-500">Medium</td>
+                                    <td class="px-4 py-3">Missing CSP Header</td>
+                                    <td class="px-4 py-3 font-mono text-xs">CWE-693</td>
+                                </tr>
+                                <tr class="hover:bg-stone-50">
+                                    <td class="px-4 py-3 font-bold text-blue-500">Low</td>
+                                    <td class="px-4 py-3">Cookie w/o HttpOnly</td>
+                                    <td class="px-4 py-3 font-mono text-xs">CWE-1004</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Reporting & Remediation -->
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-stone-200">
+                        <h3 class="font-bold text-stone-800 mb-2">Remediation Strategy</h3>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="bg-stone-50 p-4 rounded border-l-4 border-red-500">
+                                <h4 class="font-bold">Fixing SQLi</h4>
+                                <p class="text-sm text-stone-600 mt-1">Use <strong>Prepared Statements</strong> (Parameterized Queries). Never concatenate user input directly into SQL strings.</p>
+                            </div>
+                            <div class="bg-stone-50 p-4 rounded border-l-4 border-red-500">
+                                <h4 class="font-bold">Fixing XSS</h4>
+                                <p class="text-sm text-stone-600 mt-1"><strong>Encode</strong> all user-supplied output before rendering. Sanitize input where possible.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-stone-800 text-stone-200 p-6 rounded-lg">
+                        <h3 class="font-bold text-white mb-4">Final Deliverable Checklist</h3>
+                        <div class="grid sm:grid-cols-2 gap-2 text-sm">
+                            <div class="flex items-center">
+                                <span class="w-4 h-4 border border-stone-500 mr-2 rounded-sm"></span> Brief Introduction
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-4 h-4 border border-stone-500 mr-2 rounded-sm"></span> Findings Summary Table
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-4 h-4 border border-stone-500 mr-2 rounded-sm"></span> 2+ Findings Detailed
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-4 h-4 border border-stone-500 mr-2 rounded-sm"></span> Screenshots (Labelled)
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-4 h-4 border border-stone-500 mr-2 rounded-sm"></span> Remediation Steps
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-4 h-4 border border-stone-500 mr-2 rounded-sm"></span> Conclusion
+                            </div>
+                        </div>
+                        <p class="mt-4 text-xs text-stone-400">Format: PDF, Max 3 Pages A4.</p>
+                    </div>
+                    
+                    <!-- Alternative Tools (Bonus) -->
+                    <div class="mt-8">
+                         <h3 class="font-bold text-stone-800 mb-4">Alternative Arsenal</h3>
+                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                             <div class="p-3 bg-white border border-stone-200 rounded text-center hover:bg-stone-50 transition">
+                                 <div class="font-bold text-stone-800">Nikto</div>
+                                 <div class="text-xs text-stone-500">Server misconfig scanner</div>
+                             </div>
+                             <div class="p-3 bg-white border border-stone-200 rounded text-center hover:bg-stone-50 transition">
+                                 <div class="font-bold text-stone-800">Wapiti</div>
+                                 <div class="text-xs text-stone-500">Black-box scanner</div>
+                             </div>
+                             <div class="p-3 bg-white border border-stone-200 rounded text-center hover:bg-stone-50 transition">
+                                 <div class="font-bold text-stone-800">Arachni</div>
+                                 <div class="text-xs text-stone-500">Feature-rich framework</div>
+                             </div>
+                             <div class="p-3 bg-white border border-stone-200 rounded text-center hover:bg-stone-50 transition">
+                                 <div class="font-bold text-stone-800">Skipfish</div>
+                                 <div class="text-xs text-stone-500">Fast reconnaissance</div>
+                             </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // State Management
+        const state = {
+            currentTab: 'briefing',
+            checklistProgress: 0
+        };
+
+        // DOM Elements
+        const modal = document.getElementById('disclaimer-modal');
+        const appContainer = document.getElementById('app-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        
+        // Chart Instance
+        let riskChartInstance = null;
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait for user to accept disclaimer
+        });
+
+        // 1. Disclaimer Acceptance
+        function acceptDisclaimer() {
+            modal.style.opacity = '0';
+            setTimeout(() => {
+                modal.style.display = 'none';
+                appContainer.classList.remove('hidden');
+                appContainer.classList.add('flex'); // Make flex explicitly
+                // Initialize Chart when app becomes visible
+                initChart();
+            }, 300);
+        }
+
+        // 2. Navigation Logic
+        function switchTab(tabId) {
+            // Update State
+            state.currentTab = tabId;
+
+            // Update Tab Content
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+
+            // Update Sidebar Buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if(btn.dataset.target === tabId) {
+                    btn.classList.add('bg-stone-700', 'border-accent');
+                    btn.classList.remove('border-transparent');
+                } else {
+                    btn.classList.remove('bg-stone-700', 'border-accent');
+                    btn.classList.add('border-transparent');
+                }
+            });
+            
+            // Scroll to top
+            document.querySelector('main').scrollTop = 0;
+        }
+
+        function switchSubTab(subTabId, btnElement) {
+            // Hide all sub-tabs
+            document.getElementById('passive').classList.add('hidden');
+            document.getElementById('spider').classList.add('hidden');
+            document.getElementById('active-scan').classList.add('hidden');
+            
+            // Show target
+            const target = document.getElementById(subTabId);
+            target.classList.remove('hidden');
+            target.classList.add('block');
+
+            // Reset buttons
+            document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+                btn.classList.remove('border-accent', 'text-accent', 'font-bold');
+                btn.classList.add('border-transparent', 'text-stone-500');
+            });
+
+            // Active button
+            btnElement.classList.remove('border-transparent', 'text-stone-500');
+            btnElement.classList.add('border-accent', 'text-accent', 'font-bold');
+        }
+
+        // 3. Checklist Progress Logic
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('.task-checkbox');
+            const total = checkboxes.length;
+            const checked = Array.from(checkboxes).filter(cb => cb.checked).length;
+            
+            const percentage = Math.round((checked / total) * 100);
+            
+            progressBar.style.width = `${percentage}%`;
+            progressText.innerText = percentage;
+
+            if (percentage === 100) {
+                progressBar.classList.remove('bg-accent');
+                progressBar.classList.add('bg-green-500');
+            }
+        }
+
+        // 4. Utility: Copy to Clipboard
+        function copyToClipboard(btn, text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = "Copied!";
+                btn.classList.add('bg-green-600');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.remove('bg-green-600');
+                }, 2000);
+            });
+        }
+
+        // 5. Chart.js Implementation
+        function initChart() {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            
+            if (riskChartInstance) riskChartInstance.destroy();
+
+            riskChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['SQL Injection', 'Reflected XSS', 'Missing CSP', 'Cookie w/o HttpOnly'],
+                    datasets: [{
+                        label: 'Risk Severity',
+                        data: [3, 3, 2, 1], // Mapped High=3, Med=2, Low=1 for viz
+                        backgroundColor: [
+                            'rgba(220, 38, 38, 0.8)', // Red
+                            'rgba(220, 38, 38, 0.8)', // Red
+                            'rgba(249, 115, 22, 0.8)', // Orange
+                            'rgba(59, 130, 246, 0.8)'  // Blue
+                        ],
+                        borderColor: [
+                            'rgba(220, 38, 38, 1)',
+                            'rgba(220, 38, 38, 1)',
+                            'rgba(249, 115, 22, 1)',
+                            'rgba(59, 130, 246, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Vital for custom container sizing
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    if(value === 3) return 'High';
+                                    if(value === 2) return 'Medium';
+                                    if(value === 1) return 'Low';
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const labels = ['Low', 'Medium', 'High'];
+                                    return 'Severity: ' + labels[context.raw - 1];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
+
+
+

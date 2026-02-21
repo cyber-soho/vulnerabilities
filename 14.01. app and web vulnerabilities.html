@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cybersecurity Fundamentals: Managing Vulnerabilities</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Primary Background: Stone-50 (#FAFAF9) -->
+    <!-- Text: Stone-900 (#1C1917) -->
+    <!-- Accents: Amber-600, Rose-600, Emerald-600 (Severity Levels) -->
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        stone: {
+                            50: '#fafaf9',
+                            100: '#f5f5f4',
+                            200: '#e7e5e4',
+                            800: '#292524',
+                            900: '#1c1917',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Chart Container Styles to meet strict requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Hide scrollbar for clean UI in side-scrollers if used */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Transition classes */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tree Diagram Lines */
+        .tree-line {
+            position: relative;
+        }
+        .tree-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 100%;
+            background-color: #cbd5e1;
+            transform: translateX(-50%);
+            z-index: 0;
+        }
+    </style>
+    <!-- Application Structure Plan:
+         Designed as a "Security Operations Center" (SOC) Dashboard.
+         - Sidebar Navigation: Allows non-linear exploration of the 4 main modules.
+         - Module 1: Threat Landscape (OWASP Top 10 Overview).
+         - Module 2: Vulnerability Lab (Deep dive into BAC, Crypto, Injection with interactive sims).
+         - Module 3: Supply Chain (Visualizing the 3rd party risk and dependency chains).
+         - Module 4: Defense Protocol (Management strategies, CVSS, and Glossary).
+         Rationale: Breaking the report into "Threats" vs "Defense" vs "Mechanics" helps users build a mental model of problem -> mechanism -> solution.
+    -->
+    <!-- Visualization & Content Choices:
+         - Doughnut Chart: To visualize the 80/20 code composition rule.
+         - Interactive Grid: For OWASP Top 10, allowing users to focus on one item at a time.
+         - Text-based Simulators: For SQL Injection and Password Hashing (simulating logic without backend).
+         - DOM Tree Visualizer: For Dependency Chains (HTML/CSS) to show transitive risks.
+         - Bar Chart: For CVSS Severity bands.
+         - Interactive Cyclical Diagram: For the Scan-Fix-Rescan lifecycle.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-stone-50 text-stone-900 font-sans antialiased h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-stone-200 flex flex-col z-20 shadow-sm">
+        <div class="p-6 border-b border-stone-100 flex justify-between items-center md:block">
+            <div>
+                <h1 class="text-xl font-bold text-stone-900 tracking-tight">Cyber<span class="text-rose-600">Shield</span></h1>
+                <p class="text-xs text-stone-500 mt-1">Vuln. Management Fundamentals</p>
+            </div>
+            <button id="mobile-menu-btn" class="md:hidden text-stone-500 hover:text-stone-900 focus:outline-none">
+                <span class="text-2xl">☰</span>
+            </button>
+        </div>
+        
+        <nav id="main-nav" class="flex-1 overflow-y-auto hidden md:block transition-all duration-300">
+            <ul class="p-4 space-y-2">
+                <li>
+                    <button onclick="navigateTo('dashboard')" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 transition-colors bg-stone-100 text-rose-700 font-medium" data-target="dashboard">
+                        <span>📊</span>
+                        <span>Overview</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('owasp')" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors" data-target="owasp">
+                        <span>💀</span>
+                        <span>OWASP Top 10</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('lab')" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors" data-target="lab">
+                        <span>🧪</span>
+                        <span>Vulnerability Lab</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('supply')" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors" data-target="supply">
+                        <span>📦</span>
+                        <span>Supply Chain Risk</span>
+                    </button>
+                </li>
+                <li>
+                    <button onclick="navigateTo('defense')" class="nav-btn w-full text-left px-4 py-3 rounded-lg flex items-center space-x-3 text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors" data-target="defense">
+                        <span>🛡️</span>
+                        <span>Defense Strategies</span>
+                    </button>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="p-4 border-t border-stone-100 text-xs text-stone-400">
+            <p>© Cyber.SoHo Day 14</p>
+            <p class="mt-1">Interactive Learning Module</p>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto relative bg-stone-50 scroll-smooth" id="main-scroll">
+        
+        <!-- Header for Mobile -->
+        <div class="md:hidden h-16"></div> 
+
+        <!-- VIEW: DASHBOARD / OVERVIEW -->
+        <section id="dashboard" class="view-section p-6 md:p-10 max-w-7xl mx-auto fade-in">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-stone-900 mb-2">Security Overview</h2>
+                <p class="text-stone-600 max-w-3xl leading-relaxed">
+                    Welcome to the <strong>Managing Vulnerabilities</strong> interactive module. 
+                    Security is not about elite hackers cracking codes; it's about managing ordinary human mistakes.
+                    Use this dashboard to explore the <strong>OWASP Top 10</strong>, understand <strong>Third-Party Risks</strong>, and learn the defense strategies required for modern web applications.
+                </p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+                <!-- Card 1: The Core Question -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-stone-800">The Core Question</h3>
+                        <span class="text-2xl">🤔</span>
+                    </div>
+                    <p class="text-stone-600 mb-4 italic">"Who built the apps you use every day — and did they build them right?"</p>
+                    <div class="mt-auto pt-4 border-t border-stone-100">
+                        <span class="text-sm font-medium text-rose-600">Goal: Find, Name, Manage mistakes.</span>
+                    </div>
+                </div>
+
+                <!-- Card 2: OWASP Definition -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-stone-800">Standard</h3>
+                        <span class="text-2xl">🌐</span>
+                    </div>
+                    <p class="text-stone-600 mb-2"><strong>OWASP</strong> is the global reference standard.</p>
+                    <p class="text-sm text-stone-500">The Top 10 is the "Most Wanted" list for software flaws, used by developers, auditors, and compliance teams worldwide.</p>
+                </div>
+
+                <!-- Card 3: Code Composition Chart -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-stone-200 flex flex-col">
+                    <h3 class="text-lg font-semibold text-stone-800 mb-2">Modern App Reality</h3>
+                    <div class="flex-1 flex items-center justify-center">
+                        <div class="chart-container" style="height: 180px; max-height: 180px;">
+                            <canvas id="compositionChart"></canvas>
+                        </div>
+                    </div>
+                    <p class="text-xs text-center text-stone-500 mt-2">Vulnerabilities can exist in 100% of the stack.</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button onclick="navigateTo('owasp')" class="group bg-gradient-to-br from-stone-800 to-stone-900 text-white p-8 rounded-xl shadow-md hover:shadow-lg transition-all text-left">
+                    <h3 class="text-xl font-bold mb-2 group-hover:text-rose-400 transition-colors">Explore OWASP Top 10 &rarr;</h3>
+                    <p class="text-stone-400 text-sm">Dive into the 2021 list of most critical web application security risks.</p>
+                </button>
+                <button onclick="navigateTo('supply')" class="group bg-white border border-stone-200 p-8 rounded-xl shadow-sm hover:border-rose-300 hover:shadow-md transition-all text-left">
+                    <h3 class="text-xl font-bold text-stone-900 mb-2 group-hover:text-rose-600 transition-colors">Analyze Supply Chain &rarr;</h3>
+                    <p class="text-stone-500 text-sm">Visualize how third-party dependencies introduce hidden risks.</p>
+                </button>
+            </div>
+        </section>
+
+        <!-- VIEW: OWASP TOP 10 -->
+        <section id="owasp" class="view-section hidden p-6 md:p-10 max-w-7xl mx-auto fade-in">
+            <div class="mb-6 border-b border-stone-200 pb-6">
+                <h2 class="text-3xl font-bold text-stone-900 mb-2">OWASP Top 10 (2021)</h2>
+                <p class="text-stone-600 max-w-4xl">
+                    This section details the 10 most critical web application security risks. 
+                    Remember: <strong>A01</strong> doesn't mean "easiest"; it means <strong>most prevalent</strong>. 
+                    Attackers often chain these vulnerabilities together. Click on any card below to reveal details.
+                </p>
+            </div>
+
+            <!-- Filter Controls (Visual Only for now as we show all) -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <span class="px-3 py-1 bg-stone-200 text-stone-700 rounded-full text-xs font-semibold uppercase tracking-wide">Filter:</span>
+                <button class="px-3 py-1 bg-rose-600 text-white rounded-full text-xs font-medium shadow-sm">All Risks</button>
+                <button class="px-3 py-1 bg-white border border-stone-300 text-stone-600 rounded-full text-xs font-medium hover:bg-stone-50">Access Control</button>
+                <button class="px-3 py-1 bg-white border border-stone-300 text-stone-600 rounded-full text-xs font-medium hover:bg-stone-50">Cryptographic</button>
+                <button class="px-3 py-1 bg-white border border-stone-300 text-stone-600 rounded-full text-xs font-medium hover:bg-stone-50">Injection</button>
+            </div>
+
+            <!-- OWASP Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4" id="owasp-grid">
+                <!-- Cards injected by JS -->
+            </div>
+        </section>
+
+        <!-- VIEW: VULNERABILITY LAB -->
+        <section id="lab" class="view-section hidden p-6 md:p-10 max-w-7xl mx-auto fade-in">
+            <div class="mb-8 border-b border-stone-200 pb-6">
+                <h2 class="text-3xl font-bold text-stone-900 mb-2">Vulnerability Lab</h2>
+                <p class="text-stone-600">
+                    Interactive demonstrations of the "Big Three" vulnerabilities: Broken Access Control (IDOR), Cryptographic Failures, and Injection.
+                    See the difference between secure and insecure implementations.
+                </p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex space-x-4 mb-6 border-b border-stone-200">
+                <button onclick="switchLab('idor')" class="lab-tab active-tab px-4 py-2 text-sm font-medium border-b-2 border-rose-600 text-rose-600">Broken Access (IDOR)</button>
+                <button onclick="switchLab('crypto')" class="lab-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-stone-500 hover:text-stone-800">Cryptography</button>
+                <button onclick="switchLab('sqli')" class="lab-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-stone-500 hover:text-stone-800">Injection (SQLi)</button>
+            </div>
+
+            <!-- LAB: IDOR -->
+            <div id="lab-idor" class="lab-content grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold text-stone-800 mb-4">The IDOR Pattern</h3>
+                    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <p class="text-sm text-stone-600 mb-4">
+                            <strong>Insecure Direct Object Reference (IDOR)</strong> happens when an application uses input (like an ID in a URL) to access a database record without checking if the user <em>owns</em> that record.
+                        </p>
+                        <div class="bg-stone-100 p-4 rounded font-mono text-sm mb-4">
+                            GET /profile?id=<span class="text-rose-600 font-bold" id="idor-url-id">1001</span>
+                        </div>
+                        
+                        <div class="flex items-center space-x-4 mb-6">
+                            <label class="text-sm font-semibold">Change ID:</label>
+                            <input type="number" id="idor-input" value="1001" class="border border-stone-300 rounded px-2 py-1 w-24" oninput="updateIdor()">
+                        </div>
+
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between p-3 border rounded bg-white">
+                                <span class="font-semibold text-stone-700">Insecure App:</span>
+                                <span id="idor-result-insecure" class="text-xs px-2 py-1 rounded bg-green-100 text-green-800">Access Granted</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 border rounded bg-white">
+                                <span class="font-semibold text-stone-700">Secure App:</span>
+                                <span id="idor-result-secure" class="text-xs px-2 py-1 rounded bg-green-100 text-green-800">Access Granted</span>
+                            </div>
+                        </div>
+                        <p id="idor-explanation" class="mt-4 text-xs text-stone-500">Try changing the ID to 1002.</p>
+                    </div>
+                </div>
+                <div class="bg-stone-900 text-stone-300 p-6 rounded-xl font-mono text-sm overflow-x-auto">
+                    <h4 class="text-stone-500 mb-2 uppercase tracking-widest text-xs">Server Logic</h4>
+                    <pre>
+// INSECURE
+function getProfile(id) {
+  return db.query("SELECT * FROM users WHERE id = " + id);
+  // ⚠️ No ownership check!
+}
+
+// SECURE
+function getProfile(id, currentUser) {
+  if (id != currentUser.id) {
+    return <span class="text-rose-400">ERROR_403_FORBIDDEN</span>;
+  }
+  return db.query(...);
+}
+                    </pre>
+                </div>
+            </div>
+
+            <!-- LAB: CRYPTO -->
+            <div id="lab-crypto" class="lab-content hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold text-stone-800 mb-4">Plain Text vs. Hashing</h3>
+                    <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                        <p class="text-sm text-stone-600 mb-4">
+                            Never store passwords in plain text. Use a slow, salted hash like <strong>bcrypt</strong> or <strong>Argon2</strong>.
+                        </p>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-semibold mb-1">Enter Password:</label>
+                            <input type="text" id="crypto-input" value="pizza4life" class="border border-stone-300 rounded px-3 py-2 w-full" oninput="updateCrypto()">
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <span class="text-xs text-rose-600 font-bold uppercase">❌ Wrong (Plain Text DB)</span>
+                                <div class="bg-red-50 border border-red-100 p-3 rounded font-mono text-sm text-red-800 break-all" id="crypto-plain">pizza4life</div>
+                            </div>
+                            <div>
+                                <span class="text-xs text-emerald-600 font-bold uppercase">✅ Right (Bcrypt Hash)</span>
+                                <div class="bg-emerald-50 border border-emerald-100 p-3 rounded font-mono text-sm text-emerald-800 break-all" id="crypto-hash">$2b$12$KIX7...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                    <h3 class="text-xl font-bold text-stone-800 mb-4">Data Sensitivity</h3>
+                    <p class="text-sm text-stone-600 mb-4">What counts as sensitive data? (A02)</p>
+                     <div class="chart-container" style="height: 250px;">
+                        <canvas id="sensitiveDataChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LAB: SQLi -->
+            <div id="lab-sqli" class="lab-content hidden">
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm max-w-3xl mx-auto">
+                    <h3 class="text-xl font-bold text-stone-800 mb-4">SQL Injection Anatomy</h3>
+                    <p class="text-sm text-stone-600 mb-6">
+                        Injection occurs when user input is treated as <strong>code</strong> rather than <strong>data</strong>. 
+                        Below is a vulnerable query construction.
+                    </p>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold mb-2">User Input (Username field):</label>
+                        <div class="flex space-x-2">
+                            <button onclick="setSqli('alice')" class="px-3 py-1 bg-stone-100 hover:bg-stone-200 rounded text-sm">Normal: "alice"</button>
+                            <button onclick="setSqli(`' OR '1'='1`)" class="px-3 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded text-sm border border-rose-200">Attack: "' OR '1'='1"</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-stone-900 text-stone-300 p-6 rounded-lg font-mono text-sm mb-4">
+                        <div class="text-stone-500 mb-2">// Constructed Query</div>
+                        <span class="text-blue-400">SELECT</span> * <span class="text-blue-400">FROM</span> users <span class="text-blue-400">WHERE</span> user = '<span id="sqli-target" class="text-white font-bold transition-all">alice</span>'
+                    </div>
+
+                    <div id="sqli-explanation" class="p-4 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700">
+                        <strong>Result:</strong> Query searches for user named "alice". Safe.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: SUPPLY CHAIN -->
+        <section id="supply" class="view-section hidden p-6 md:p-10 max-w-7xl mx-auto fade-in">
+             <div class="mb-8 border-b border-stone-200 pb-6">
+                <h2 class="text-3xl font-bold text-stone-900 mb-2">Third-Party Software Risk</h2>
+                <p class="text-stone-600 max-w-4xl">
+                    You inherit the vulnerabilities of every library you use. 
+                    This visualization shows a <strong>Transitive Dependency</strong> chain, where a deep-level library introduces a critical flaw (A06).
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Visual Tree -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-stone-200 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-4 right-4 z-10">
+                        <button onclick="scanDependencies()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg shadow-sm text-sm font-semibold transition-colors flex items-center gap-2">
+                            <span id="scan-icon">🔍</span> Run Dependency Scan
+                        </button>
+                    </div>
+
+                    <div class="flex flex-col items-center pt-8 pb-4 w-full overflow-x-auto">
+                        <!-- Root -->
+                        <div class="z-10 bg-stone-800 text-white px-6 py-3 rounded-lg font-bold shadow-lg border-2 border-stone-800 text-center w-48">
+                            YOUR APP
+                            <div class="text-xs font-normal text-stone-400">Main Component</div>
+                        </div>
+                        
+                        <!-- Line 1 -->
+                        <div class="h-12 w-px bg-stone-300"></div>
+
+                        <!-- Level 1 -->
+                        <div class="flex justify-between w-full max-w-md px-4 relative">
+                            <!-- Connector horizontal -->
+                            <div class="absolute top-0 left-1/4 right-1/4 h-px bg-stone-300"></div> 
+                            
+                            <div class="flex flex-col items-center relative">
+                                <div class="h-4 w-px bg-stone-300 absolute -top-4"></div>
+                                <div class="bg-white border border-stone-300 px-4 py-2 rounded shadow-sm text-sm font-medium w-32 text-center dep-node">
+                                    Library A
+                                    <div class="text-xs text-stone-400">Auth Utils</div>
+                                </div>
+                            </div>
+                             <div class="flex flex-col items-center relative">
+                                <div class="h-4 w-px bg-stone-300 absolute -top-4"></div>
+                                <div class="bg-white border border-stone-300 px-4 py-2 rounded shadow-sm text-sm font-medium w-32 text-center dep-node">
+                                    Library B
+                                    <div class="text-xs text-stone-400">UI Kit</div>
+                                </div>
+                                <!-- Child of Lib B -->
+                                <div class="h-8 w-px bg-stone-300"></div>
+                                <div class="bg-white border border-stone-300 px-4 py-2 rounded shadow-sm text-sm font-medium w-32 text-center dep-node" id="lib-c">
+                                    Library C
+                                    <div class="text-xs text-stone-400">Data Parser</div>
+                                </div>
+                                 <!-- Child of Lib C (VULNERABLE) -->
+                                <div class="h-8 w-px bg-stone-300"></div>
+                                <div class="bg-white border border-stone-300 px-4 py-2 rounded shadow-sm text-sm font-medium w-32 text-center dep-node transition-colors duration-500" id="vuln-lib">
+                                    Library D
+                                    <div class="text-xs text-stone-400">Log Helper</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="scan-result" class="mt-6 p-4 bg-stone-50 rounded border border-stone-200 text-center hidden">
+                        <p class="font-bold text-rose-600 mb-1">⚠️ CRITICAL VULNERABILITY FOUND</p>
+                        <p class="text-sm text-stone-600">Library D (Log Helper) has a known CVE. It is a dependency of Library C, which is a dependency of Library B.</p>
+                        <p class="text-xs text-stone-500 mt-2">Status: <strong>Transitive Vulnerability</strong></p>
+                    </div>
+                </div>
+
+                <!-- Info Column -->
+                <div class="space-y-4">
+                    <div class="bg-stone-100 p-4 rounded-xl">
+                        <h4 class="font-bold text-stone-800 mb-2">The Dependency Chain</h4>
+                        <ul class="text-sm text-stone-600 space-y-2 list-disc pl-4">
+                            <li>You chose Lib B.</li>
+                            <li>Lib B chose Lib C.</li>
+                            <li>Lib C chose Lib D.</li>
+                            <li><strong>You are responsible for Lib D.</strong></li>
+                        </ul>
+                    </div>
+                    <div class="bg-white border border-stone-200 p-4 rounded-xl">
+                        <h4 class="font-bold text-stone-800 mb-2">Management Strategies</h4>
+                        <ul class="text-sm space-y-2">
+                            <li class="flex items-start">
+                                <span class="mr-2">📄</span>
+                                <span><strong>SBOM:</strong> Ingredients list of your software.</span>
+                            </li>
+                             <li class="flex items-start">
+                                <span class="mr-2">🤖</span>
+                                <span><strong>Scanning:</strong> Automated checks (Snyk, Dependabot).</span>
+                            </li>
+                             <li class="flex items-start">
+                                <span class="mr-2">📌</span>
+                                <span><strong>Pinning:</strong> Lock versions in <code>package-lock.json</code>.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: DEFENSE PROTOCOL -->
+        <section id="defense" class="view-section hidden p-6 md:p-10 max-w-7xl mx-auto fade-in">
+            <div class="mb-8 border-b border-stone-200 pb-6">
+                <h2 class="text-3xl font-bold text-stone-900 mb-2">Defense Center</h2>
+                <p class="text-stone-600">
+                    Understanding the risk scores (CVSS) and the continuous management cycle is crucial for a robust security posture.
+                    Security is a system, not a checklist.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- CVSS Chart -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm">
+                    <h3 class="text-lg font-bold text-stone-800 mb-4">CVSS Severity Scale</h3>
+                    <p class="text-sm text-stone-500 mb-4">Common Vulnerability Scoring System (0-10)</p>
+                    <div class="chart-container">
+                        <canvas id="cvssChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Life Cycle -->
+                <div class="bg-white p-6 rounded-xl border border-stone-200 shadow-sm flex flex-col items-center justify-center">
+                    <h3 class="text-lg font-bold text-stone-800 mb-6">The Dependency Management Cycle</h3>
+                    
+                    <div class="relative w-64 h-64">
+                        <!-- CSS Grid for Cycle -->
+                        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 bg-rose-100 text-rose-800 p-3 rounded-full text-xs font-bold w-20 text-center border border-rose-200 cursor-pointer hover:bg-rose-200 transition-colors" title="Automated check">SCAN</div>
+                        
+                        <div class="absolute right-0 top-1/2 transform -translate-y-1/2 bg-stone-100 text-stone-800 p-3 rounded-full text-xs font-bold w-20 text-center border border-stone-200 cursor-pointer hover:bg-stone-200 transition-colors" title="Is it critical?">ASSESS</div>
+                        
+                        <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-stone-100 text-stone-800 p-3 rounded-full text-xs font-bold w-20 text-center border border-stone-200 cursor-pointer hover:bg-stone-200 transition-colors" title="Update version">FIX</div>
+                        
+                        <div class="absolute left-0 top-1/2 transform -translate-y-1/2 bg-stone-100 text-stone-800 p-3 rounded-full text-xs font-bold w-20 text-center border border-stone-200 cursor-pointer hover:bg-stone-200 transition-colors" title="Verify fix">RESCAN</div>
+
+                        <!-- Arrows (Unicode) -->
+                        <div class="absolute top-1/4 right-1/4 text-stone-300 text-xl">↘</div>
+                        <div class="absolute bottom-1/4 right-1/4 text-stone-300 text-xl">↙</div>
+                        <div class="absolute bottom-1/4 left-1/4 text-stone-300 text-xl">↖</div>
+                        <div class="absolute top-1/4 left-1/4 text-stone-300 text-xl">↗</div>
+                        
+                        <!-- Center Text -->
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div class="text-center">
+                                <div class="text-2xl">🔁</div>
+                                <div class="text-xs text-stone-400 font-medium uppercase mt-1">Continuous</div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-stone-500 mt-4 text-center max-w-sm">
+                        Repeat on every: Code commit, New dependency, New CVE, Scheduled interval.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Glossary -->
+            <div class="bg-stone-100 rounded-xl p-6">
+                <h3 class="text-lg font-bold text-stone-800 mb-4">Quick Glossary</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm" id="glossary-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- DATA ---
+        const owaspData = [
+            { code: "A01", title: "Broken Access Control", risk: "Users access what they shouldn't.", detail: "Most prevalent. Example: Changing ID in URL to see another user's data (IDOR). Fix: Deny by default, check ownership server-side." },
+            { code: "A02", title: "Cryptographic Failures", risk: "Sensitive data not protected.", detail: "Storing passwords in plain text or using HTTP. Fix: Use bcrypt/Argon2 hashing and enforce HTTPS." },
+            { code: "A03", title: "Injection", risk: "Attacker runs unintended commands.", detail: "SQL Injection, XSS. Attacker sends hostile data that the interpreter treats as code. Fix: Parameterized queries." },
+            { code: "A04", title: "Insecure Design", risk: "Security not designed in.", detail: "Bad design cannot be fixed with code. Need threat modeling and security requirements upfront." },
+            { code: "A05", title: "Security Misconfiguration", risk: "Insecure defaults.", detail: "Default passwords, error messages revealing stack traces, open cloud buckets. Fix: Hardening processes." },
+            { code: "A06", title: "Vulnerable Components", risk: "Old/Unpatched libraries.", detail: "Using libraries with known CVEs. Attackers scan for these. Fix: SBOM, Scanning, Patching." },
+            { code: "A07", title: "Auth Failures", risk: "Broken login/session.", detail: "Weak passwords, no MFA, credential stuffing. Fix: Implement MFA and strong session management." },
+            { code: "A08", title: "Integrity Failures", risk: "Untrusted code/data trusted.", detail: "Insecure deserialization, CI/CD pipeline attacks, Supply chain attacks (SolarWinds)." },
+            { code: "A09", title: "Logging Failures", risk: "Attacks go undetected.", detail: "No logs means no response. Attackers have long dwell time. Fix: Log failed logins and critical errors." },
+            { code: "A10", title: "SSRF", risk: "Server tricked into requests.", detail: "Server-Side Request Forgery. Attacker makes server fetch internal resources (cloud metadata). Fix: Input validation." }
+        ];
+
+        const glossaryData = [
+            { term: "OWASP", def: "Open Web Application Security Project" },
+            { term: "CVE", def: "Common Vulnerabilities and Exposures (ID)" },
+            { term: "CVSS", def: "Common Vulnerability Scoring System (0-10)" },
+            { term: "SBOM", def: "Software Bill of Materials (Inventory)" },
+            { term: "IDOR", def: "Insecure Direct Object Reference (Type of A01)" },
+            { term: "MTTD", def: "Mean Time To Detect" }
+        ];
+
+        // --- NAVIGATION STATE ---
+        function navigateTo(targetId) {
+            // Hide all sections
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.add('hidden');
+            });
+            // Show target
+            document.getElementById(targetId).classList.remove('hidden');
+            
+            // Update Nav State
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-stone-100', 'text-rose-700', 'font-medium');
+                btn.classList.add('text-stone-600', 'hover:bg-stone-50');
+                if(btn.dataset.target === targetId) {
+                    btn.classList.add('bg-stone-100', 'text-rose-700', 'font-medium');
+                    btn.classList.remove('text-stone-600', 'hover:bg-stone-50');
+                }
+            });
+
+            // Mobile menu logic
+            if(window.innerWidth < 768) {
+                document.getElementById('main-nav').classList.add('hidden');
+            }
+            
+            // Scroll to top
+            document.getElementById('main-scroll').scrollTop = 0;
+        }
+
+        // --- RENDER FUNCTIONS ---
+        function renderOWASP() {
+            const grid = document.getElementById('owasp-grid');
+            grid.innerHTML = owaspData.map(item => `
+                <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md transition-shadow cursor-pointer group" onclick="toggleCard(this)">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-mono text-xs font-bold text-stone-400 bg-stone-100 px-2 py-1 rounded">${item.code}</span>
+                        <span class="text-stone-300 group-hover:text-rose-500 transition-colors">▼</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-stone-800 mb-1 group-hover:text-rose-700 transition-colors">${item.title}</h3>
+                    <p class="text-sm text-stone-600 mb-2 font-medium">${item.risk}</p>
+                    <div class="hidden mt-3 pt-3 border-t border-stone-100 text-sm text-stone-500 card-detail fade-in">
+                        ${item.detail}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleCard(card) {
+            const detail = card.querySelector('.card-detail');
+            const arrow = card.querySelector('span:last-child');
+            if (detail.classList.contains('hidden')) {
+                detail.classList.remove('hidden');
+                arrow.style.transform = "rotate(180deg)";
+            } else {
+                detail.classList.add('hidden');
+                arrow.style.transform = "rotate(0deg)";
+            }
+        }
+
+        function renderGlossary() {
+            const container = document.getElementById('glossary-grid');
+            container.innerHTML = glossaryData.map(item => `
+                <div class="flex justify-between border-b border-stone-200 pb-2 last:border-0">
+                    <span class="font-bold text-stone-700">${item.term}</span>
+                    <span class="text-stone-500 text-right">${item.def}</span>
+                </div>
+            `).join('');
+        }
+
+        // --- LAB INTERACTIVITY ---
+        function switchLab(tabName) {
+            // Update tabs
+            document.querySelectorAll('.lab-tab').forEach(t => {
+                t.classList.remove('active-tab', 'border-rose-600', 'text-rose-600');
+                t.classList.add('border-transparent', 'text-stone-500');
+            });
+            event.target.classList.add('active-tab', 'border-rose-600', 'text-rose-600');
+            event.target.classList.remove('border-transparent', 'text-stone-500');
+
+            // Show content
+            document.querySelectorAll('.lab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`lab-${tabName}`).classList.remove('hidden');
+        }
+
+        function updateIdor() {
+            const id = document.getElementById('idor-input').value;
+            document.getElementById('idor-url-id').textContent = id;
+            
+            const insecureRes = document.getElementById('idor-result-insecure');
+            const secureRes = document.getElementById('idor-result-secure');
+            const explanation = document.getElementById('idor-explanation');
+
+            if (id == 1001) {
+                insecureRes.textContent = "Access Granted (Your Data)";
+                insecureRes.className = "text-xs px-2 py-1 rounded bg-green-100 text-green-800";
+                secureRes.textContent = "Access Granted (Your Data)";
+                secureRes.className = "text-xs px-2 py-1 rounded bg-green-100 text-green-800";
+                explanation.textContent = "You are requesting your own ID. Both systems allow this.";
+            } else {
+                insecureRes.textContent = "Access Granted (OTHER USER DATA)";
+                insecureRes.className = "text-xs px-2 py-1 rounded bg-rose-100 text-rose-800 font-bold";
+                
+                secureRes.textContent = "Access Denied (403 Forbidden)";
+                secureRes.className = "text-xs px-2 py-1 rounded bg-stone-200 text-stone-600 font-bold";
+                
+                explanation.textContent = "IDOR Attack! The insecure app didn't check ownership. The secure app blocked it.";
+            }
+        }
+
+        function updateCrypto() {
+            const val = document.getElementById('crypto-input').value;
+            document.getElementById('crypto-plain').textContent = val;
+            
+            // Fake hash simulation
+            if (val.length > 0) {
+                const fakeHash = "$2b$12$" + btoa(val).substring(0, 10) + "... (salted)";
+                document.getElementById('crypto-hash').textContent = fakeHash;
+            } else {
+                document.getElementById('crypto-hash').textContent = "";
+            }
+        }
+
+        function setSqli(val) {
+            const target = document.getElementById('sqli-target');
+            const explanation = document.getElementById('sqli-explanation');
+            
+            target.textContent = val;
+            
+            if (val.includes("OR")) {
+                target.classList.add('text-rose-400');
+                explanation.innerHTML = `<strong class="text-rose-600">ATTACK SUCCESS:</strong> The query logic was changed to <code>WHERE user = '' OR true</code>. This returns ALL users, bypassing authentication.`;
+                explanation.classList.add('bg-rose-50', 'border-rose-200');
+                explanation.classList.remove('bg-stone-50', 'border-stone-200');
+            } else {
+                target.classList.remove('text-rose-400');
+                explanation.innerHTML = `<strong>Result:</strong> Query searches for user named "alice". Safe.`;
+                explanation.classList.add('bg-stone-50', 'border-stone-200');
+                explanation.classList.remove('bg-rose-50', 'border-rose-200');
+            }
+        }
+
+        // --- SUPPLY CHAIN SCANNER ---
+        function scanDependencies() {
+            const btn = document.querySelector('#supply button');
+            const icon = document.getElementById('scan-icon');
+            const vulnNode = document.getElementById('vuln-lib');
+            const result = document.getElementById('scan-result');
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-spin">⌛</span> Scanning...`;
+
+            setTimeout(() => {
+                vulnNode.classList.remove('bg-white', 'border-stone-300');
+                vulnNode.classList.add('bg-rose-100', 'border-rose-500', 'text-rose-900');
+                
+                result.classList.remove('hidden');
+                result.classList.add('fade-in');
+                
+                btn.innerHTML = `✅ Scan Complete`;
+                btn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
+                btn.classList.add('bg-stone-400', 'cursor-not-allowed');
+            }, 1500);
+        }
+
+        // --- CHARTS ---
+        function initCharts() {
+            // 1. Composition Chart
+            const ctxComp = document.getElementById('compositionChart').getContext('2d');
+            new Chart(ctxComp, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Dev Code (15%)', '3rd Party (85%)'],
+                    datasets: [{
+                        data: [15, 85],
+                        backgroundColor: ['#e7e5e4', '#e11d48'], // stone-200, rose-600
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+
+            // 2. Sensitive Data Donut (Visual filler for Crypto section)
+            const ctxSens = document.getElementById('sensitiveDataChart').getContext('2d');
+            new Chart(ctxSens, {
+                type: 'pie',
+                data: {
+                    labels: ['Passwords', 'Credit Cards', 'Health Records', 'PII', 'API Keys'],
+                    datasets: [{
+                        data: [20, 20, 20, 20, 20],
+                        backgroundColor: ['#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: { display: true, text: 'Targets for Attackers' }
+                    }
+                }
+            });
+
+            // 3. CVSS Bar Chart
+            const ctxCvss = document.getElementById('cvssChart').getContext('2d');
+            new Chart(ctxCvss, {
+                type: 'bar',
+                data: {
+                    labels: ['None (0.0)', 'Low (0.1-3.9)', 'Medium (4.0-6.9)', 'High (7.0-8.9)', 'Critical (9.0-10.0)'],
+                    datasets: [{
+                        label: 'Severity Score',
+                        data: [0.1, 3.9, 6.9, 8.9, 10],
+                        backgroundColor: [
+                            '#d6d3d1', // None
+                            '#10b981', // Low (Green)
+                            '#f59e0b', // Med (Amber)
+                            '#f97316', // High (Orange)
+                            '#e11d48'  // Critical (Red)
+                        ],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 10 }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderOWASP();
+            renderGlossary();
+            initCharts();
+            updateIdor(); // Init IDOR state
+
+            // Mobile menu toggle
+            document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+                document.getElementById('main-nav').classList.toggle('hidden');
+            });
+        });
+
+    </script>
+</body>
+</html>
+
+
