@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 11: Deploying Security Patches - Interactive Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FDFBF7; /* Warm neutral background */
+            color: #1F2937;
+        }
+
+        /* Chart Container Styling - Mandatory Strictness */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Scrollbar for Terminal */
+        .terminal-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .terminal-scroll::-webkit-scrollbar-track {
+            background: #1F2937;
+        }
+        .terminal-scroll::-webkit-scrollbar-thumb {
+            background: #4B5563;
+            border-radius: 4px;
+        }
+
+        /* Tab Transitions */
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .nav-btn.active {
+            background-color: #E5E7EB;
+            color: #111827;
+            font-weight: 600;
+            border-left: 4px solid #4B5563;
+        }
+    </style>
+    <!-- Chosen Palette: Warm Neutral & Professional Grey (#FDFBF7 background, #1F2937 text, Muted Accents) -->
+    <!-- Application Structure Plan: A Dashboard/Guide hybrid. 
+         Left Sidebar for high-level navigation (Phases). 
+         Main Content Area updates dynamically.
+         - 'Briefing': Objectives, Safety, Environment.
+         - 'Discovery (Part A)': Interactive Terminal for Recon commands, Chart for Severity visualization.
+         - 'Patching (Part B)': Tabbed interface for Windows/Linux workflows to reduce clutter.
+         - 'Verification (Part C)': Comparison Charts (Before/After) and Reporting Guide.
+         Why: The lab is procedural. Splitting it into logical phases reduces cognitive load. The terminal simulation reinforces command familiarity.
+    -->
+    <!-- Visualization & Content Choices:
+         1. Interactive Terminal: Displays text-based commands (Source: Tools Section). Goal: Inform/Teach syntax.
+         2. Donut Chart: Vulnerability Severity Distribution. Goal: Contextualize Part A findings.
+         3. Bar Chart: Pre vs Post Patch Comparison. Goal: Demonstrate success metric for Part C.
+         4. Flow/Process Steps: HTML/CSS styled lists for Patching workflow. Goal: Organize complex instructions.
+         NO SVG/Mermaid.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col hidden md:flex z-20 shadow-sm">
+        <div class="p-6 border-b border-gray-100">
+            <h1 class="text-xl font-bold text-gray-800 tracking-tight">VulnMgmt Lab 11</h1>
+            <p class="text-xs text-gray-500 mt-1">Deploying Security Patches</p>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4">
+            <button onclick="navigateTo('briefing')" id="nav-briefing" class="nav-btn active w-full text-left px-6 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                1. Mission Briefing
+            </button>
+            <button onclick="navigateTo('part-a')" id="nav-part-a" class="nav-btn w-full text-left px-6 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                2. Discovery (Part A)
+            </button>
+            <button onclick="navigateTo('part-b')" id="nav-part-b" class="nav-btn w-full text-left px-6 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                3. Patch Deployment (Part B)
+            </button>
+            <button onclick="navigateTo('part-c')" id="nav-part-c" class="nav-btn w-full text-left px-6 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                4. Verification (Part C)
+            </button>
+        </nav>
+        <div class="p-4 border-t border-gray-100 bg-gray-50">
+            <div class="flex items-center justify-between text-xs text-gray-500">
+                <span>Time: Max 3h</span>
+                <span>Diff: Intermediate</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                <div id="progress-bar" class="bg-indigo-600 h-1.5 rounded-full" style="width: 10%"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 w-full bg-white border-b border-gray-200 z-30 px-4 py-3 flex justify-between items-center shadow-sm">
+        <span class="font-bold text-gray-800">Lab 11: Patching</span>
+        <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="text-gray-600 focus:outline-none">
+            Menu
+        </button>
+    </div>
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="hidden fixed top-12 left-0 w-full bg-white border-b border-gray-200 z-20 shadow-lg md:hidden">
+         <button onclick="navigateTo('briefing'); toggleMobileMenu()" class="block w-full text-left px-4 py-3 border-b border-gray-100">1. Briefing</button>
+         <button onclick="navigateTo('part-a'); toggleMobileMenu()" class="block w-full text-left px-4 py-3 border-b border-gray-100">2. Discovery</button>
+         <button onclick="navigateTo('part-b'); toggleMobileMenu()" class="block w-full text-left px-4 py-3 border-b border-gray-100">3. Patching</button>
+         <button onclick="navigateTo('part-c'); toggleMobileMenu()" class="block w-full text-left px-4 py-3">4. Verification</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto bg-[#FDFBF7] p-4 md:p-8 pt-16 md:pt-8 scroll-smooth">
+        <div class="max-w-5xl mx-auto">
+            
+            <!-- SECTION 1: BRIEFING -->
+            <section id="briefing" class="tab-content active space-y-8">
+                <div class="mb-6">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">Pre-Lab Briefing</h2>
+                    <p class="text-gray-600 max-w-3xl">
+                        Welcome to Lab 11. Your mission is to secure a vulnerable system by identifying weaknesses, researching fixes, deploying patches, and validating the remediation. This dashboard guides you through the lifecycle of patch management in a controlled environment.
+                    </p>
+                </div>
+
+                <!-- Safety Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-red-500">
+                        <h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center">
+                            <span class="text-2xl mr-2">⚠️</span> Safety Protocol
+                        </h3>
+                        <ul class="text-sm text-gray-600 space-y-2 list-disc pl-5">
+                            <li><strong>Contained Environment Only:</strong> Never scan or patch systems you do not own.</li>
+                            <li><strong>No Exfiltration:</strong> Tools and data stay in the lab.</li>
+                            <li><strong>Ethical Conduct:</strong> Adhere to CFAA, Computer Misuse Act, etc.</li>
+                            <li><strong>Liability:</strong> You are responsible for your actions.</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-blue-500">
+                        <h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center">
+                            <span class="text-2xl mr-2">🎯</span> Objectives
+                        </h3>
+                        <ul class="text-sm text-gray-600 space-y-2 list-disc pl-5">
+                            <li>Identify vulnerabilities via automated scanning (Nmap, OpenVAS).</li>
+                            <li>Research patches using NVD and Vendor Advisories.</li>
+                            <li>Deploy patches on Windows and Linux targets.</li>
+                            <li>Verify remediation and document the process.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Environment & Tools -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Operational Environment</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="p-4 bg-gray-50 rounded border border-gray-200">
+                            <h4 class="font-semibold text-sm text-gray-800">🕵️ Audit Station</h4>
+                            <p class="text-xs text-gray-500 mt-1">Kali Linux / Parrot</p>
+                            <p class="text-xs text-gray-500">Tools: Nmap, OpenVAS</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded border border-gray-200">
+                            <h4 class="font-semibold text-sm text-gray-800">🪟 Target A (Windows)</h4>
+                            <p class="text-xs text-gray-500 mt-1">Server 2019 / Win 10</p>
+                            <p class="text-xs text-gray-500">Unpatched, Known CVEs</p>
+                        </div>
+                        <div class="p-4 bg-gray-50 rounded border border-gray-200">
+                            <h4 class="font-semibold text-sm text-gray-800">🐧 Target B (Linux)</h4>
+                            <p class="text-xs text-gray-500 mt-1">Ubuntu 18.04 / Metasploitable</p>
+                            <p class="text-xs text-gray-500">Unpatched Kernel/Services</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-8">
+                    <button onclick="navigateTo('part-a')" class="bg-indigo-600 text-white px-8 py-3 rounded-md shadow hover:bg-indigo-700 transition font-medium">Start Part A: Discovery &rarr;</button>
+                </div>
+            </section>
+
+            <!-- SECTION 2: DISCOVERY (PART A) -->
+            <section id="part-a" class="tab-content space-y-8">
+                <div class="mb-6">
+                    <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded">45 Minutes</span>
+                    <h2 class="text-3xl font-bold text-gray-900 mt-2 mb-2">Part A: Vulnerability Discovery</h2>
+                    <p class="text-gray-600">
+                        Establish the baseline. You cannot fix what you don't know exists. Use network reconnaissance and vulnerability scanners to map the target's "before" state.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    <!-- Left: Terminal Simulator -->
+                    <div class="bg-gray-900 rounded-lg shadow-lg overflow-hidden flex flex-col h-[500px]">
+                        <div class="bg-gray-800 px-4 py-2 flex items-center justify-between border-b border-gray-700">
+                            <span class="text-xs text-gray-400 font-mono">root@kali:~/lab11</span>
+                            <div class="flex space-x-1.5">
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            </div>
+                        </div>
+                        <div class="p-4 font-mono text-sm text-green-400 overflow-y-auto terminal-scroll flex-1" id="terminal-output">
+                            <p class="text-gray-500"># Select a scan type below to simulate command execution...</p>
+                        </div>
+                        <div class="bg-gray-800 p-4 border-t border-gray-700 grid grid-cols-2 gap-2">
+                            <button onclick="runSim('nmap')" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded text-left transition">
+                                <span class="font-bold block">1. Network Recon</span>
+                                <span class="text-gray-400">nmap -sS -sV -O</span>
+                            </button>
+                            <button onclick="runSim('vuln')" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded text-left transition">
+                                <span class="font-bold block">2. Nmap NSE Script</span>
+                                <span class="text-gray-400">nmap --script vuln</span>
+                            </button>
+                            <button onclick="runSim('openvas')" class="bg-gray-700 hover:bg-gray-600 text-white text-xs py-2 px-3 rounded text-left transition">
+                                <span class="font-bold block">3. OpenVAS / Nessus</span>
+                                <span class="text-gray-400">Web Interface Scan</span>
+                            </button>
+                            <button onclick="clearTerminal()" class="bg-red-900/50 hover:bg-red-900 text-red-200 text-xs py-2 px-3 rounded transition text-center flex items-center justify-center">
+                                Clear Terminal
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Context & Chart -->
+                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                            <h3 class="text-lg font-bold text-gray-900 mb-4">Sample Findings Distribution</h3>
+                            <p class="text-sm text-gray-500 mb-4">
+                                This chart represents a typical vulnerability spread on an unpatched Windows 2019 server. Your scan results should identify specific CVEs matching these severities.
+                            </p>
+                            <div class="chart-container">
+                                <canvas id="vulnChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Research Checklist</h3>
+                            <p class="text-sm text-gray-600 mb-4">For the top 3 critical vulnerabilities found, document:</p>
+                            <ul class="text-sm text-gray-600 space-y-2">
+                                <li class="flex items-start"><span class="mr-2 text-indigo-500">✓</span> CVE ID (e.g., CVE-2017-0144)</li>
+                                <li class="flex items-start"><span class="mr-2 text-indigo-500">✓</span> CVSS Score (e.g., 9.3 Critical)</li>
+                                <li class="flex items-start"><span class="mr-2 text-indigo-500">✓</span> Affected Service & Version</li>
+                                <li class="flex items-start"><span class="mr-2 text-indigo-500">✓</span> Patch ID (KB Number or Package Version)</li>
+                            </ul>
+                            <a href="https://nvd.nist.gov/" target="_blank" class="text-xs text-indigo-600 hover:underline mt-2 inline-block">Open NVD Database &rarr;</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-right">
+                    <button onclick="navigateTo('part-b')" class="bg-indigo-600 text-white px-6 py-2 rounded-md shadow hover:bg-indigo-700 transition text-sm">Proceed to Patching &rarr;</button>
+                </div>
+            </section>
+
+            <!-- SECTION 3: PATCHING (PART B) -->
+            <section id="part-b" class="tab-content space-y-8">
+                <div class="mb-6">
+                    <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded">90 Minutes</span>
+                    <h2 class="text-3xl font-bold text-gray-900 mt-2 mb-2">Part B: Patch Deployment</h2>
+                    <p class="text-gray-600">
+                        The core operational phase. Follow the lifecycle: Snapshot -> Verify Integrity -> Deploy -> Log. Choose your target OS below to see specific commands.
+                    </p>
+                </div>
+
+                <!-- OS Toggle -->
+                <div class="flex space-x-4 mb-6 border-b border-gray-200">
+                    <button onclick="switchOS('windows')" id="btn-windows" class="pb-3 px-4 text-sm font-medium border-b-2 border-blue-600 text-blue-600 transition-colors">Windows Target</button>
+                    <button onclick="switchOS('linux')" id="btn-linux" class="pb-3 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition-colors">Linux Target</button>
+                </div>
+
+                <!-- Step-by-Step Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    
+                    <!-- Step 1: Baseline -->
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm relative overflow-hidden group">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-yellow-400"></div>
+                        <h3 class="font-bold text-gray-800 mb-2">1. Establish Baseline</h3>
+                        <p class="text-xs text-gray-500 mb-4">Record current state before touching anything.</p>
+                        
+                        <div id="content-windows-1" class="os-content">
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 mb-2 font-mono">wmic qfe list brief</code>
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 font-mono">systeminfo | findstr /B /C:"OS Version"</code>
+                        </div>
+                        <div id="content-linux-1" class="os-content hidden">
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 mb-2 font-mono">uname -r</code>
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 font-mono">apt list --upgradable</code>
+                        </div>
+                        <div class="mt-4 text-xs font-semibold text-red-600">⚠️ Take VM Snapshot Now!</div>
+                    </div>
+
+                    <!-- Step 2: Integrity -->
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm relative overflow-hidden group">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-400"></div>
+                        <h3 class="font-bold text-gray-800 mb-2">2. Verify Integrity</h3>
+                        <p class="text-xs text-gray-500 mb-4">Ensure patches are authentic.</p>
+                        
+                        <div id="content-windows-2" class="os-content">
+                            <p class="text-xs text-gray-600 mb-2">Calculate SHA256 of .msu file:</p>
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 font-mono break-all">Get-FileHash -Path "patch.msu" -Algorithm SHA256</code>
+                        </div>
+                        <div id="content-linux-2" class="os-content hidden">
+                            <p class="text-xs text-gray-600 mb-2">Package managers (apt/dnf) use GPG keys automatically. Verify keys:</p>
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 font-mono">apt-key list</code>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Deployment -->
+                    <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm relative overflow-hidden group">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-green-400"></div>
+                        <h3 class="font-bold text-gray-800 mb-2">3. Install Updates</h3>
+                        <p class="text-xs text-gray-500 mb-4">Apply the fix and reboot if needed.</p>
+                        
+                        <div id="content-windows-3" class="os-content">
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 mb-2 font-mono">wusa.exe patch.msu /quiet /norestart</code>
+                            <p class="text-xs text-gray-600 my-1">OR (Cumulative)</p>
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 font-mono">Install-WindowsUpdate -AcceptAll</code>
+                        </div>
+                        <div id="content-linux-3" class="os-content hidden">
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 mb-2 font-mono">sudo apt update && sudo apt upgrade -y</code>
+                            <p class="text-xs text-gray-600 my-1">RedHat/CentOS:</p>
+                            <code class="block bg-gray-100 p-2 rounded text-xs text-gray-800 font-mono">sudo dnf update --security -y</code>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Documentation Log Builder -->
+                <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Documentation Requirement</h3>
+                    <p class="text-sm text-gray-600 mb-4">Use this format for your report (Step B.5). Compliance requires tracking <em>who</em> patched <em>what</em> and <em>when</em>.</p>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-xs text-left text-gray-600">
+                            <thead class="bg-gray-100 text-gray-700 uppercase font-medium">
+                                <tr>
+                                    <th class="px-4 py-2">Date/Time</th>
+                                    <th class="px-4 py-2">Target</th>
+                                    <th class="px-4 py-2">CVE(s)</th>
+                                    <th class="px-4 py-2">Patch ID</th>
+                                    <th class="px-4 py-2">Verified By</th>
+                                    <th class="px-4 py-2">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-100">
+                                <tr>
+                                    <td class="px-4 py-2 font-mono">2023-10-27 14:00</td>
+                                    <td class="px-4 py-2">192.168.56.101</td>
+                                    <td class="px-4 py-2">CVE-2017-0144</td>
+                                    <td class="px-4 py-2">KB4013389</td>
+                                    <td class="px-4 py-2">Student Name</td>
+                                    <td class="px-4 py-2 text-green-600 font-bold">Success</td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-2 font-mono opacity-50">...</td>
+                                    <td class="px-4 py-2 opacity-50">...</td>
+                                    <td class="px-4 py-2 opacity-50">...</td>
+                                    <td class="px-4 py-2 opacity-50">...</td>
+                                    <td class="px-4 py-2 opacity-50">...</td>
+                                    <td class="px-4 py-2 opacity-50">...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="text-right">
+                    <button onclick="navigateTo('part-c')" class="bg-indigo-600 text-white px-6 py-2 rounded-md shadow hover:bg-indigo-700 transition text-sm">Proceed to Verification &rarr;</button>
+                </div>
+            </section>
+
+            <!-- SECTION 4: VERIFICATION (PART C) -->
+            <section id="part-c" class="tab-content space-y-8">
+                <div class="mb-6">
+                    <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold px-2.5 py-0.5 rounded">45 Minutes</span>
+                    <h2 class="text-3xl font-bold text-gray-900 mt-2 mb-2">Part C: Verification & Reporting</h2>
+                    <p class="text-gray-600">
+                        The job isn't done until you verify remediation. Re-scan the targets and perform a Gap Analysis on any residual vulnerabilities.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Verification Chart -->
+                    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                        <h3 class="text-lg font-bold text-gray-900 mb-4">Remediation Success Metric</h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            Your Part C report must demonstrate this reduction. A successful lab results in critical vulnerabilities dropping to zero (or "Residual Risk" status).
+                        </p>
+                        <div class="chart-container">
+                            <canvas id="verifyChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Gap Analysis & Report Structure -->
+                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Gap Analysis</h3>
+                            <p class="text-sm text-gray-600 mb-4">If vulnerabilities persist, classify them:</p>
+                            <div class="space-y-3">
+                                <div class="flex items-start">
+                                    <div class="bg-yellow-100 p-2 rounded mr-3">
+                                        <span class="text-yellow-600 text-xl">⚙️</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-800">Configuration Issue</h4>
+                                        <p class="text-xs text-gray-500">Needs settings change, not a patch.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="bg-red-100 p-2 rounded mr-3">
+                                        <span class="text-red-600 text-xl">🚫</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-800">No Patch Available</h4>
+                                        <p class="text-xs text-gray-500">Zero-day or EOL software.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="bg-blue-100 p-2 rounded mr-3">
+                                        <span class="text-blue-600 text-xl">🔄</span>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-gray-800">Restart Required</h4>
+                                        <p class="text-xs text-gray-500">Patch installed but not active.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Final Deliverable (Max 3 Pages)</h3>
+                            <ol class="list-decimal pl-5 text-sm text-gray-600 space-y-1">
+                                <li><strong>Executive Summary:</strong> Objective + Pre-patch scan screenshot.</li>
+                                <li><strong>Patch Deployment:</strong> Log Tables + Integrity Check Evidence.</li>
+                                <li><strong>Verification:</strong> Post-patch scan diff + Conclusion.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                    <h4 class="text-green-800 font-bold mb-1">Congratulations!</h4>
+                    <p class="text-green-700 text-sm">Once the report is compiled, you have completed the Patch Management Lifecycle.</p>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        // --- Navigation Logic ---
+        function navigateTo(sectionId) {
+            // Update Tab Content
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+
+            // Update Sidebar Buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const navBtn = document.getElementById('nav-' + sectionId);
+            if (navBtn) navBtn.classList.add('active');
+
+            // Update Progress Bar based on section
+            const progressBar = document.getElementById('progress-bar');
+            switch(sectionId) {
+                case 'briefing': progressBar.style.width = '10%'; break;
+                case 'part-a': progressBar.style.width = '35%'; break;
+                case 'part-b': progressBar.style.width = '75%'; break;
+                case 'part-c': progressBar.style.width = '100%'; break;
+            }
+            
+            // Scroll to top
+            document.querySelector('main').scrollTop = 0;
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.add('hidden');
+        }
+
+        // --- Part A: Terminal Simulator ---
+        function runSim(commandType) {
+            const terminal = document.getElementById('terminal-output');
+            let output = "";
+            let cmd = "";
+
+            if (commandType === 'nmap') {
+                cmd = "nmap -sS -sV -O -T4 192.168.56.101";
+                output = `
+<span class="text-white">$ ${cmd}</span>
+Starting Nmap 7.94...
+Nmap scan report for 192.168.56.101
+Host is up (0.00045s latency).
+Not shown: 997 closed ports
+PORT    STATE SERVICE      VERSION
+<span class="text-yellow-400">80/tcp  open  http         Microsoft IIS httpd 10.0</span>
+<span class="text-yellow-400">135/tcp open  msrpc        Microsoft Windows RPC</span>
+<span class="text-red-400">445/tcp open  microsoft-ds Windows Server 2019 Standard 17763</span>
+Device type: general purpose
+Running: Microsoft Windows 10
+OS details: Microsoft Windows Server 2019
+Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+
+Nmap done: 1 IP address (1 host up) scanned in 12.34 seconds
+`;
+            } else if (commandType === 'vuln') {
+                cmd = "nmap --script vuln 192.168.56.101";
+                output = `
+<span class="text-white">$ ${cmd}</span>
+...
+PORT    STATE SERVICE
+445/tcp open  microsoft-ds
+| smb-vuln-ms17-010:
+|   VULNERABLE:
+|   Remote Code Execution vulnerability in Microsoft SMBv1 servers (ms17-010)
+|     State: <span class="text-red-500 font-bold">VULNERABLE</span>
+|     IDs:  CVE:CVE-2017-0143
+|     Risk factor: <span class="text-red-500 font-bold">HIGH</span>
+|       A critical remote code execution vulnerability exists in Microsoft SMBv1...
+|_
+...
+`;
+            } else if (commandType === 'openvas') {
+                cmd = "[Accessing Greenbone Security Assistant...]";
+                output = `
+<span class="text-white">$ gvm-start</span>
+[+] Starting GSA...
+[+] Listening on https://127.0.0.1:9392
+<span class="text-blue-400">-> Launching Web Interface...</span>
+Task Created: "Scan Windows Target"
+Progress: [####################] 100%
+Report Generated:
+- High: 2
+- Medium: 4
+- Low: 1
+`;
+            }
+
+            terminal.innerHTML += `<div class="mt-4 border-t border-gray-800 pt-2">${output}</div>`;
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function clearTerminal() {
+            document.getElementById('terminal-output').innerHTML = '<p class="text-gray-500"># Select a scan type below to simulate command execution...</p>';
+        }
+
+        // --- Part B: OS Toggle ---
+        function switchOS(os) {
+            const winBtn = document.getElementById('btn-windows');
+            const linBtn = document.getElementById('btn-linux');
+            const winContents = document.querySelectorAll('[id^="content-windows"]');
+            const linContents = document.querySelectorAll('[id^="content-linux"]');
+
+            if (os === 'windows') {
+                winBtn.classList.replace('border-transparent', 'border-blue-600');
+                winBtn.classList.replace('text-gray-500', 'text-blue-600');
+                linBtn.classList.replace('border-blue-600', 'border-transparent');
+                linBtn.classList.replace('text-blue-600', 'text-gray-500');
+                
+                winContents.forEach(el => el.classList.remove('hidden'));
+                linContents.forEach(el => el.classList.add('hidden'));
+            } else {
+                linBtn.classList.replace('border-transparent', 'border-blue-600');
+                linBtn.classList.replace('text-gray-500', 'text-blue-600');
+                winBtn.classList.replace('border-blue-600', 'border-transparent');
+                winBtn.classList.replace('text-blue-600', 'text-gray-500');
+
+                linContents.forEach(el => el.classList.remove('hidden'));
+                winContents.forEach(el => el.classList.add('hidden'));
+            }
+        }
+
+        // --- Chart.js Implementations ---
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // 1. Part A: Vulnerability Distribution (Donut)
+            const ctxVuln = document.getElementById('vulnChart').getContext('2d');
+            new Chart(ctxVuln, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Critical (CVSS 9-10)', 'High (CVSS 7-8.9)', 'Medium (CVSS 4-6.9)', 'Low'],
+                    datasets: [{
+                        data: [2, 5, 8, 12], // Sample data
+                        backgroundColor: [
+                            '#EF4444', // Red-500
+                            '#F97316', // Orange-500
+                            '#FBBF24', // Amber-400
+                            '#60A5FA'  // Blue-400
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ${context.raw} found`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. Part C: Remediation Success (Bar)
+            const ctxVerify = document.getElementById('verifyChart').getContext('2d');
+            new Chart(ctxVerify, {
+                type: 'bar',
+                data: {
+                    labels: ['Critical', 'High', 'Medium', 'Low'],
+                    datasets: [
+                        {
+                            label: 'Pre-Patch Scan',
+                            data: [2, 5, 8, 12],
+                            backgroundColor: '#EF4444' // Red
+                        },
+                        {
+                            label: 'Post-Patch Scan',
+                            data: [0, 1, 2, 10], // Residuals
+                            backgroundColor: '#10B981' // Green
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Number of Vulnerabilities' } }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                footer: function(tooltipItems) {
+                                    if(tooltipItems[0].datasetIndex === 1) {
+                                        return 'Reduction indicates successful patching.';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
+
+
+

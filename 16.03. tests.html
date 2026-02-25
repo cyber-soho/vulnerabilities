@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Managing Vulnerabilities: Study App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for 3D flip effect */
+        .perspective { perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        
+        /* Fixed flip card transition and selector */
+        .flip-card { transition: transform 0.5s; }
+        .flip-card.flipped { transform: rotateY(180deg); }
+        
+        /* Smooth transitions */
+        .tab-btn { transition: all 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen">
+
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2">🛡️ Managing Vulnerabilities</h1>
+            <p class="text-slate-500 text-lg">Patch Management & Remediation Study Guide</p>
+        </header>
+
+        <!-- Tabs Navigation -->
+        <div class="flex justify-center space-x-2 mb-8 border-b border-gray-200 pb-px">
+            <button onclick="switchTab('flashcards')" id="tab-flashcards" class="tab-btn px-6 py-3 font-medium text-sm rounded-t-lg bg-blue-600 text-white shadow-sm">
+                Flashcards (25)
+            </button>
+            <button onclick="switchTab('quiz')" id="tab-quiz" class="tab-btn px-6 py-3 font-medium text-sm rounded-t-lg bg-gray-200 text-gray-600 hover:bg-gray-300">
+                Practice Quiz (10)
+            </button>
+        </div>
+
+        <!-- Tab 1: Flashcards -->
+        <div id="content-flashcards" class="tab-content block">
+            <div class="mb-6 flex justify-between items-center">
+                <p class="text-gray-600">Click any card to flip it over and reveal the answer.</p>
+                <button onclick="shuffleFlashcards()" class="text-sm bg-slate-200 hover:bg-slate-300 text-slate-700 py-2 px-4 rounded-md transition-colors">
+                    Shuffle Cards
+                </button>
+            </div>
+            
+            <div id="flashcard-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Flashcards will be injected here via JS -->
+            </div>
+        </div>
+
+        <!-- Tab 2: Quiz -->
+        <div id="content-quiz" class="tab-content hidden max-w-3xl mx-auto">
+            <div id="quiz-container" class="bg-white rounded-xl shadow-md p-6 md:p-8 border border-gray-100">
+                <!-- Quiz Status -->
+                <div class="flex justify-between items-center mb-6 text-sm font-medium text-slate-500">
+                    <span id="quiz-progress">Question 1 of 10</span>
+                    <span id="quiz-score" class="hidden">Score: 0</span>
+                </div>
+
+                <!-- Question Area -->
+                <div id="quiz-question-container">
+                    <h2 id="quiz-question" class="text-xl font-semibold text-gray-800 mb-6 leading-relaxed"></h2>
+                    
+                    <!-- Hint -->
+                    <div class="mb-6">
+                        <button onclick="toggleHint()" class="text-blue-600 text-sm font-medium hover:underline flex items-center">
+                            💡 Show Hint
+                        </button>
+                        <p id="quiz-hint" class="hidden mt-2 text-sm text-slate-600 italic bg-blue-50 p-3 rounded border border-blue-100"></p>
+                    </div>
+
+                    <!-- Options -->
+                    <div id="quiz-options" class="space-y-3">
+                        <!-- Options injected via JS -->
+                    </div>
+                </div>
+
+                <!-- Feedback Area -->
+                <div id="quiz-feedback" class="hidden mt-6 p-4 rounded-lg border">
+                    <p id="feedback-title" class="font-bold mb-1"></p>
+                    <p id="feedback-rationale" class="text-sm"></p>
+                </div>
+
+                <!-- Controls -->
+                <div class="mt-8 flex justify-end">
+                    <button id="quiz-next-btn" onclick="nextQuestion()" class="hidden bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
+                        Next Question
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quiz Results -->
+            <div id="quiz-results" class="hidden text-center bg-white rounded-xl shadow-md p-10 border border-gray-100">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">Quiz Complete!</h2>
+                <p class="text-xl text-gray-600 mb-6">You scored <span id="final-score" class="font-bold text-blue-600"></span> out of 10.</p>
+                <button onclick="restartQuiz()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-8 rounded-lg transition-colors">
+                    Retake Quiz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA: Flashcards ---
+        const rawFlashcards = [
+            { front: "Definition of a Software Patch", back: "Vendor-released software designed to fix a specific flaw, such as a security hole, bug, or performance issue." },
+            { front: "Four Main Types of Patches", back: "Security Patches, Hotfixes, Service Packs, and Firmware Updates." },
+            { front: "Lesson from the 2017 WannaCry Attack", back: "It exploited a Windows flaw patched two months earlier, illustrating the danger of unmanaged patching." },
+            { front: "Lesson from the 2024 CrowdStrike Outage", back: "A routine update crashed millions of machines, highlighting the critical need for testing before deployment." },
+            { front: "The Six Stages of Patch Management", back: "1. Asset Inventory, 2. Patch Monitor, 3. Prioritization, 4. Test, 5. Deploy, 6. Verify & Report." },
+            { front: "Core Principle of Asset Inventory", back: "You cannot patch what you do not know exists." },
+            { front: "Common Tools for Asset Inventory", back: "Qualys, Tenable Nessus, and Microsoft SCCM." },
+            { front: "CVSS", back: "Common Vulnerability Scoring System; a metric used to measure the severity of a vulnerability (0-10)." },
+            { front: "Three Factors for Patch Prioritization", back: "CVSS score (severity), Criticality of the asset, and Exploit availability." },
+            { front: "CISA KEV Catalog", back: "A list of Known Exploited Vulnerabilities. If a vulnerability appears here, attackers are actively using it and it must be patched immediately." },
+            { front: "Staged Rollout Strategy Steps", back: "1. Canary group (pilot/early warning), 2. Wave 1 (larger subset), 3. Wave 2+ (full environment)." },
+            { front: "Actions for Patch Verification", back: "Run follow-up vulnerability scans, check system logs for installation errors, and confirm software version numbers." },
+            { front: "MTTP (Mean Time to Patch) Target for Critical Issues", back: "Less than 15 days." },
+            { front: "Three Requirements for a Staging Environment", back: "Configuration parity (matches production), Isolation (separate from live operations), and Reproducibility (consistent results)." },
+            { front: "Five Types of Patch Tests", back: "Functional, Regression, Compatibility, Performance, and Rollback." },
+            { front: "Purpose of Functional Testing", back: "To confirm that the patch actually closes the targeted vulnerability." },
+            { front: "Purpose of Regression Testing", back: "To ensure the patch does not break other existing features or applications (unintended side effects)." },
+            { front: "Performance Testing Failure Threshold", back: "Degradation greater than 10%." },
+            { front: "Purpose of Rollback Testing", back: "To verify that the patch can be cleanly uninstalled if it causes problems in production." },
+            { front: "Best Practice for Zero-Day Deployment", back: "Deploy to a small canary group while monitoring closely, rather than waiting for full testing to complete." },
+            { front: "Difference Between Remediation and Mitigation", back: "Remediation permanently eliminates the vulnerability (Risk = 0). Mitigation temporarily reduces risk without eliminating the vulnerability (Risk > 0)." },
+            { front: "Examples of Remediation", back: "Applying a vendor patch, upgrading software, replacing the component, or removing the software." },
+            { front: "Examples of Mitigation", back: "WAF rules, network segmentation, disabling vulnerable features, IPS signatures, and ACL restrictions." },
+            { front: "Remediation Target for Critical Vulnerabilities (CVSS 9.0-10.0)", back: "7 Days." },
+            { front: "Log4Shell Response Strategy", back: "Immediate mitigation (WAF rules, blocking lookups) followed by remediation (upgrading Log4j versions)." }
+        ];
+
+        let flashcards = [...rawFlashcards];
+
+        // --- DATA: Quiz ---
+        const quizQuestions = [
+            {
+                question: "Why is 'Asset Inventory' considered the foundational first stage of the patch management lifecycle?",
+                hint: "Think about the phrase: 'You cannot protect what you cannot see.'",
+                options: [
+                    { text: "You cannot patch devices or software if you do not know they exist in your environment.", rationale: "Inventory provides the map of the terrain; without knowing what assets you have, you cannot assess their risk or apply updates to them.", isCorrect: true },
+                    { text: "It determines the CVSS score for incoming vulnerabilities.", rationale: "CVSS scores are determined by the vulnerability characteristics, not the inventory itself, although the inventory helps determine impact.", isCorrect: false },
+                    { text: "It allows the security team to generate patches for vendor software.", rationale: "Security teams do not generate patches; vendors do. Inventory helps track where those patches need to go.", isCorrect: false },
+                    { text: "It ensures that the staging environment is isolated from production.", rationale: "Isolation is a configuration requirement for the testing environment, not a function of the inventory stage.", isCorrect: false }
+                ]
+            },
+            {
+                question: "According to the Prioritization Formula, which three factors should be multiplied to determine patch urgency?",
+                hint: "Urgency depends on how bad the bug is, how important the server is, and if hackers are actually using it.",
+                options: [
+                    { text: "CVSS Score, Asset Criticality, and Exploit Availability", rationale: "These three factors balance the technical severity of the flaw, the business value of the asset, and the real-world likelihood of an attack.", isCorrect: true },
+                    { text: "Vendor Reputation, Patch Size, and Maintenance Window", rationale: "While maintenance windows matter for scheduling, they do not determine the inherent urgency or risk level of the vulnerability itself.", isCorrect: false },
+                    { text: "MTTP, Compliance Rate, and Coverage Gap", rationale: "These are KPIs used to measure the success of the program after the fact, not factors used to prioritize incoming patches.", isCorrect: false },
+                    { text: "Functional Testing, Regression Testing, and Rollback Success", rationale: "These are testing phases that occur after prioritization has already taken place.", isCorrect: false }
+                ]
+            },
+            {
+                question: "A patch successfully fixes a security vulnerability, but after installation, the company's payroll software crashes every time it tries to print checks. Which type of test failed?",
+                hint: "This test checks if the 'cure' (the patch) caused a new 'disease' (side effect) in the system.",
+                options: [
+                    { text: "Regression Testing", rationale: "Regression testing is specifically designed to catch unintended side effects where a fix breaks existing, previously working functionality.", isCorrect: true },
+                    { text: "Functional Testing", rationale: "Functional testing only checks if the specific vulnerability was fixed; if the security hole is closed, the functional test technically passed.", isCorrect: false },
+                    { text: "Performance Testing", rationale: "Performance testing measures system speed and resource usage, not whether applications crash or feature logic fails.", isCorrect: false },
+                    { text: "Rollback Testing", rationale: "Rollback testing checks if the patch can be uninstalled; it does not test the behavior of applications while the patch is installed.", isCorrect: false }
+                ]
+            },
+            {
+                question: "What is the primary purpose of a 'Canary group' during the deployment stage?",
+                hint: "This group acts as an early warning system, similar to a bird used in mines to detect toxic gas.",
+                options: [
+                    { text: "To deploy to a small pilot set of systems first to catch problems early before they affect the whole network.", rationale: "Like a canary in a coal mine, this small group alerts administrators to danger before the wider population is exposed.", isCorrect: true },
+                    { text: "To deploy patches only to systems that are not connected to the internet.", rationale: "Canary groups are about risk management through small sample sizes, not network connectivity status.", isCorrect: false },
+                    { text: "To automatically rollback patches if the server crashes.", rationale: "While rollbacks are a response to failure, the canary group itself is the strategy of limiting the blast radius of that failure.", isCorrect: false },
+                    { text: "To run vulnerability scans against vendor websites.", rationale: "This describes threat intelligence gathering or monitoring, not the deployment of patches to internal systems.", isCorrect: false }
+                ]
+            },
+            {
+                question: "An administrator discovers a critical vulnerability on a legacy server. The vendor has gone out of business and no patch will ever be released. What is the correct strategic action?",
+                hint: "If you cannot fix the broken lock (remediate), you must post a guard (compensating control).",
+                options: [
+                    { text: "Mitigate the risk using compensating controls like network segmentation or WAF rules.", rationale: "When remediation (patching) is impossible, you must reduce risk through containment strategies, known as mitigation.", isCorrect: true },
+                    { text: "Remediate the server by reinstalling the operating system.", rationale: "Reinstalling the same OS won't fix the vulnerability if no patch exists, and remediation implies a permanent fix which isn't available here.", isCorrect: false },
+                    { text: "Deploy a canary group to test the non-existent patch.", rationale: "You cannot deploy or test a patch that does not exist.", isCorrect: false },
+                    { text: "Mark the risk as 'Accepted' and do nothing.", rationale: "Ignoring a critical vulnerability on a legacy system is negligent; active mitigation is required even if patching isn't possible.", isCorrect: false }
+                ]
+            },
+            {
+                question: "Which of the following scenarios represents a failure of 'Configuration Parity' in a staging environment?",
+                hint: "If the test environment is 'too perfect' or different from the messy reality of the live environment, the test results are invalid.",
+                options: [
+                    { text: "Testing a patch on a clean Windows 10 VM when production uses Windows 10 with heavy custom security policies.", rationale: "Parity means the test environment must mirror production exactly; testing on a 'clean' version misses conflicts caused by custom configurations.", isCorrect: true },
+                    { text: "Ensuring the staging environment is completely isolated from the live network.", rationale: "Isolation is a requirement, not a failure. Staging *should* be isolated to prevent testing accidents from affecting live data.", isCorrect: false },
+                    { text: "Running the exact same regression test suite in staging that is used in production.", rationale: "This is a best practice for reproducibility, not a configuration failure.", isCorrect: false },
+                    { text: "Using Virtual Machines (VMs) for testing instead of physical hardware.", rationale: "Using VMs is a standard and acceptable technology for staging, provided the OS and app configurations match.", isCorrect: false }
+                ]
+            },
+            {
+                question: "What is the industry target (KPI) for Mean Time To Patch (MTTP) for critical vulnerabilities?",
+                hint: "Critical issues need to be resolved in roughly two weeks.",
+                options: [
+                    { text: "Less than 15 days", rationale: "Critical vulnerabilities pose an imminent threat, requiring a swift response time of under two weeks to minimize the window of exposure.", isCorrect: true },
+                    { text: "Less than 60 days", rationale: "60 days is the target for Low severity vulnerabilities, which pose significantly less risk.", isCorrect: false },
+                    { text: "Less than 24 hours", rationale: "While ideal, 24 hours is rarely a feasible standard KPI for enterprise-wide deployment due to the need for testing.", isCorrect: false },
+                    { text: "Greater than 95%", rationale: "This figure likely refers to the Patch Compliance Rate percentage, not the time (days) taken to patch.", isCorrect: false }
+                ]
+            },
+            {
+                question: "During performance testing, a patch is found to degrade system speed by 12%. According to the course standards, what is the appropriate action?",
+                hint: "The threshold for failure is double digits.",
+                options: [
+                    { text: "Fail the patch; do not deploy and escalate to the vendor.", rationale: "A degradation greater than 10% is considered a failure because it could severely impact business operations.", isCorrect: true },
+                    { text: "Pass the patch and deploy normally.", rationale: "Deploying a patch that slows systems by 12% would likely cause user complaints and operational slowdowns.", isCorrect: false },
+                    { text: "Warning status; deploy with enhanced monitoring.", rationale: "Warning status applies to degradation between 5% and 10%, but 12% exceeds the failure threshold.", isCorrect: false },
+                    { text: "Deploy to the canary group only.", rationale: "If a patch fails performance testing, it shouldn't even reach the canary group until the issue is resolved.", isCorrect: false }
+                ]
+            },
+            {
+                question: "Which resource should be checked to see if a vulnerability is currently being used by attackers in the wild, necessitating immediate patching?",
+                hint: "Look for the catalog maintained by the US government agency CISA.",
+                options: [
+                    { text: "CISA KEV (Known Exploited Vulnerabilities) Catalog", rationale: "The KEV catalog specifically lists vulnerabilities that are actively being exploited, making them the highest priority.", isCorrect: true },
+                    { text: "The Asset Inventory Database", rationale: "This tells you what machines you have, not what attackers are doing to them.", isCorrect: false },
+                    { text: "PCI DSS Compliance Standards", rationale: "This is a regulatory standard that dictates timelines, but it doesn't provide real-time threat intelligence.", isCorrect: false },
+                    { text: "GitHub Actions", rationale: "GitHub Actions is a CI/CD tool for automation, not a source of threat intelligence.", isCorrect: false }
+                ]
+            },
+            {
+                question: "What is the key difference between Remediation and Mitigation regarding the state of the vulnerability?",
+                hint: "One is a permanent cure; the other is a temporary bandage.",
+                options: [
+                    { text: "Remediation eliminates the vulnerability (Risk = 0), while Mitigation reduces risk but the vulnerability remains.", rationale: "Remediation fixes the root cause (like a patch), whereas mitigation puts up barriers (like a firewall) without fixing the underlying software flaw.", isCorrect: true },
+                    { text: "Mitigation is permanent, while Remediation is temporary.", rationale: "This is reversed; Mitigation is temporary (waiting for a fix), while Remediation is the permanent solution.", isCorrect: false },
+                    { text: "Remediation involves WAF rules, while Mitigation involves vendor patches.", rationale: "This is reversed; WAF rules are mitigation, and patches are remediation.", isCorrect: false },
+                    { text: "Remediation is only for low-risk assets, while Mitigation is for critical assets.", rationale: "The choice between them depends on patch availability and downtime tolerance, not just asset criticality.", isCorrect: false }
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let quizCompleted = false;
+
+        // --- UI LOGIC: Tabs ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('content-' + tabId).classList.remove('hidden');
+
+            const flashTab = document.getElementById('tab-flashcards');
+            const quizTab = document.getElementById('tab-quiz');
+
+            if (tabId === 'flashcards') {
+                flashTab.className = "tab-btn px-6 py-3 font-medium text-sm rounded-t-lg bg-blue-600 text-white shadow-sm";
+                quizTab.className = "tab-btn px-6 py-3 font-medium text-sm rounded-t-lg bg-gray-200 text-gray-600 hover:bg-gray-300";
+            } else {
+                quizTab.className = "tab-btn px-6 py-3 font-medium text-sm rounded-t-lg bg-blue-600 text-white shadow-sm";
+                flashTab.className = "tab-btn px-6 py-3 font-medium text-sm rounded-t-lg bg-gray-200 text-gray-600 hover:bg-gray-300";
+                if(currentQuestionIndex === 0 && !quizCompleted) loadQuestion();
+            }
+        }
+
+        // --- UI LOGIC: Flashcards ---
+        function renderFlashcards() {
+            const grid = document.getElementById('flashcard-grid');
+            grid.innerHTML = '';
+            
+            flashcards.forEach((card, index) => {
+                const cardHtml = `
+                    <div class="h-64 perspective group">
+                        <div class="flip-card relative w-full h-full duration-500 preserve-3d cursor-pointer" onclick="this.classList.toggle('flipped')">
+                            <!-- Front -->
+                            <div class="absolute w-full h-full backface-hidden bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow flex flex-col items-center justify-center p-6 text-center">
+                                <span class="absolute top-3 left-4 text-xs font-bold text-gray-400">#${index + 1}</span>
+                                <h3 class="text-xl font-semibold text-gray-800">${card.front}</h3>
+                                <p class="text-sm text-blue-500 mt-4 font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to flip ⤵</p>
+                            </div>
+                            <!-- Back -->
+                            <div class="absolute w-full h-full backface-hidden rotate-y-180 bg-blue-50 border border-blue-200 rounded-xl shadow-sm flex items-center justify-center p-6 text-center">
+                                <p class="text-md text-slate-800 leading-relaxed">${card.back}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += cardHtml;
+            });
+        }
+
+        function shuffleFlashcards() {
+            for (let i = flashcards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [flashcards[i], flashcards[j]] = [flashcards[j], flashcards[i]];
+            }
+            renderFlashcards();
+        }
+
+        // --- UI LOGIC: Quiz ---
+        function loadQuestion() {
+            const q = quizQuestions[currentQuestionIndex];
+            
+            document.getElementById('quiz-progress').innerText = `Question ${currentQuestionIndex + 1} of ${quizQuestions.length}`;
+            document.getElementById('quiz-question').innerText = q.question;
+            document.getElementById('quiz-hint').innerText = q.hint;
+            document.getElementById('quiz-hint').classList.add('hidden');
+            
+            // Reset feedback & next button
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('quiz-next-btn').classList.add('hidden');
+
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+
+            // Shuffle options visually
+            const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+
+            shuffledOptions.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-lg border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500";
+                btn.innerText = opt.text;
+                btn.onclick = () => selectAnswer(opt, btn, optionsContainer);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function selectAnswer(selectedOption, selectedBtn, container) {
+            // Disable all buttons after selection
+            const allBtns = container.querySelectorAll('button');
+            allBtns.forEach(b => {
+                b.disabled = true;
+                b.classList.remove('hover:border-blue-500', 'hover:bg-blue-50');
+            });
+
+            const feedbackEl = document.getElementById('quiz-feedback');
+            const feedbackTitle = document.getElementById('feedback-title');
+            const feedbackRationale = document.getElementById('feedback-rationale');
+
+            if (selectedOption.isCorrect) {
+                selectedBtn.classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+                feedbackEl.className = "mt-6 p-4 rounded-lg border bg-green-50 border-green-200 text-green-800 block";
+                feedbackTitle.innerText = "✅ Correct!";
+                score++;
+            } else {
+                selectedBtn.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
+                feedbackEl.className = "mt-6 p-4 rounded-lg border bg-red-50 border-red-200 text-red-800 block";
+                feedbackTitle.innerText = "❌ Incorrect";
+                
+                // Highlight correct answer
+                allBtns.forEach(b => {
+                    const optionMatch = quizQuestions[currentQuestionIndex].options.find(o => o.text === b.innerText);
+                    if(optionMatch && optionMatch.isCorrect) {
+                        b.classList.add('border-green-500', 'bg-green-50');
+                    }
+                });
+            }
+
+            feedbackRationale.innerText = selectedOption.rationale;
+            
+            // Show Next Button
+            const nextBtn = document.getElementById('quiz-next-btn');
+            nextBtn.classList.remove('hidden');
+            if(currentQuestionIndex === quizQuestions.length - 1) {
+                nextBtn.innerText = "View Results";
+            }
+        }
+
+        function toggleHint() {
+            const hintEl = document.getElementById('quiz-hint');
+            hintEl.classList.toggle('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizQuestions.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            quizCompleted = true;
+            document.getElementById('quiz-container').classList.add('hidden');
+            const resultsEl = document.getElementById('quiz-results');
+            resultsEl.classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            quizCompleted = false;
+            document.getElementById('quiz-results').classList.add('hidden');
+            document.getElementById('quiz-container').classList.remove('hidden');
+            document.getElementById('quiz-next-btn').innerText = "Next Question";
+            loadQuestion();
+        }
+
+        // Initialize App
+        renderFlashcards();
+    </script>
+</body>
+</html>

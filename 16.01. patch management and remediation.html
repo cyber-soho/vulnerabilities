@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Managing Vulnerabilities: Patch Management & Remediation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Warm neutral light gray */
+            color: #1e293b;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        .tab-active {
+            border-bottom: 2px solid #0f172a;
+            color: #0f172a;
+            font-weight: 600;
+        }
+        
+        .tab-inactive {
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab-inactive:hover {
+            color: #334155;
+            border-bottom: 2px solid #cbd5e1;
+        }
+
+        .stage-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+    <!-- Chosen Palette: Warm Neutrals & Deep Slate (Slate-50 to Slate-900) with Semantic Accents (Red/Amber/Green/Blue) -->
+    <!-- Application Structure Plan: 
+         1. Dashboard Layout: A central hub with 4 main tabs representing the key lessons: Lifecycle, Testing, Strategy, and Metrics.
+         2. Lifecycle Tab: Interactive flow diagram. Clicking stages reveals details (Tools, Inputs, Outputs) to break down the 6-stage complexity.
+         3. Testing Tab: "Simulation" style interface. Users can "Run" tests to see the logic of the 5 test types in action, reinforcing the "Gauntlet" concept.
+         4. Strategy Tab: Interactive Decision Tree for Remediation vs. Mitigation. Helps users apply the logic rather than just reading definitions.
+         5. Metrics Tab: Data visualization of CVSS scores and KPI targets using Chart.js to make abstract numbers concrete.
+    -->
+    <!-- Visualization & Content Choices:
+         - Lifecycle: Interactive Grid of Cards. Goal: Organize process steps. Interaction: Selection/Detail View. No SVG needed.
+         - Testing: Progress bar simulation. Goal: Inform about test types and failure rates. Interaction: Click to animate.
+         - Strategy: Step-by-step Wizard (Decision Tree). Goal: Guide decision making. Interaction: Yes/No buttons.
+         - Metrics: Bar/Donut Charts (Chart.js). Goal: Compare targets and visualize severity. Interaction: Tooltips.
+         - Confirmation: NO SVG graphics used. NO Mermaid JS used.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header / Intro -->
+    <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Managing Vulnerabilities</h1>
+                    <p class="text-slate-500 text-sm mt-1">Day 14: Patch Management & Remediation | Interactive Course Material</p>
+                </div>
+                <div class="mt-4 md:mt-0 flex gap-3">
+                    <span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-semibold border border-blue-100">Cyber.SoHo</span>
+                    <span class="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-semibold border border-slate-200">Time: 1.5h</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-white border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-8 overflow-x-auto" id="nav-container">
+                <button onclick="switchTab('lifecycle')" id="tab-lifecycle" class="tab-active py-4 px-1 text-sm font-medium whitespace-nowrap transition-colors duration-200">
+                    1. The Lifecycle
+                </button>
+                <button onclick="switchTab('testing')" id="tab-testing" class="tab-inactive py-4 px-1 text-sm font-medium whitespace-nowrap transition-colors duration-200">
+                    2. The Testing Gauntlet
+                </button>
+                <button onclick="switchTab('strategy')" id="tab-strategy" class="tab-inactive py-4 px-1 text-sm font-medium whitespace-nowrap transition-colors duration-200">
+                    3. Strategy & Decisions
+                </button>
+                <button onclick="switchTab('metrics')" id="tab-metrics" class="tab-inactive py-4 px-1 text-sm font-medium whitespace-nowrap transition-colors duration-200">
+                    4. Metrics & KPIs
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow bg-slate-50 py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            <!-- Context Summary (Always Visible) -->
+            <div class="bg-indigo-900 text-white rounded-lg shadow-lg p-6 mb-8">
+                <h2 class="text-lg font-semibold mb-2">Core Mission: Keep Systems Secure</h2>
+                <p class="text-indigo-100 mb-4 max-w-3xl">
+                    Blindly deploying patches is dangerous, but ignoring them is fatal. We must systematically find, test, and deploy fixes while balancing risk.
+                    Remember <strong>WannaCry</strong> (exploited a 2-month old flaw) and <strong>CrowdStrike</strong> (a bad update crashed 8.5M machines).
+                </p>
+                <div class="flex flex-wrap gap-4 text-xs font-mono">
+                    <span class="bg-indigo-800 px-2 py-1 rounded text-indigo-200">Patch = Vendor Fix</span>
+                    <span class="bg-indigo-800 px-2 py-1 rounded text-indigo-200">Lifecycle = 6 Stages</span>
+                    <span class="bg-indigo-800 px-2 py-1 rounded text-indigo-200">Goal = Zero Risk</span>
+                </div>
+            </div>
+
+            <!-- TAB 1: LIFECYCLE -->
+            <div id="view-lifecycle" class="animate-fade-in block">
+                <div class="grid lg:grid-cols-3 gap-8">
+                    <!-- Intro Text -->
+                    <div class="lg:col-span-3">
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">The Six Stages of Patch Management</h3>
+                        <p class="text-slate-600">
+                            Patch management is a continuous cycle, not a one-time event. Click on any stage below to explore the specific tools, inputs, and actions required. You must master each step to prevent coverage gaps.
+                        </p>
+                    </div>
+
+                    <!-- Interactive Lifecycle Grid -->
+                    <div class="lg:col-span-1 space-y-3">
+                        <!-- Stage Buttons -->
+                        <div id="stage-buttons" class="flex flex-col gap-3">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Details Panel -->
+                    <div class="lg:col-span-2">
+                        <div id="lifecycle-details" class="bg-white rounded-xl shadow-sm border border-slate-200 h-full p-6 transition-all duration-300">
+                            <div class="h-full flex flex-col justify-center items-center text-center text-slate-400">
+                                <span class="text-4xl mb-4">👆</span>
+                                <p>Select a stage on the left to view details.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: TESTING -->
+            <div id="view-testing" class="hidden animate-fade-in">
+                <div class="grid lg:grid-cols-12 gap-8">
+                    <div class="lg:col-span-12 mb-4">
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">The Testing Gauntlet</h3>
+                        <p class="text-slate-600">
+                            A patch that fixes a vulnerability but breaks business apps is a disaster. Every patch must survive these five tests. 
+                            Use the interactive list below to explore what each test protects against.
+                        </p>
+                    </div>
+
+                    <!-- Interactive Test List -->
+                    <div class="lg:col-span-7">
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+                                <span class="font-semibold text-slate-700">Test Types & Objectives</span>
+                                <span class="text-xs text-slate-500">Based on industry standards</span>
+                            </div>
+                            <div class="divide-y divide-slate-100" id="test-list-container">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Simulation / Importance Panel -->
+                    <div class="lg:col-span-5">
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-6">
+                            <h4 class="font-bold text-amber-900 mb-3">Why Test? The CrowdStrike Lesson</h4>
+                            <p class="text-sm text-amber-800 mb-4">
+                                In July 2024, a routine signature update crashed ~8.5 million Windows machines. This emphasizes why <strong>Staging Environments</strong> are critical.
+                            </p>
+                            <div class="bg-white p-4 rounded-lg border border-amber-100 mb-4 shadow-sm">
+                                <h5 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Staging Requirements</h5>
+                                <ul class="text-sm space-y-2 text-slate-700">
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-green-500 font-bold">✓</span> Configuration parity (Match Prod)
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-green-500 font-bold">✓</span> Isolation (Don't touch live data)
+                                    </li>
+                                    <li class="flex items-start gap-2">
+                                        <span class="text-green-500 font-bold">✓</span> Reproducibility (Consistent results)
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="text-xs text-amber-700 italic">
+                                "The dilemma: If you delay, attackers exploit. If you deploy untested, you break systems. Solution: Automated CI/CD pipelines."
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: STRATEGY -->
+            <div id="view-strategy" class="hidden animate-fade-in">
+                <div class="mb-8">
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">Remediation vs. Mitigation</h3>
+                    <p class="text-slate-600">
+                        Sometimes you cannot patch immediately (Zero-day, Legacy systems). Use this decision matrix to determine the correct course of action.
+                        Remember: Mitigation is temporary.
+                    </p>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <!-- Interactive Decision Tree -->
+                    <div class="bg-white rounded-xl shadow-md border border-slate-200 p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h4 class="font-bold text-slate-800">Decision Assistant</h4>
+                            <button onclick="resetDecisionTree()" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Reset</button>
+                        </div>
+                        
+                        <div id="decision-tree-container" class="min-h-[300px] flex flex-col justify-center">
+                            <!-- Steps injected by JS -->
+                            <div id="dt-step-1" class="text-center animate-fade-in">
+                                <p class="text-lg font-medium text-slate-900 mb-6">Is a vendor patch available for the vulnerability?</p>
+                                <div class="flex justify-center gap-4">
+                                    <button onclick="nextStep(2, true)" class="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition">Yes</button>
+                                    <button onclick="nextStep(2, false)" class="px-6 py-2 bg-white border-2 border-slate-200 text-slate-700 rounded-lg hover:border-slate-400 transition">No</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Concepts Comparison -->
+                    <div class="space-y-6">
+                        <!-- Definition Cards -->
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div class="bg-green-50 border border-green-200 p-4 rounded-lg">
+                                <h5 class="font-bold text-green-800 mb-2">Remediation</h5>
+                                <p class="text-sm text-green-900 mb-2">Permanent fix. Vulnerability is gone.</p>
+                                <ul class="text-xs text-green-700 list-disc list-inside">
+                                    <li>Apply Patch</li>
+                                    <li>Upgrade Software</li>
+                                    <li>Remove Software</li>
+                                </ul>
+                            </div>
+                            <div class="bg-orange-50 border border-orange-200 p-4 rounded-lg">
+                                <h5 class="font-bold text-orange-800 mb-2">Mitigation</h5>
+                                <p class="text-sm text-orange-900 mb-2">Temporary containment. Risk reduced.</p>
+                                <ul class="text-xs text-orange-700 list-disc list-inside">
+                                    <li>WAF Rules</li>
+                                    <li>Network Segmentation</li>
+                                    <li>Disable Features</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Prioritization Formula -->
+                        <div class="bg-slate-800 text-slate-200 p-5 rounded-lg">
+                            <h5 class="font-bold text-white mb-3">Prioritization Formula</h5>
+                            <div class="font-mono text-center text-sm md:text-base bg-slate-900 p-3 rounded mb-3">
+                                Urgency = CVSS × Criticality × Exploit Availability
+                            </div>
+                            <p class="text-xs text-slate-400">
+                                Tip: Check <strong>CISA KEV</strong> (Known Exploited Vulnerabilities). If it's there, patch immediately.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: METRICS -->
+            <div id="view-metrics" class="hidden animate-fade-in">
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">KPIs & Severity Metrics</h3>
+                    <p class="text-slate-600">
+                        You can't manage what you don't measure. Use these industry targets to evaluate your patch management program.
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- KPI Chart -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-4 border-b pb-2">Industry Targets (KPIs)</h4>
+                        <div class="chart-container">
+                            <canvas id="kpiChart"></canvas>
+                        </div>
+                        <div class="mt-4 text-xs text-slate-500">
+                            <strong>MTTP:</strong> Mean Time To Patch. <strong>Compliance:</strong> % of systems patched. <strong>Gap:</strong> Missed systems.
+                        </div>
+                    </div>
+
+                    <!-- Remediation Timeline Chart -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h4 class="font-bold text-slate-800 mb-4 border-b pb-2">Remediation Targets by Severity (CVSS)</h4>
+                        <div class="chart-container">
+                            <canvas id="timelineChart"></canvas>
+                        </div>
+                        <div class="mt-4 text-xs text-slate-500 text-center">
+                            Based on CVSS Score (0-10). Critical systems (9.0+) require action within 7 days.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CVSS Reference Table (Styled) -->
+                <div class="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="min-w-full text-sm text-left">
+                        <thead class="bg-slate-100 text-slate-700 font-semibold">
+                            <tr>
+                                <th class="px-6 py-3">CVSS Score</th>
+                                <th class="px-6 py-3">Severity</th>
+                                <th class="px-6 py-3">Time to Patch</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr class="hover:bg-red-50">
+                                <td class="px-6 py-3 font-mono font-bold text-red-600">9.0 - 10.0</td>
+                                <td class="px-6 py-3"><span class="bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs font-bold">CRITICAL</span></td>
+                                <td class="px-6 py-3 font-semibold">7 Days</td>
+                            </tr>
+                            <tr class="hover:bg-orange-50">
+                                <td class="px-6 py-3 font-mono font-bold text-orange-600">7.0 - 8.9</td>
+                                <td class="px-6 py-3"><span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full text-xs font-bold">HIGH</span></td>
+                                <td class="px-6 py-3 font-semibold">15 Days</td>
+                            </tr>
+                            <tr class="hover:bg-yellow-50">
+                                <td class="px-6 py-3 font-mono font-bold text-yellow-600">4.0 - 6.9</td>
+                                <td class="px-6 py-3"><span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full text-xs font-bold">MEDIUM</span></td>
+                                <td class="px-6 py-3">30 Days</td>
+                            </tr>
+                            <tr class="hover:bg-green-50">
+                                <td class="px-6 py-3 font-mono font-bold text-green-600">0.1 - 3.9</td>
+                                <td class="px-6 py-3"><span class="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-bold">LOW</span></td>
+                                <td class="px-6 py-3">60 Days</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-auto py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center text-slate-400 text-sm">
+            <p>&copy; Cyber.SoHo — Managing Vulnerabilities Course. For Educational Purposes Only.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- DATA STORAGE ---
+        
+        const lifecycleStages = [
+            {
+                id: 1,
+                title: "Asset Inventory",
+                icon: "📋",
+                desc: "You cannot patch what you do not know exists.",
+                details: {
+                    focus: "Maintain complete catalog of devices, OS, apps, and firmware.",
+                    tools: "Qualys, Tenable Nessus, Microsoft SCCM",
+                    action: "Classify assets by criticality (Database vs. Breakroom display)."
+                }
+            },
+            {
+                id: 2,
+                title: "Patch Monitor",
+                icon: "📡",
+                desc: "Track new vulnerabilities and vendor releases.",
+                details: {
+                    focus: "Identify what needs fixing.",
+                    tools: "NVD (NIST), Vendor Advisories, Threat Intel Feeds",
+                    action: "Monitor CVSS scores and CISA KEV catalog."
+                }
+            },
+            {
+                id: 3,
+                title: "Prioritization",
+                icon: "⚖️",
+                desc: "Not all patches are equal. Rank by risk.",
+                details: {
+                    focus: "Determine order of operations.",
+                    tools: "Internal Risk Matrix",
+                    action: "Formula: CVSS Score x Asset Criticality x Exploit Availability."
+                }
+            },
+            {
+                id: 4,
+                title: "Test",
+                icon: "🧪",
+                desc: "The Gauntlet. Never deploy untested patches.",
+                details: {
+                    focus: "Ensure patch fixes flaw without breaking apps.",
+                    tools: "Staging Environment (VMware, Docker)",
+                    action: "Run 5 tests: Functional, Regression, Compatibility, Performance, Rollback."
+                }
+            },
+            {
+                id: 5,
+                title: "Deploy",
+                icon: "🚀",
+                desc: "Staged rollout to production systems.",
+                details: {
+                    focus: "Safe installation.",
+                    tools: "Ansible, Chef, Puppet, WSUS",
+                    action: "Strategy: Canary Group -> Wave 1 -> Wave 2+. Always during maintenance windows."
+                }
+            },
+            {
+                id: 6,
+                title: "Verify & Report",
+                icon: "✅",
+                desc: "Confirm success and document compliance.",
+                details: {
+                    focus: "Proof of security.",
+                    tools: "Vuln Scanners, Log Analysis",
+                    action: "Rescan systems. Check logs. Report for PCI/HIPAA compliance."
+                }
+            }
+        ];
+
+        const testTypes = [
+            { name: "Functional", question: "Does the patch fix the vulnerability?", rate: "95%", note: "If fails, patch is defective." },
+            { name: "Regression", question: "Does the patch break anything else?", rate: "90%", note: "Most time consuming. Checks unintended side effects." },
+            { name: "Compatibility", question: "Conflicts with other software?", rate: "92%", note: "Critical for complex enterprise stacks." },
+            { name: "Performance", question: "Does it slow the system down?", rate: "<10% Deg.", note: "Example: Meltdown/Spectre patches slowed CPUs." },
+            { name: "Rollback", question: "Can we cleanly uninstall it?", rate: "97%", note: "Safety net. If this fails, a bad patch is permanent." }
+        ];
+
+        // --- CORE NAVIGATION & UI ---
+
+        function switchTab(tabId) {
+            // Update Tab Styles
+            ['lifecycle', 'testing', 'strategy', 'metrics'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const view = document.getElementById(`view-${t}`);
+                
+                if (t === tabId) {
+                    btn.className = "tab-active py-4 px-1 text-sm font-medium whitespace-nowrap transition-colors duration-200 border-b-2 border-slate-900";
+                    view.classList.remove('hidden');
+                } else {
+                    btn.className = "tab-inactive py-4 px-1 text-sm font-medium whitespace-nowrap transition-colors duration-200 text-slate-500 hover:text-slate-700";
+                    view.classList.add('hidden');
+                }
+            });
+            
+            // Trigger chart render if metrics tab
+            if (tabId === 'metrics') {
+                renderCharts();
+            }
+        }
+
+        // --- LIFECYCLE LOGIC ---
+
+        function renderLifecycle() {
+            const container = document.getElementById('stage-buttons');
+            container.innerHTML = lifecycleStages.map((stage, index) => `
+                <div onclick="showStageDetails(${index})" class="stage-card cursor-pointer bg-white p-4 rounded-lg border border-slate-200 shadow-sm transition-all flex items-center gap-4 group">
+                    <div class="h-10 w-10 bg-slate-100 rounded-full flex items-center justify-center text-xl group-hover:bg-indigo-100 transition-colors">
+                        ${stage.icon}
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-sm">${stage.id}. ${stage.title}</h4>
+                        <p class="text-xs text-slate-500 truncate">${stage.desc}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Show first by default logic could go here, but "Select a stage" is fine.
+        }
+
+        function showStageDetails(index) {
+            const stage = lifecycleStages[index];
+            const detailsPanel = document.getElementById('lifecycle-details');
+            
+            detailsPanel.innerHTML = `
+                <div class="animate-fade-in h-full flex flex-col">
+                    <div class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+                        <span class="text-5xl">${stage.icon}</span>
+                        <div>
+                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wide">Stage ${stage.id}</span>
+                            <h2 class="text-3xl font-bold text-slate-900">${stage.title}</h2>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-6 flex-grow">
+                        <div>
+                            <h5 class="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span> Core Objective
+                            </h5>
+                            <p class="text-slate-600 leading-relaxed">${stage.desc} ${stage.details.focus}</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-slate-50 p-4 rounded-lg">
+                                <h5 class="font-bold text-slate-800 mb-2 text-sm">🛠️ Tools & Tech</h5>
+                                <p class="text-sm text-slate-600">${stage.details.tools}</p>
+                            </div>
+                            <div class="bg-slate-50 p-4 rounded-lg">
+                                <h5 class="font-bold text-slate-800 mb-2 text-sm">⚡ Key Actions</h5>
+                                <p class="text-sm text-slate-600">${stage.details.action}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- TESTING GAUNTLET LOGIC ---
+        
+        function renderTesting() {
+            const container = document.getElementById('test-list-container');
+            container.innerHTML = testTypes.map((test, index) => `
+                <div class="group p-4 hover:bg-indigo-50 transition-colors cursor-default">
+                    <div class="flex justify-between items-start mb-1">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-slate-200 text-slate-600 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">${index + 1}</span>
+                            <h4 class="font-bold text-slate-800">${test.name} Testing</h4>
+                        </div>
+                        <span class="text-xs font-mono bg-white border border-slate-200 px-2 py-1 rounded text-slate-500">Pass Rate: ${test.rate}</span>
+                    </div>
+                    <p class="text-sm text-slate-600 pl-8 mb-2 font-medium">"${test.question}"</p>
+                    <p class="text-xs text-slate-500 pl-8 italic border-l-2 border-indigo-200 ml-8 pl-2">${test.note}</p>
+                </div>
+            `).join('');
+        }
+
+        // --- STRATEGY DECISION TREE LOGIC ---
+
+        function resetDecisionTree() {
+            const container = document.getElementById('decision-tree-container');
+            container.innerHTML = `
+                <div id="dt-step-1" class="text-center animate-fade-in">
+                    <p class="text-lg font-medium text-slate-900 mb-6">Is a vendor patch available for the vulnerability?</p>
+                    <div class="flex justify-center gap-4">
+                        <button onclick="nextStep(2, true)" class="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-md">Yes</button>
+                        <button onclick="nextStep(2, false)" class="px-6 py-2 bg-white border-2 border-slate-200 text-slate-700 rounded-lg hover:border-slate-400 transition">No</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function nextStep(step, answer) {
+            const container = document.getElementById('decision-tree-container');
+            let content = '';
+
+            if (step === 2) {
+                if (answer === true) {
+                    // Patch Exists -> Check Downtime
+                    content = `
+                        <div class="text-center animate-fade-in">
+                            <div class="mb-4 text-xs uppercase text-slate-400 font-bold tracking-widest">Decision Step 2</div>
+                            <p class="text-lg font-medium text-slate-900 mb-6">Can the system tolerate downtime right now?</p>
+                            <div class="flex justify-center gap-4">
+                                <button onclick="showResult('remediate')" class="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-700 transition shadow-md">Yes</button>
+                                <button onclick="showResult('mitigate-wait')" class="px-6 py-2 bg-white border-2 border-slate-200 text-slate-700 rounded-lg hover:border-slate-400 transition">No</button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // No Patch -> Mitigate
+                    showResult('mitigate-only');
+                    return;
+                }
+            }
+            if (content) container.innerHTML = content;
+        }
+
+        function showResult(type) {
+            const container = document.getElementById('decision-tree-container');
+            let resultHtml = '';
+
+            if (type === 'remediate') {
+                resultHtml = `
+                    <div class="text-center animate-fade-in bg-green-50 p-6 rounded-lg border border-green-200">
+                        <div class="text-4xl mb-2">🛡️</div>
+                        <h3 class="text-xl font-bold text-green-900 mb-2">REMEDIATE</h3>
+                        <p class="text-green-800 mb-4">The patch is available and downtime is acceptable.</p>
+                        <div class="text-left bg-white p-4 rounded border border-green-100 text-sm text-slate-600">
+                            <strong>Action Plan:</strong><br>
+                            1. Test patch in staging.<br>
+                            2. Deploy during window.<br>
+                            3. Verify vulnerability is gone.
+                        </div>
+                    </div>`;
+            } else if (type === 'mitigate-wait') {
+                resultHtml = `
+                    <div class="text-center animate-fade-in bg-orange-50 p-6 rounded-lg border border-orange-200">
+                        <div class="text-4xl mb-2">🚧</div>
+                        <h3 class="text-xl font-bold text-orange-900 mb-2">MITIGATE (Then Remediate)</h3>
+                        <p class="text-orange-800 mb-4">System cannot go down, but a fix exists.</p>
+                        <div class="text-left bg-white p-4 rounded border border-orange-100 text-sm text-slate-600">
+                            <strong>Action Plan:</strong><br>
+                            1. Apply WAF rules or segmentation immediately.<br>
+                            2. <strong>Schedule</strong> remediation for next maintenance window.<br>
+                            3. Do NOT forget to patch later.
+                        </div>
+                    </div>`;
+            } else if (type === 'mitigate-only') {
+                resultHtml = `
+                    <div class="text-center animate-fade-in bg-red-50 p-6 rounded-lg border border-red-200">
+                        <div class="text-4xl mb-2">🚫</div>
+                        <h3 class="text-xl font-bold text-red-900 mb-2">MITIGATE (Zero-Day/EOL)</h3>
+                        <p class="text-red-800 mb-4">No vendor patch is available.</p>
+                        <div class="text-left bg-white p-4 rounded border border-red-100 text-sm text-slate-600">
+                            <strong>Action Plan:</strong><br>
+                            1. WAF rules, IPS signatures, or Network Isolation.<br>
+                            2. Disable vulnerable feature if possible.<br>
+                            3. Monitor threat intel for patch release.
+                        </div>
+                    </div>`;
+            }
+            container.innerHTML = resultHtml + `<div class="mt-4"><button onclick="resetDecisionTree()" class="text-sm underline text-slate-500">Start Over</button></div>`;
+        }
+
+        // --- CHARTS LOGIC ---
+        let chartsInitialized = false;
+
+        function renderCharts() {
+            if (chartsInitialized) return;
+
+            // KPI Chart (Bar)
+            const ctxKPI = document.getElementById('kpiChart').getContext('2d');
+            new Chart(ctxKPI, {
+                type: 'bar',
+                data: {
+                    labels: ['MTTP (Critical)', 'Compliance Rate', 'Coverage Gap'],
+                    datasets: [{
+                        label: 'Industry Target',
+                        data: [15, 95, 2], // 15 days, 95%, 2%
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.7)', // Red
+                            'rgba(34, 197, 94, 0.7)', // Green
+                            'rgba(234, 179, 8, 0.7)'  // Yellow
+                        ],
+                        borderColor: [
+                            'rgb(239, 68, 68)',
+                            'rgb(34, 197, 94)',
+                            'rgb(234, 179, 8)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Value (Days / %)' }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y === 15) return label + '< 15 Days';
+                                    if (context.parsed.y === 95) return label + '> 95%';
+                                    if (context.parsed.y === 2) return label + '< 2%';
+                                    return label + context.parsed.y;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Timeline Chart (Horizontal Bar for Time)
+            const ctxTime = document.getElementById('timelineChart').getContext('2d');
+            new Chart(ctxTime, {
+                type: 'bar',
+                data: {
+                    labels: ['Critical (9.0+)', 'High (7.0-8.9)', 'Medium (4.0-6.9)', 'Low (<4.0)'],
+                    datasets: [{
+                        label: 'Days to Patch Target',
+                        data: [7, 15, 30, 60],
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', // Horizontal bar
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Days' }
+                        }
+                    }
+                }
+            });
+
+            chartsInitialized = true;
+        }
+
+        // --- INIT ---
+        window.addEventListener('DOMContentLoaded', () => {
+            renderLifecycle();
+            renderTesting();
+            // Default load
+            switchTab('lifecycle');
+        });
+
+    </script>
+</body>
+</html>
+
+
+
+
