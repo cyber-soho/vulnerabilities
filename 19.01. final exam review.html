@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Managing Vulnerabilities: Final Exam Review</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Chart Container Styling per requirements */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Animation Utilities */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Custom UI Elements */
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+        .tab-inactive { color: #64748b; }
+        .tab-inactive:hover { color: #1e293b; }
+    </style>
+    <!-- Chosen Palette: Slate (Background) & Blue (Primary) for a clean, professional academic look. -->
+    <!-- Application Structure Plan: 
+         The app is divided into 3 main interactive modules based on the review guide's structure:
+         1. "Knowledge Core" (Review): Interactive accordions and visual summaries of the 4 key lectures.
+         2. "Scenario Lab" (Case Studies): A flashcard-style interface to test application of concepts.
+         3. "Exam Simulator" (Mid-Term Review): A full quiz engine for MCQs, MSQs, and Essays with real-time scoring.
+         This structure moves from Passive Review -> Active Application -> Testing, mirroring the learning process.
+    -->
+    <!-- Visualization & Content Choices:
+         - Review Section: Used a "Topic Distribution" chart to visualize the weight of different course areas.
+         - Exam Section: Used a "Performance Doughnut" to give immediate feedback on quiz progress.
+         - Icons: Unicode symbols used throughout (🛡️, 🔍, 📊) to maintain visual interest without SVG/Images.
+         - Interaction: Javascript handles all tab switching, quiz logic (scoring, feedback), and dynamic content rendering.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="text-slate-800">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-2">🛡️</span>
+                    <h1 class="text-xl font-bold text-slate-900 tracking-tight">CyberSec 101: <span class="text-blue-600">Final Exam Prep</span></h1>
+                </div>
+                <div class="hidden sm:flex sm:space-x-8" id="nav-container">
+                    <button onclick="app.navigate('review')" id="nav-review" class="tab-active inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors">Course Review</button>
+                    <button onclick="app.navigate('cases')" id="nav-cases" class="tab-inactive inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent transition-colors">Case Studies</button>
+                    <button onclick="app.navigate('exam')" id="nav-exam" class="tab-inactive inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent transition-colors">Exam Simulator</button>
+                </div>
+                <!-- Mobile Menu Button (simplified) -->
+                <div class="flex items-center sm:hidden">
+                    <button onclick="app.toggleMobileMenu()" class="text-slate-500 hover:text-slate-700 p-2">☰</button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobile-menu" class="hidden sm:hidden bg-white border-b border-slate-200">
+            <button onclick="app.navigate('review')" class="block w-full text-left px-4 py-2 text-base font-medium text-slate-700 hover:bg-slate-50">Course Review</button>
+            <button onclick="app.navigate('cases')" class="block w-full text-left px-4 py-2 text-base font-medium text-slate-700 hover:bg-slate-50">Case Studies</button>
+            <button onclick="app.navigate('exam')" class="block w-full text-left px-4 py-2 text-base font-medium text-slate-700 hover:bg-slate-50">Exam Simulator</button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-screen">
+        
+        <!-- SECTION 1: COURSE REVIEW -->
+        <section id="view-review" class="fade-in block">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-900 mb-2">Comprehensive Course Review</h2>
+                <p class="text-slate-600 max-w-3xl">
+                    This section synthesizes the core concepts from the four primary lecture modules. Use the interactive modules below to refresh your memory on Vulnerability Assessments, CVSS Scoring, Web Vulnerabilities, and Patch Management.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Interactive Topic Cards -->
+                <div class="lg:col-span-2 space-y-4" id="review-content-area">
+                    <!-- Dynamic Content Injected Here -->
+                </div>
+
+                <!-- Visual Summary Sidebar -->
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-semibold mb-4 text-slate-800">Review Focus Areas</h3>
+                        <div class="chart-container">
+                            <canvas id="reviewChart"></canvas>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 text-center">Relative weight of topics in the Final Exam</p>
+                    </div>
+
+                    <div class="bg-blue-50 p-6 rounded-xl border border-blue-100">
+                        <h3 class="text-lg font-semibold text-blue-800 mb-2">💡 Quick Tip</h3>
+                        <p class="text-blue-700 text-sm">
+                            Remember the difference between <strong>False Positives</strong> (Annoying ghost alerts) and <strong>False Negatives</strong> (Dangerous silent threats). The latter is always more critical!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: CASE STUDIES -->
+        <section id="view-cases" class="hidden fade-in">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-900 mb-2">Real-World Case Studies</h2>
+                <p class="text-slate-600 max-w-3xl">
+                    Apply your knowledge to these 10 scenarios. Analyze the situation, formulate your answer, and then reveal the expert conclusion.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="cases-grid">
+                <!-- Dynamic Cases Injected Here -->
+            </div>
+        </section>
+
+        <!-- SECTION 3: EXAM SIMULATOR -->
+        <section id="view-exam" class="hidden fade-in">
+            <div class="mb-8 flex flex-col md:flex-row md:items-end justify-between">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-900 mb-2">Mid-Term Review Exam</h2>
+                    <p class="text-slate-600 max-w-2xl">
+                        Simulate the exam environment with 100 practice questions covering MCQs, Multiple Selection, and Short Essays.
+                    </p>
+                </div>
+                <div class="mt-4 md:mt-0 flex space-x-2">
+                    <span id="score-badge" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-mono font-bold border border-slate-200">
+                        Score: 0 / 0
+                    </span>
+                    <button onclick="app.resetExam()" class="px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium transition-colors">
+                        Reset Exam
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                <!-- Question Area -->
+                <div class="lg:col-span-3">
+                    <div id="exam-interface" class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden min-h-[500px]">
+                        <!-- Question Header -->
+                        <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                            <span id="q-type-badge" class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold uppercase rounded">MCQ</span>
+                            <span id="q-progress" class="text-sm text-slate-500 font-medium">Question 1 of 100</span>
+                        </div>
+                        
+                        <!-- Question Content -->
+                        <div class="p-8">
+                            <h3 id="q-text" class="text-xl font-medium text-slate-900 mb-6 leading-relaxed">
+                                Loading Question...
+                            </h3>
+                            <div id="q-options" class="space-y-3">
+                                <!-- Dynamic Options -->
+                            </div>
+                            <!-- Feedback Area -->
+                            <div id="q-feedback" class="mt-8 hidden p-4 rounded-lg bg-slate-50 border border-slate-200 slide-in">
+                                <h4 class="font-bold mb-1" id="feedback-title"></h4>
+                                <p class="text-slate-700" id="feedback-text"></p>
+                                <p class="text-xs text-slate-500 mt-2 italic" id="feedback-source"></p>
+                            </div>
+                        </div>
+
+                        <!-- Footer Controls -->
+                        <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-between items-center">
+                            <button onclick="app.prevQuestion()" class="text-slate-600 hover:text-slate-900 font-medium text-sm flex items-center">
+                                ← Previous
+                            </button>
+                            <button id="btn-submit-answer" onclick="app.checkAnswer()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm">
+                                Submit Answer
+                            </button>
+                            <button id="btn-next-question" onclick="app.nextQuestion()" class="hidden bg-slate-800 hover:bg-slate-900 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center">
+                                Next →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exam Sidebar -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Progress Chart -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Session Stats</h4>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="examChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Question Navigator -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Navigator</h4>
+                        <div class="grid grid-cols-5 gap-2 max-h-64 overflow-y-auto pr-2" id="question-nav-grid">
+                            <!-- Grid items generated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-slate-500 text-sm">Managing Vulnerabilities Course Review</p>
+            <p class="text-slate-400 text-xs mt-1">Based on Course Lecture Material</p>
+        </div>
+    </footer>
+
+    <!-- Application Logic -->
+    <script>
+        // --- DATA STORE ---
+        const reviewData = [
+            {
+                id: "assessments",
+                title: "1. Conducting Vulnerability Assessments",
+                icon: "🔍",
+                content: `
+                    <p class="mb-2">A vulnerability assessment is the "annual physical" for digital infrastructure. Unlike Penetration Testing (active exploitation), an assessment identifies and categorizes weaknesses.</p>
+                    <ul class="list-disc list-inside space-y-1 text-slate-700 mb-4">
+                        <li><strong>Key Tools:</strong> Scanners like Nessus, Qualys, and OpenVAS.</li>
+                        <li><strong>Accuracy:</strong> 
+                            <span class="text-red-600 font-medium">False Negative</span> (Missing a real flaw) is more dangerous than a 
+                            <span class="text-yellow-600 font-medium">False Positive</span> (Flagging a ghost flaw).
+                        </li>
+                        <li><strong>Ethics:</strong> Unauthorized scanning violates the <a href="#" class="text-blue-600 hover:underline">CFAA</a>. Always get written permission.</li>
+                    </ul>
+                `
+            },
+            {
+                id: "cvss",
+                title: "2. Vulnerability Scoring (CVSS)",
+                icon: "📊",
+                content: `
+                    <p class="mb-2">Maintained by FIRST, CVSS rates severity from 0.0 to 10.0 to help triage patching.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4 text-sm">
+                        <div class="bg-slate-100 p-2 rounded"><strong>Base Metrics:</strong> Intrinsic qualities (Attack Vector, Complexity, CIA Impact).</div>
+                        <div class="bg-slate-100 p-2 rounded"><strong>Temporal:</strong> Changes over time (Exploit maturity).</div>
+                        <div class="bg-slate-100 p-2 rounded"><strong>Environmental:</strong> Your specific infrastructure context.</div>
+                    </div>
+                    <p class="text-sm"><strong>Prioritization:</strong> Critical (9.0-10.0) & High (7.0-8.9) take precedence.</p>
+                `
+            },
+            {
+                id: "web",
+                title: "3. Application & Web Vulnerabilities",
+                icon: "🌐",
+                content: `
+                    <p class="mb-2">Most breaches stem from code errors. <a href="#" class="text-blue-600 hover:underline">OWASP</a> tracks the Top 10 risks.</p>
+                    <ul class="list-disc list-inside space-y-1 text-slate-700 mb-4">
+                        <li><strong>Injection (SQLi):</strong> Untrusted data executing commands.</li>
+                        <li><strong>Broken Auth:</strong> Session/Password flaws.</li>
+                        <li><strong>XSS:</strong> Malicious scripts in benign sites.</li>
+                        <li><strong>Supply Chain:</strong> Risks from 3rd party libs (e.g., Log4j).</li>
+                    </ul>
+                `
+            },
+            {
+                id: "patch",
+                title: "4. Patch Management & Remediation",
+                icon: "🩹",
+                content: `
+                    <p class="mb-2">The Lifecycle: <strong>Discover > Prioritize > Test > Deploy > Verify</strong>.</p>
+                    <p class="mb-2 text-sm"><strong>WannaCry (2017):</strong> Devastated the NHS because a known Windows patch wasn't applied.</p>
+                    <p class="text-sm bg-yellow-50 p-2 rounded border border-yellow-200"><strong>Compensating Controls:</strong> Temporary fixes (firewalls, segmentation) when patching isn't immediately possible (legacy systems, zero-days).</p>
+                `
+            }
+        ];
+
+        const caseStudies = [
+            { title: "The Eager Freshman", scenario: "Student scans university portal without asking.", question: "What legal/ethical boundaries were crossed?", answer: "Violated ethical guidelines (ISC²) and potentially the CFAA. Scanning without explicit written authorization is illegal.", source: "Conducting Vulnerability Assessments" },
+            { title: "The Hospital Triage", scenario: "CVSS 9.8 on Web Server vs CVSS 4.2 on Backup Server.", question: "Patch which first?", answer: "Patch CVSS 9.8 first. Public-facing critical flaws present immediate, high risk.", source: "Vulnerability Scoring" },
+            { title: "The Ghost Alert", scenario: "Scanner flags Windows flaw on a Linux server.", question: "Type of error?", answer: "False Positive. Document it, verify OS, and tune scanner.", source: "Conducting Vulnerability Assessments" },
+            { title: "The Delayed Fix", scenario: "Delayed patch for 3 months leads to ransomware infection.", question: "Mirrors which attack?", answer: "Mirrors WannaCry (2017). Failure in Test/Deploy phases.", source: "Patch Management" },
+            { title: "The Sneaky Input", scenario: "Attacker uses ' OR 1=1 -- to bypass login.", question: "Type of vulnerability?", answer: "SQL Injection. Tracked by OWASP.", source: "Web Vulnerabilities" },
+            { title: "The Unpatchable Server", scenario: "Legacy XP machine running robots cannot be patched.", question: "How to protect?", answer: "Compensating Controls: Isolate network, restrict access, strict firewalls.", source: "Patch Management" },
+            { title: "The Supply Chain Surprise", scenario: "Secure code breached via free logging library.", question: "Concept?", answer: "Third-Party/Supply Chain Risk (e.g., Log4j).", source: "Web Vulnerabilities" },
+            { title: "The Score Adjustment", scenario: "Base 8.5 vuln on offline, empty server.", question: "Which metric lowers score?", answer: "Environmental Metrics.", source: "Vulnerability Scoring" },
+            { title: "The Missing Flaw", scenario: "Scan is clean, but breach occurs via known flaw.", question: "Concept?", answer: "False Negative. Scanner failed to detect present vulnerability.", source: "Conducting Vulnerability Assessments" },
+            { title: "The Exploit Availability", scenario: "Automated exploit tool released for a vulnerability.", question: "Which metric changes?", answer: "Temporal Metric (Exploit Code Maturity) increases.", source: "Vulnerability Scoring" }
+        ];
+
+        // Compressed Question Data (100 Questions)
+        // type: 0=MCQ, 1=MSQ, 2=Essay
+        const questions = [
+            // MCQs (1-50)
+            { id: 1, type: 0, q: "Primary purpose of a vulnerability assessment?", opts: ["Arrest hackers", "Exploit systems", "Identify/Categorize weaknesses", "Write code"], a: [2], src: "Conducting Assessments" },
+            { id: 2, type: 0, q: "Who publishes the Top 10 web risks?", opts: ["FIRST", "OWASP", "NHS", "ISC²"], a: [1], src: "Web Vulns" },
+            { id: 3, type: 0, q: "What does CVSS stand for?", opts: ["Common Vulnerability Scoring System", "Computer Vector Security Standard", "Cyber Vuln Scanning System", "Critical Vector Scoring"], a: [0], src: "Vulnerability Scoring" },
+            { id: 4, type: 0, q: "Law making unauthorized scanning illegal in US?", opts: ["HIPAA", "CFAA", "GDPR", "DMCA"], a: [1], src: "Conducting Assessments" },
+            { id: 5, type: 0, q: "Scanner flags non-existent vuln?", opts: ["False Negative", "True Positive", "False Positive", "Zero-Day"], a: [2], src: "Conducting Assessments" },
+            { id: 6, type: 0, q: "WannaCry exploited unpatched systems at?", opts: ["OWASP", "NHS", "FIRST", "Microsoft"], a: [1], src: "Patch Mgmt" },
+            { id: 7, type: 0, q: "Example of Injection attack?", opts: ["SQLi", "Phishing", "Malware", "Social Engineering"], a: [0], src: "Web Vulns" },
+            { id: 8, type: 0, q: "CVSS metric group that never changes?", opts: ["Temporal", "Environmental", "Base", "Exploitability"], a: [2], src: "Vulnerability Scoring" },
+            { id: 9, type: 0, q: "Nessus, Qualys, OpenVAS are?", opts: ["Antivirus", "Browsers", "Scanners", "Firewalls"], a: [2], src: "Conducting Assessments" },
+            { id: 10, type: 0, q: "Vuln with no patch exists?", opts: ["Zero-day", "False Positive", "Temporal", "Base"], a: [0], src: "Patch Mgmt" },
+            { id: 11, type: 0, q: "Highest CVSS score?", opts: ["100", "5.0", "10.0", "1000"], a: [2], src: "Vulnerability Scoring" },
+            { id: 12, type: 0, q: "Risk from 3rd party library?", opts: ["Zero-risk", "Supply Chain Risk", "Hardware Risk", "Physical Risk"], a: [1], src: "Web Vulns" },
+            { id: 13, type: 0, q: "Example of Compensating Control?", opts: ["Vendor patch", "New hardware", "Strict firewall/isolation", "Ignoring it"], a: [2], src: "Patch Mgmt" },
+            { id: 14, type: 0, q: "'A' in CIA triad (CVSS)?", opts: ["Authentication", "Authorization", "Availability", "Auditing"], a: [2], src: "Vulnerability Scoring" },
+            { id: 15, type: 0, q: "Cross-Site Scripting abbreviation?", opts: ["CSS", "XSS", "CRS", "XRS"], a: [1], src: "Web Vulns" },
+            { id: 16, type: 0, q: "Patch phase: apply to test env?", opts: ["Discover", "Deploy", "Test", "Verify"], a: [2], src: "Patch Mgmt" },
+            { id: 17, type: 0, q: "Scanner misses critical vuln?", opts: ["True Negative", "False Positive", "False Negative", "Buffer Overflow"], a: [2], src: "Conducting Assessments" },
+            { id: 18, type: 0, q: "Who manages CVSS?", opts: ["FIRST", "Apple", "EC-Council", "OWASP"], a: [0], src: "Vulnerability Scoring" },
+            { id: 19, type: 0, q: "Broken Authentication leads to?", opts: ["Crashes", "Unauthorized access", "Outages", "Faster loads"], a: [1], src: "Web Vulns" },
+            { id: 20, type: 0, q: "Requirement before scanning client?", opts: ["Fast PC", "Written Authorization", "Zero-day", "Antivirus"], a: [1], src: "Conducting Assessments" },
+            { id: 21, type: 0, q: "CVSS 9.5 category?", opts: ["Low", "Medium", "High", "Critical"], a: [3], src: "Vulnerability Scoring" },
+            { id: 22, type: 0, q: "Final step in Patch Lifecycle?", opts: ["Prioritize", "Discover", "Verify", "Test"], a: [2], src: "Patch Mgmt" },
+            { id: 23, type: 0, q: "Customize CVSS for network?", opts: ["Base", "Temporal", "Environmental", "Impact"], a: [2], src: "Vulnerability Scoring" },
+            { id: 24, type: 0, q: "Log4j example of?", opts: ["Physical failure", "3rd Party Vuln", "Hardware malfunction", "Social Eng"], a: [1], src: "Web Vulns" },
+            { id: 25, type: 0, q: "Pen-testing differs from scanning because?", opts: ["Illegal", "Actively exploits", "No tools", "Hardware only"], a: [1], src: "Conducting Assessments" },
+            { id: 26, type: 0, q: "CVSS 3.2 category?", opts: ["Low", "Medium", "High", "Critical"], a: [0], src: "Vulnerability Scoring" },
+            { id: 27, type: 0, q: "No user interaction needed?", opts: ["Required", "None", "High", "Critical"], a: [1], src: "Vulnerability Scoring" },
+            { id: 28, type: 0, q: "Prevent SQL Injection?", opts: ["Shorter passwords", "Parameterized Queries", "Plain text", "Old libs"], a: [1], src: "Web Vulns" },
+            { id: 29, type: 0, q: "Why delay patching?", opts: ["Expensive", "Fear of breaking apps", "Never works", "Hackers prefer it"], a: [1], src: "Patch Mgmt" },
+            { id: 30, type: 0, q: "Body publishing Code of Ethics?", opts: ["ISC²", "Microsoft", "Google", "Amazon"], a: [0], src: "Conducting Assessments" },
+            { id: 31, type: 0, q: "Exploit code released - which metric changes?", opts: ["Base", "Temporal", "Environmental", "Vector"], a: [1], src: "Vulnerability Scoring" },
+            { id: 32, type: 0, q: "Cannot protect what you don't understand?", opts: ["Buying firewalls", "Ignoring logs", "Vuln Assessments", "Shutting down"], a: [2], src: "Conducting Assessments" },
+            { id: 33, type: 0, q: "NOT a scanner?", opts: ["Nessus", "Photoshop", "Qualys", "OpenVAS"], a: [1], src: "Conducting Assessments" },
+            { id: 34, type: 0, q: "Attacker at keyboard?", opts: ["Network", "Adjacent", "Local", "Physical"], a: [3], src: "Vulnerability Scoring" },
+            { id: 35, type: 0, q: "Most breaches originate from?", opts: ["Elite hackers", "Dev mistakes", "Break-ins", "Stolen laptops"], a: [1], src: "Web Vulns" },
+            { id: 36, type: 0, q: "Legacy system unpatchable?", opts: ["Turn off", "Ignore", "Compensating Controls", "Post IP"], a: [2], src: "Patch Mgmt" },
+            { id: 37, type: 0, q: "CVSS 7.5 category?", opts: ["Low", "Medium", "High", "Critical"], a: [2], src: "Vulnerability Scoring" },
+            { id: 38, type: 0, q: "Code of Ethics for professionals?", opts: ["EC-Council", "NHS", "OWASP", "FIRST"], a: [0], src: "Conducting Assessments" },
+            { id: 39, type: 0, q: "Triage means?", opts: ["Deleting logs", "Prioritizing by severity", "Fixing randomly", "Ignoring low"], a: [1], src: "Vulnerability Scoring" },
+            { id: 40, type: 0, q: "Stealing session token?", opts: ["XSS", "Broken Authentication", "SQLi", "DoS"], a: [1], src: "Web Vulns" },
+            { id: 41, type: 0, q: "First step in Patch Mgmt?", opts: ["Deploy", "Test", "Discover", "Verify"], a: [2], src: "Patch Mgmt" },
+            { id: 42, type: 0, q: "Scanning w/o permission violates?", opts: ["Integrity", "CFAA", "Ethics", "All above"], a: [3], src: "Conducting Assessments" },
+            { id: 43, type: 0, q: "Metric for Admin account needed?", opts: ["Privileges Required", "Vector", "Impact", "Availability"], a: [0], src: "Vulnerability Scoring" },
+            { id: 44, type: 0, q: "Unpatched software is like?", opts: ["Locked door", "Vault", "Ignoring recall", "Encrypted file"], a: [2], src: "Patch Mgmt" },
+            { id: 45, type: 0, q: "Injecting malicious JS into site?", opts: ["SQLi", "XSS", "Overflow", "Ransomware"], a: [1], src: "Web Vulns" },
+            { id: 46, type: 0, q: "Who defines CVSS standards?", opts: ["Microsoft", "FIRST", "CompTIA", "Cisco"], a: [1], src: "Vulnerability Scoring" },
+            { id: 47, type: 0, q: "Tuning scanner reduces?", opts: ["Cost", "False Positives", "Speed", "Power"], a: [1], src: "Conducting Assessments" },
+            { id: 48, type: 0, q: "Skipping 'Test' phase results in?", opts: ["Speed", "Broken apps", "Security", "High score"], a: [1], src: "Patch Mgmt" },
+            { id: 49, type: 0, q: "Zero-day temporal score?", opts: ["Zero", "High (no patch)", "Low", "None"], a: [1], src: "Vulnerability Scoring" },
+            { id: 50, type: 0, q: "Core purpose of OWASP?", opts: ["Sell firewalls", "Arrest criminals", "Improve software security", "Score hardware"], a: [2], src: "Web Vulns" },
+            
+            // MSQs (51-85) - Multiple Selection
+            { id: 51, type: 1, q: "Valid scanners?", opts: ["Nessus", "Nmap", "Qualys", "OpenVAS"], a: [0, 2, 3], src: "Conducting Assessments" },
+            { id: 52, type: 1, q: "Base CVSS metrics?", opts: ["Attack Vector", "Privileges Required", "Exploitation Maturity", "Availability Impact"], a: [0, 1, 3], src: "Vulnerability Scoring" },
+            { id: 53, type: 1, q: "Ethics codes providers?", opts: ["ISC²", "EC-Council", "NHS", "Apple"], a: [0, 1], src: "Conducting Assessments" },
+            { id: 54, type: 1, q: "OWASP Top 10 includes?", opts: ["Injection", "Broken Auth", "Hardware Failure", "XSS"], a: [0, 1, 3], src: "Web Vulns" },
+            { id: 55, type: 1, q: "Patch Lifecycle phases?", opts: ["Discover", "Ignore", "Test", "Deploy"], a: [0, 2, 3], src: "Patch Mgmt" },
+            { id: 56, type: 1, q: "Consequences of unauthorized scan?", opts: ["Promotion", "CFAA Violation", "Civil liability", "Disciplinary action"], a: [1, 2, 3], src: "Conducting Assessments" },
+            { id: 57, type: 1, q: "CVSS Metric Groups?", opts: ["Base", "Temporal", "Financial", "Environmental"], a: [0, 1, 3], src: "Vulnerability Scoring" },
+            { id: 58, type: 1, q: "Zero-Day description?", opts: ["Known for years", "No vendor patch", "Exploited in wild", "No controls needed"], a: [1, 2], src: "Patch Mgmt" },
+            { id: 59, type: 1, q: "3rd party risk sources?", opts: ["Open-source libs", "In-house code", "Vendor APIs", "RAM"], a: [0, 2], src: "Web Vulns" },
+            { id: 60, type: 1, q: "Valid delays for patching?", opts: ["Breaks custom apps", "Want to be hacked", "100% uptime req", "Low CVSS"], a: [0, 2, 3], src: "Patch Mgmt" },
+            { id: 61, type: 1, q: "Scanning vs Pen-test diffs?", opts: ["Scan identifies/Pen-test exploits", "Pen-test auto only", "Scan simulates goal", "Pen-test proves impact"], a: [0, 3], src: "Conducting Assessments" },
+            { id: 62, type: 1, q: "CIA Triad?", opts: ["Confidentiality", "Integrity", "Authentication", "Availability"], a: [0, 1, 3], src: "Vulnerability Scoring" },
+            { id: 63, type: 1, q: "Manipulating input fields?", opts: ["SQLi", "XSS", "Hardware fail", "Deployment"], a: [0, 1], src: "Web Vulns" },
+            { id: 64, type: 1, q: "Compensating Controls?", opts: ["Applying patch", "Segmentation", "WAF", "Disable service"], a: [1, 2, 3], src: "Patch Mgmt" },
+            { id: 65, type: 1, q: "False Positive actions?", opts: ["Panic", "Verify manually", "Document error", "Tune scanner"], a: [1, 2, 3], src: "Conducting Assessments" },
+            { id: 66, type: 1, q: "Alter Temporal Score?", opts: ["Exploit tool release", "Vendor patch release", "Server location", "Vector"], a: [0, 1], src: "Vulnerability Scoring" },
+            { id: 67, type: 1, q: "Critical/High scores?", opts: ["3.5", "7.5", "8.9", "9.8"], a: [1, 2, 3], src: "Vulnerability Scoring" },
+            { id: 68, type: 1, q: "WannaCry showed dangers of?", opts: ["Strong passwords", "Unpatched Windows", "Delaying remediation", "Too many scans"], a: [1, 2], src: "Patch Mgmt" },
+            { id: 69, type: 1, q: "Broken Auth targets?", opts: ["Session tokens", "Passwords", "Chassis", "MFA"], a: [0, 1, 3], src: "Web Vulns" },
+            { id: 70, type: 1, q: "Good Vuln Mgmt components?", opts: ["Inventory", "Continuous scanning", "Ignore low", "Threat Intel"], a: [0, 1, 3], src: "Conducting Assessments" },
+            { id: 71, type: 1, q: "Testing 3rd party code?", opts: ["Blind trust", "Review known vulns", "Monitor updates", "Never use"], a: [1, 2], src: "Web Vulns" },
+            { id: 72, type: 1, q: "Lower Environmental Score why?", opts: ["Turned off", "Isolated from internet", "Classified data", "Strict controls"], a: [1, 3], src: "Vulnerability Scoring" },
+            { id: 73, type: 1, q: "Assessment ethics prioritize?", opts: ["Legality", "Profit", "Authorization", "Responsible disclosure"], a: [0, 2, 3], src: "Conducting Assessments" },
+            { id: 74, type: 1, q: "High User Interaction means?", opts: ["Nothing", "Click specific link", "Download file", "Admin account"], a: [1, 2], src: "Vulnerability Scoring" },
+            { id: 75, type: 1, q: "Verify stage includes?", opts: ["Rescan", "Check logs", "Wait for complaints", "Ensure functionality"], a: [0, 1, 3], src: "Patch Mgmt" },
+            { id: 76, type: 1, q: "True about SQLi?", opts: ["Only MS SQL", "Tricks DB", "Tracked by OWASP", "Impossible to stop"], a: [1, 2], src: "Web Vulns" },
+            { id: 77, type: 1, q: "Scoring guidance sources?", opts: ["FIRST docs", "Rumors", "NVD", "CVSS calc"], a: [0, 2, 3], src: "Vulnerability Scoring" },
+            { id: 78, type: 1, q: "False Negative dangerous why?", opts: ["Wastes time", "Unknown threat", "Exploitable unseen flaw", "Breaks scanner"], a: [1, 2], src: "Conducting Assessments" },
+            { id: 79, type: 1, q: "Log4j severity reasons?", opts: ["Zero-day", "Used globally", "Easy exploit", "Physical access"], a: [0, 1, 2], src: "Web Vulns" },
+            { id: 80, type: 1, q: "Effective remediation?", opts: ["Patch w/o test", "Compensating Controls", "Strict lifecycle", "Decommission legacy"], a: [1, 2, 3], src: "Patch Mgmt" },
+            { id: 81, type: 1, q: "CVSS Attack Vectors?", opts: ["Network", "Adjacent", "Easy", "Local"], a: [0, 1, 3], src: "Vulnerability Scoring" },
+            { id: 82, type: 1, q: "Scanners look for?", opts: ["Misconfigs", "Outdated versions", "Missing patches", "Zero-days"], a: [0, 1, 2], src: "Conducting Assessments" },
+            { id: 83, type: 1, q: "Broken Auth mitigation?", opts: ["MFA", "Weak passwords", "Session timeouts", "Plain text"], a: [0, 2], src: "Web Vulns" },
+            { id: 84, type: 1, q: "CFAA penalizes?", opts: ["Auth pen-test", "Unauthorized access", "Exceeding access", "Writing code"], a: [1, 2], src: "Conducting Assessments" },
+            { id: 85, type: 1, q: "Test phase critical why?", opts: ["Ensure fix", "Prevent downtime", "Verify compatibility", "Raise score"], a: [0, 1, 2], src: "Patch Mgmt" },
+
+            // Essays (86-100) - Short Answer
+            { id: 86, type: 2, q: "Diff between Vuln Assessment & Pen Test?", a: "Assessment: Automated identification/quantification (checkup). Pen Test: Active exploitation to prove impact (attack).", src: "Conducting Assessments" },
+            { id: 87, type: 2, q: "Purpose of CVSS?", a: "Standardized scoring (0-10) to help triage and prioritize vulnerabilities based on severity.", src: "Vulnerability Scoring" },
+            { id: 88, type: 2, q: "What is OWASP Top 10?", a: "Awareness doc outlining the 10 most critical web app risks to help developers avoid common errors.", src: "Web Vulns" },
+            { id: 89, type: 2, q: "Why use Compensating Controls?", a: "Patch unavailable (zero-day), legacy system unsupported, or immediate patch would break critical apps.", src: "Patch Mgmt" },
+            { id: 90, type: 2, q: "Legal implications of unauthorized scanning?", a: "Illegal (CFAA), violates ethics (ISC²), risks prosecution and civil suits.", src: "Conducting Assessments" },
+            { id: 91, type: 2, q: "False Pos vs False Neg?", a: "False Pos: Fake alert (annoying). False Neg: Missed real vuln (dangerous false security).", src: "Conducting Assessments" },
+            { id: 92, type: 2, q: "How Environmental metrics alter score?", a: "Adjusts Base score based on organization's specific context (e.g., isolated server lowers score).", src: "Vulnerability Scoring" },
+            { id: 93, type: 2, q: "SQL Injection & prevention?", a: "Untrusted input manipulating DB queries. Prevent with Parameterized Queries.", src: "Web Vulns" },
+            { id: 94, type: 2, q: "5 steps of Patch Lifecycle?", a: "Discover, Prioritize, Test, Deploy, Verify.", src: "Patch Mgmt" },
+            { id: 95, type: 2, q: "Supply Chain Risk (Log4j)?", a: "Reliance on vulnerable 3rd party libs makes your secure app vulnerable.", src: "Web Vulns" },
+            { id: 96, type: 2, q: "Privileges Required metric?", a: "Level of access needed to exploit. None=Higher Score, Admin=Lower Score.", src: "Vulnerability Scoring" },
+            { id: 97, type: 2, q: "WannaCry & Patching?", a: "Exploited known flaw with existing patch. Proved need for timely patching.", src: "Patch Mgmt" },
+            { id: 98, type: 2, q: "XSS threat?", a: "Scripts in trusted sites steal session cookies or hijack accounts.", src: "Web Vulns" },
+            { id: 99, type: 2, q: "Why Triage?", a: "Limited resources require focusing on critical risks first.", src: "Vulnerability Scoring" },
+            { id: 100, type: 2, q: "Steps after finding vuln in assessment?", a: "Document, Score (CVSS), Do NOT exploit, Report to owner.", src: "Conducting Assessments" }
+        ];
+
+        // --- APP STATE & LOGIC ---
+        const app = {
+            state: {
+                currentView: 'review',
+                exam: {
+                    currentQIndex: 0,
+                    answers: {}, // Map QID -> Array of selected indices
+                    results: {}, // Map QID -> boolean (correct/incorrect)
+                    score: 0
+                }
+            },
+
+            init() {
+                this.renderReview();
+                this.renderCases();
+                this.renderExamNav();
+                this.loadQuestion(0);
+                this.initCharts();
+            },
+
+            navigate(viewId) {
+                // UI Toggle
+                ['review', 'cases', 'exam'].forEach(v => {
+                    document.getElementById(`view-${v}`).classList.add('hidden');
+                    document.getElementById(`nav-${v}`).classList.replace('tab-active', 'tab-inactive');
+                    document.getElementById(`nav-${v}`).classList.remove('border-blue-500');
+                });
+                
+                document.getElementById(`view-${viewId}`).classList.remove('hidden');
+                document.getElementById(`nav-${viewId}`).classList.replace('tab-inactive', 'tab-active');
+                
+                this.state.currentView = viewId;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+
+            toggleMobileMenu() {
+                const menu = document.getElementById('mobile-menu');
+                menu.classList.toggle('hidden');
+            },
+
+            // --- REVIEW SECTION ---
+            renderReview() {
+                const container = document.getElementById('review-content-area');
+                container.innerHTML = reviewData.map(topic => `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden group hover:shadow-md transition-shadow">
+                        <details class="group">
+                            <summary class="flex items-center justify-between p-6 cursor-pointer list-none bg-slate-50 group-open:bg-white transition-colors">
+                                <div class="flex items-center">
+                                    <span class="text-3xl mr-4">${topic.icon}</span>
+                                    <h3 class="text-xl font-bold text-slate-900">${topic.title}</h3>
+                                </div>
+                                <span class="text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+                            </summary>
+                            <div class="px-6 pb-6 pt-2 border-t border-slate-100 fade-in">
+                                ${topic.content}
+                            </div>
+                        </details>
+                    </div>
+                `).join('');
+            },
+
+            // --- CASE STUDIES SECTION ---
+            renderCases() {
+                const container = document.getElementById('cases-grid');
+                container.innerHTML = caseStudies.map((c, i) => `
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col h-full hover:shadow-md transition-shadow relative overflow-hidden">
+                        <div class="mb-4">
+                            <span class="text-xs font-bold text-blue-600 uppercase tracking-wide">Case Study #${i+1}</span>
+                            <h3 class="text-lg font-bold text-slate-900 mt-1">${c.title}</h3>
+                        </div>
+                        <div class="flex-grow">
+                            <p class="text-slate-600 mb-4 italic">"${c.scenario}"</p>
+                            <p class="text-slate-800 font-medium mb-4">❓ ${c.question}</p>
+                        </div>
+                        
+                        <!-- Reveal Mechanism -->
+                        <div class="mt-4">
+                            <button onclick="document.getElementById('ans-${i}').classList.remove('hidden'); this.classList.add('hidden')" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors text-sm">
+                                Reveal Answer
+                            </button>
+                            <div id="ans-${i}" class="hidden p-4 bg-green-50 rounded-lg border border-green-100 fade-in">
+                                <p class="text-green-800 font-medium text-sm">✅ ${c.answer}</p>
+                                <p class="text-xs text-green-600 mt-2 text-right">Source: ${c.source}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            // --- EXAM LOGIC ---
+            renderExamNav() {
+                const container = document.getElementById('question-nav-grid');
+                container.innerHTML = questions.map((q, i) => `
+                    <button id="nav-btn-${i}" onclick="app.loadQuestion(${i})" 
+                        class="w-full h-8 text-xs font-medium rounded border flex items-center justify-center
+                        ${i === 0 ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}">
+                        ${i + 1}
+                    </button>
+                `).join('');
+            },
+
+            loadQuestion(index) {
+                this.state.exam.currentQIndex = index;
+                const q = questions[index];
+                const isAnswered = this.state.exam.answers[q.id];
+
+                // Update UI
+                document.getElementById('q-progress').innerText = `Question ${index + 1} of 100`;
+                document.getElementById('q-type-badge').innerText = q.type === 0 ? "MCQ (Single)" : q.type === 1 ? "MSQ (Select All)" : "Short Essay";
+                document.getElementById('q-type-badge').className = `px-2 py-1 text-xs font-bold uppercase rounded ${q.type === 0 ? 'bg-blue-100 text-blue-700' : q.type === 1 ? 'bg-purple-100 text-purple-700' : 'bg-orange-100 text-orange-700'}`;
+                
+                document.getElementById('q-text').innerText = q.q;
+                
+                // Render Options
+                const optsContainer = document.getElementById('q-options');
+                optsContainer.innerHTML = '';
+
+                if (q.type === 2) {
+                    // Essay
+                    optsContainer.innerHTML = `
+                        <textarea class="w-full p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" rows="4" placeholder="Type your answer here for practice..."></textarea>
+                    `;
+                } else {
+                    // MCQ/MSQ
+                    q.opts.forEach((opt, optIdx) => {
+                        const inputType = q.type === 0 ? 'radio' : 'checkbox';
+                        // Check if previously selected
+                        const checked = isAnswered && isAnswered.includes(optIdx) ? 'checked' : '';
+                        const disabled = isAnswered ? 'disabled' : ''; // Disable changing after submit for simplicity in this demo
+
+                        optsContainer.innerHTML += `
+                            <label class="flex items-start p-4 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors">
+                                <input type="${inputType}" name="q-option" value="${optIdx}" ${checked} ${disabled} class="mt-1 mr-3 text-blue-600 focus:ring-blue-500">
+                                <span class="text-slate-700 select-none">${opt}</span>
+                            </label>
+                        `;
+                    });
+                }
+
+                // Reset Footer State
+                const feedback = document.getElementById('q-feedback');
+                feedback.classList.add('hidden');
+                
+                const btnSubmit = document.getElementById('btn-submit-answer');
+                const btnNext = document.getElementById('btn-next-question');
+
+                if (isAnswered) {
+                    this.showFeedback(q);
+                    btnSubmit.classList.add('hidden');
+                    btnNext.classList.remove('hidden');
+                } else {
+                    btnSubmit.classList.remove('hidden');
+                    btnNext.classList.add('hidden');
+                }
+
+                // Update Nav Highlight
+                document.querySelectorAll('#question-nav-grid button').forEach(b => {
+                    b.classList.remove('ring-2', 'ring-blue-500');
+                });
+                document.getElementById(`nav-btn-${index}`).classList.add('ring-2', 'ring-blue-500');
+            },
+
+            checkAnswer() {
+                const qIndex = this.state.exam.currentQIndex;
+                const q = questions[qIndex];
+                let selected = [];
+
+                if (q.type === 2) {
+                    // Essay - Just mark as reviewed
+                    selected = [0]; // Dummy
+                } else {
+                    const inputs = document.querySelectorAll('input[name="q-option"]:checked');
+                    inputs.forEach(i => selected.push(parseInt(i.value)));
+                    
+                    if (selected.length === 0) {
+                        alert("Please select an answer.");
+                        return;
+                    }
+                }
+
+                // Save Answer
+                this.state.exam.answers[q.id] = selected;
+
+                // Check Correctness
+                let isCorrect = false;
+                if (q.type === 2) {
+                    isCorrect = true; // Self-graded
+                } else {
+                    // Arrays match?
+                    const correctArr = q.a.sort().toString();
+                    const selectedArr = selected.sort().toString();
+                    isCorrect = correctArr === selectedArr;
+                }
+
+                this.state.exam.results[q.id] = isCorrect;
+                if (isCorrect) this.state.exam.score++;
+
+                // Update Score UI
+                document.getElementById('score-badge').innerText = `Score: ${this.state.exam.score} / ${Object.keys(this.state.exam.results).length}`;
+
+                // Update Nav Button Color
+                const navBtn = document.getElementById(`nav-btn-${qIndex}`);
+                navBtn.classList.remove('bg-blue-50', 'text-blue-700', 'text-slate-500', 'hover:bg-slate-50');
+                if (q.type === 2) {
+                     navBtn.classList.add('bg-orange-100', 'text-orange-700', 'border-orange-300');
+                } else {
+                    navBtn.classList.add(isCorrect ? 'bg-green-100' : 'bg-red-100', isCorrect ? 'text-green-700' : 'text-red-700', isCorrect ? 'border-green-300' : 'border-red-300');
+                }
+
+                // Show Feedback
+                this.showFeedback(q);
+                this.updateExamChart();
+
+                // Toggle Buttons
+                document.getElementById('btn-submit-answer').classList.add('hidden');
+                document.getElementById('btn-next-question').classList.remove('hidden');
+            },
+
+            showFeedback(q) {
+                const feedback = document.getElementById('q-feedback');
+                const title = document.getElementById('feedback-title');
+                const text = document.getElementById('feedback-text');
+                const src = document.getElementById('feedback-source');
+                
+                feedback.classList.remove('hidden');
+                
+                if (q.type === 2) {
+                    feedback.className = "mt-8 p-4 rounded-lg bg-orange-50 border border-orange-200 slide-in";
+                    title.innerText = "Model Answer:";
+                    title.className = "font-bold mb-1 text-orange-800";
+                    text.innerText = q.a;
+                } else {
+                    const isCorrect = this.state.exam.results[q.id];
+                    feedback.className = `mt-8 p-4 rounded-lg border slide-in ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`;
+                    title.innerText = isCorrect ? "Correct!" : "Incorrect";
+                    title.className = `font-bold mb-1 ${isCorrect ? 'text-green-800' : 'text-red-800'}`;
+                    
+                    // Show correct answers text
+                    if (!isCorrect) {
+                        const correctLabels = q.a.map(i => q.opts[i]).join(", ");
+                        text.innerText = `Correct Answer: ${correctLabels}`;
+                    } else {
+                        text.innerText = "Good job!";
+                    }
+                }
+                src.innerText = `Source: ${q.src}`;
+            },
+
+            nextQuestion() {
+                if (this.state.exam.currentQIndex < questions.length - 1) {
+                    this.loadQuestion(this.state.exam.currentQIndex + 1);
+                }
+            },
+            
+            prevQuestion() {
+                if (this.state.exam.currentQIndex > 0) {
+                    this.loadQuestion(this.state.exam.currentQIndex - 1);
+                }
+            },
+
+            resetExam() {
+                if(confirm("Reset all exam progress?")) {
+                    this.state.exam.answers = {};
+                    this.state.exam.results = {};
+                    this.state.exam.score = 0;
+                    this.initCharts(); // Reset chart
+                    this.renderExamNav(); // Reset nav colors
+                    this.loadQuestion(0);
+                    document.getElementById('score-badge').innerText = "Score: 0 / 0";
+                }
+            },
+
+            // --- CHARTS ---
+            initCharts() {
+                // Chart 1: Review Topic Distribution
+                const ctxReview = document.getElementById('reviewChart').getContext('2d');
+                new Chart(ctxReview, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Assessments', 'CVSS', 'Web Vulns', 'Patching'],
+                        datasets: [{
+                            data: [25, 25, 25, 25], // Approximate weight
+                            backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+
+                // Chart 2: Exam Performance
+                const ctxExam = document.getElementById('examChart').getContext('2d');
+                this.examChart = new Chart(ctxExam, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Correct', 'Incorrect', 'Remaining'],
+                        datasets: [{
+                            data: [0, 0, 100],
+                            backgroundColor: ['#22c55e', '#ef4444', '#e2e8f0']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+            },
+
+            updateExamChart() {
+                const correct = Object.values(this.state.exam.results).filter(r => r === true).length;
+                const incorrect = Object.values(this.state.exam.results).filter(r => r === false).length; // Excluding essays technically
+                const answered = Object.keys(this.state.exam.answers).length;
+                const remaining = 100 - answered;
+
+                this.examChart.data.datasets[0].data = [correct, incorrect, remaining];
+                this.examChart.update();
+            }
+        };
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+
+    </script>
+</body>
+</html>
+
+
